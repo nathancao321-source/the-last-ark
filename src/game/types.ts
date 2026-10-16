@@ -37,6 +37,9 @@ export interface Body extends Entity {
   /** World units/second; defaults to the global celestial-body cap. */
   maxSpeed?: number;
   captureRadius?: number;
+  captureMessage?: string;
+  /** Optional radial damage, independent of gravity and capture. No velocity edits. */
+  damageZone?: { radius: number; damagePerSecond: number; message: string; failureMessage: string };
   motion?: 'dynamic' | 'static' | 'kinematic';
   emitsGravity?: boolean;
   collision?: 'none' | 'hazard' | 'capture';

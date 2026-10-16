@@ -9,7 +9,7 @@ export function chapterChoices(registry: SceneRegistry, progress: CampaignProgre
   return CHAPTERS.filter(id => id !== 'coop_test' || registry[id].status === 'available').map(id => {
     const scene = registry[id];
     return { id, name: scene.name, playable: scene.status === 'available' && !!scene.level,
-      description: id === 'solar_system' && progress.level0Complete ? '已解锁 · '+scene.description : scene.description ?? '后续内容，尚未制作。' };
+      description: (id === 'solar_system' && progress.level0Complete) || (id === 'black_hole' && progress.level1Complete) ? '已解锁 · '+scene.description : scene.description ?? '后续内容，尚未制作。' };
   });
 }
 
@@ -33,16 +33,19 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
     click(button, () => enter(choice.id));
   }
   click(back, () => enter('title')); click(skipButton, skip);
-  click(next,()=>enter('solar_system'));
+  click(next,()=>{const destination=controller.nextScene();if(destination)enter(destination);});
   const text = (node: HTMLElement, value: string) => { if (node.textContent !== value) node.textContent = value; };
   return {
     update() {
       const game = controller.game, step = game && currentLesson(game);
       const solar = cards.querySelector('[data-scene="solar_system"] span');
       if (solar && controller.progress.level0Complete) text(solar as HTMLElement,'已解锁 · '+controller.registry.solar_system.description);
+      const abyss = cards.querySelector('[data-scene="black_hole"] span');
+      if (abyss && controller.progress.level1Complete) text(abyss as HTMLElement,'已解锁 · '+controller.registry.black_hole.description);
       text(name, controller.registry[controller.scene].name);
       menu.hidden = controller.scene !== 'title'; back.hidden = controller.scene === 'title';
-      next.hidden=!(controller.scene==='tutorial_part_2'&&game?.phase==='completed');
+      next.hidden=!controller.nextScene();
+      text(next,controller.registry[controller.scene].completion?.nextLabel??'继续');
       canvas.hidden = !game; controls.hidden = !game; help.hidden = !game;
       lesson.hidden = !step;
       skipButton.hidden = !debug || !step || step.condition.type === 'exit' || game?.phase === 'failed' || game?.phase === 'completed';

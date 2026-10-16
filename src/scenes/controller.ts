@@ -25,14 +25,19 @@ export class SceneController {
     if (!this.game) return;
     this.game = fromStart ? createGame(this.game.level) : retryGame(this.game); this.revision++;
   }
+  nextScene(): SceneId | undefined {
+    const next = this.registry[this.scene].completion?.nextScene;
+    return this.game?.phase === 'completed' && next && this.registry[next].status === 'available' ? next : undefined;
+  }
   step(input: Controls): void {
     if (!this.game) return;
     stepGame(this.game, input);
     if (this.scene === 'tutorial_part_2' && this.game.phase === 'completed') {
       this.progress.level0Complete = true;
-      this.game.message = 'Level 0 Complete · 下一章已解锁：Solar Exodus';
     }
-    if(this.scene==='solar_system' && this.game.phase==='completed')this.game.message='Level 1 Complete · 已离开太阳系';
+    if(this.scene==='solar_system' && this.game.phase==='completed')this.progress.level1Complete=true;
+    if(this.scene==='black_hole' && this.game.phase==='completed')this.progress.level2Complete=true;
+    if(this.game.phase==='completed' && this.registry[this.scene].completion)this.game.message=this.registry[this.scene].completion!.message;
     const next = this.game.pendingScene;
     if (next) {
       const arrival = { from: this.scene, seconds: this.game.elapsed, distance: this.game.distance };

@@ -88,7 +88,7 @@ describe('layered scene state machine',()=>{
     const controller=new SceneController();expect(controller.scene).toBe('title');controller.step(NO_CONTROLS);expect(controller.game).toBeUndefined();
     controller.toggle();expect(controller.scene).toBe('tutorial_part_1');expect(controller.game!.phase).toBe('ready');
     const before=structuredClone(controller.game);
-    for(const id of ['black_hole','endless'] as const) expect(controller.enter(id)).toBe(false);
+    for(const id of ['endless'] as const) expect(controller.enter(id)).toBe(false);
     expect(controller.game).toEqual(before);expect(controller.scene).toBe('tutorial_part_1');
   });
   it('preserves identity while paused/failed/completed and fully resets on scene reentry',()=>{

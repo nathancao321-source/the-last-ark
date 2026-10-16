@@ -9,6 +9,7 @@ import { SpatialIndex } from '../world/spatial-index';
 import { contains, sweptBounds } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 import { updateStellar } from './stellar';
+import { updateDamageZones } from './damage-zones';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
   const { checkpoint: _previous, ...state } = game;
@@ -87,7 +88,11 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
     other !== body && (!captureOnly || capabilities(other).collision === 'capture') &&
     sweptOverlap(previous.get(body.id)!, body.position, previous.get(other.id)!, other.position, body.radius + dangerRadius(other)));
   const collision = hits(ship);
-  if (collision) { lose(game, capabilities(collision).collision === 'capture' ? '飞船被吞噬' : '飞船撞击危险天体'); return; }
+  if (collision) { lose(game, capabilities(collision).collision === 'capture' ? collision.captureMessage ?? '飞船被吞噬' : '飞船撞击危险天体'); return; }
+  // Capture is checked first: entering an event horizon can never become a
+  // surviving fly-through or a goal transition, even within a single fast step.
+  const damageFailure = updateDamageZones(game, dt);
+  if (damageFailure) { lose(game, damageFailure); return; }
   const bounds = game.level.missionBounds;
   if (bounds && (!contains(bounds, {x:ship.position.x-ship.radius,y:ship.position.y-ship.radius}) || !contains(bounds, {x:ship.position.x+ship.radius,y:ship.position.y+ship.radius}))) {
     lose(game, '飞船离开任务边界'); return;

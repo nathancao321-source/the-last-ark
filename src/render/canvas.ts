@@ -27,6 +27,16 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   ctx.save(); ctx.translate(width / 2, height / 2); ctx.scale(camera.zoom, camera.zoom); ctx.translate(-camera.position.x, -camera.position.y);
   ctx.lineWidth = 1 / camera.zoom;
   for(const dot of game.level.decorations??[])if(isVisible(camera,dot.position,dot.radius))circle(ctx,dot.position.x,dot.position.y,dot.radius,dot.color);
+  for(const body of game.bodies) if(body.damageZone) {
+    if(body.gravityRadius && isVisible(camera,body.position,body.gravityRadius)) {
+      ctx.save();ctx.setLineDash([10/camera.zoom,12/camera.zoom]);
+      circle(ctx,body.position.x,body.position.y,body.gravityRadius,'#a48aca55',false);ctx.restore();
+    }
+    if(isVisible(camera,body.position,body.damageZone.radius)) {
+      circle(ctx,body.position.x,body.position.y,body.damageZone.radius,'#ec52651a');
+      circle(ctx,body.position.x,body.position.y,body.damageZone.radius,'#ec768caa',false);
+    }
+  }
   for(const body of game.bodies)if(body.stellar&&body.stellarState?.status!=='exploded'&&body.stellarState?.status!=='neutron'&&isVisible(camera,body.position,body.stellar.burnRadius)) {
     circle(ctx,body.position.x,body.position.y,body.stellar.burnRadius,'#ff9b3d18');
     circle(ctx,body.position.x,body.position.y,body.stellar.burnRadius,'#ff9b3d80',false);
@@ -48,7 +58,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     if (body.kind === 'ship') {
       ctx.save(); ctx.translate(body.position.x, body.position.y); ctx.rotate(Math.atan2(body.velocity.y, body.velocity.x));
       const iconScale=Math.max(1,0.8/camera.zoom);ctx.scale(iconScale,iconScale);
-      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fillStyle = game.hazardMessage && game.health && game.health.current<game.health.max ? '#ff9a9a' : '#fff'; ctx.fill(); ctx.restore();
       ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`${12/camera.zoom}px system-ui`;ctx.fillText('方舟',body.position.x,body.position.y-16/camera.zoom);
     } else if (body.kind === 'station' || body.kind === 'wormhole') {
       ctx.lineWidth = 3 / camera.zoom; circle(ctx, body.position.x, body.position.y, body.radius, '#64d98b', false);
@@ -57,7 +67,12 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     } else {
       circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'));
       if(body.appearance?.ring){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}
-      if (body.kind === 'black_hole') circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#110a22');
+      if (body.kind === 'black_hole') {
+        ctx.save();ctx.strokeStyle='#d6b28c';ctx.lineWidth=5/camera.zoom;ctx.beginPath();
+        ctx.ellipse(body.position.x,body.position.y,body.radius*1.6,body.radius*0.65,-0.3,0,Math.PI*2);ctx.stroke();
+        circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#03040a');
+        circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#dba3bf',false);ctx.restore();
+      }
     }
     if(body.appearance&&body.kind!=='wormhole'&&body.kind!=='station'&&(camera.zoom>=0.14||body.kind==='star')) {
       ctx.fillStyle='#e5eaf4';ctx.textAlign='center';ctx.font=`${12/camera.zoom}px system-ui`;
@@ -106,12 +121,21 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     ctx.font='15px system-ui';ctx.fillText('Solar Exodus 已解锁 · 点击上方继续',width/2,height/2+16);ctx.textAlign='left';
   }
   if(game.phase==='completed'&&game.level.id==='solar-exodus') {ctx.fillStyle='#64d98b';ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText('Level 1 Complete',width/2,height/2);ctx.textAlign='left';}
+  if(game.phase==='completed'&&game.level.id==='beyond-the-horizon') {ctx.fillStyle='#64d98b';ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText('Level 2 Complete',width/2,height/2);ctx.textAlign='left';}
+  if(game.level.id==='galactic-rest') {ctx.fillStyle='#c4cede';ctx.font='14px system-ui';ctx.fillText('已抵达银河边缘 · 安全休整 · 无限探索尚未开放 · Esc 返回章节',16,92,width-32);}
   if(game.health) {
     ctx.fillStyle='#242d3a';ctx.fillRect(16,59,150,10);ctx.fillStyle=game.health.current<35?'#ff7b69':'#7cdd9b';ctx.fillRect(16,59,150*game.health.current/game.health.max,10);
     ctx.fillStyle='#dce4ee';ctx.font='12px system-ui';ctx.fillText(`船体 ${Math.ceil(game.health.current)} / ${game.health.max}`,176,69);
     const sun=game.bodies.find(b=>b.stellar),state=sun?.stellarState;
-    const stellar=state?.status==='exploded'?'太阳已爆炸（不再产生引力）':state?.status==='neutron'?'中子星 · 强引力 / 无灼烧 / 可推动':`太阳内停留3秒：蓝色坍缩 ${(state?.blueSeconds??0).toFixed(1)} / 金色引爆 ${(state?.goldSeconds??0).toFixed(1)}`;
-    ctx.fillText(stellar,16,89,width-32);ctx.fillText(`橙圈为灼烧 / 爆炸共同范围（${sun?.stellar?.burnRadius??0}）· M 星图`,16,108,width-32);
+    if(sun) {
+      const stellar=state?.status==='exploded'?'太阳已爆炸（不再产生引力）':state?.status==='neutron'?'中子星 · 强引力 / 无灼烧 / 可推动':`太阳内停留3秒：蓝色坍缩 ${(state?.blueSeconds??0).toFixed(1)} / 金色引爆 ${(state?.goldSeconds??0).toFixed(1)}`;
+      ctx.fillText(stellar,16,89,width-32);ctx.fillText(`橙圈为灼烧 / 爆炸共同范围（${sun.stellar!.burnRadius}）· M 星图`,16,108,width-32);
+    }
+    const hole=game.bodies.find(b=>b.damageZone);
+    if(hole) {
+      ctx.fillText(`黑洞不可推动 · 外部引力 ${hole.gravityRadius} / 潮汐 ${hole.damageZone!.radius} / 事件视界 ${hole.captureRadius}`,16,89,width-32);
+      ctx.fillText('紫色虚线：引力边缘 · 红圈：持续损伤 · 黑色核心：进入立即撕碎',16,108,width-32);
+    }
   }
   ctx.fillStyle = '#92a0b3'; ctx.font = '12px system-ui';
   const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全入港', transition: '场景出口' }[trajectory.outcome];

@@ -1,7 +1,8 @@
 import type { Level } from '../game/types';
-export type SceneId = 'title' | 'prototype' | 'coop_test' | 'tutorial_part_1' | 'tutorial_part_2' | 'solar_system' | 'black_hole' | 'endless';
+export type SceneId = 'title' | 'prototype' | 'coop_test' | 'tutorial_part_1' | 'tutorial_part_2' | 'solar_system' | 'black_hole' | 'galactic_rest' | 'endless';
 export interface SceneDefinition {
   id: SceneId; name: string; status: 'available' | 'planned'; level?: Level;
   description?: string;
+  completion?: { message: string; nextScene: SceneId; nextLabel: string };
 }
 export type SceneRegistry = Record<SceneId, SceneDefinition>;

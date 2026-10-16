@@ -20,6 +20,9 @@ export function renderStarMap(ctx:CanvasRenderingContext2D,game:GameState,width:
   const scale=Math.min((panel.maxX-panel.minX)/(bounds.maxX-bounds.minX),(panel.maxY-panel.minY)/(bounds.maxY-bounds.minY));
   for(const [i,body] of bodies.entries()) {
     const p=mapPoint(body.position,bounds,panel),r=body.kind==='wormhole'?7:Math.max(body.kind==='ship'?4:3,body.radius*scale);
+    if('damageZone' in body && body.damageZone) {
+      ctx.strokeStyle='#ec768caa';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,body.damageZone.radius*scale,0,Math.PI*2);ctx.stroke();
+    }
     ctx.fillStyle=body.kind==='ship'?'#fff':body.kind==='player'?body.id==='attractor'?'#409eff':'#e9bd48':body.appearance?.color??'#8f69b9';
     ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);
     if(body.kind==='wormhole'){ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2;ctx.stroke();}else ctx.fill();

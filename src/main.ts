@@ -28,7 +28,7 @@ const status = document.querySelector<HTMLParagraphElement>('#telemetry')!;
 const debug = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
 const progressStorage = { getItem: (key:string) => localStorage.getItem(key), setItem: (key:string,value:string) => localStorage.setItem(key,value) };
 const scenes = new SceneController(debug ? developmentRegistry(registry,location.search) : registry, loadProgress(progressStorage));
-let savedCompletion = scenes.progress.level0Complete;
+let savedCompletion = JSON.stringify(scenes.progress);
 if (debug) {
   const requested = new URLSearchParams(location.search).get('scene');
   if (requested && Object.hasOwn(scenes.registry, requested)) scenes.enter(requested as SceneId);
@@ -106,7 +106,7 @@ function frame(now: number): void {
   ui.update();
   devices.update();
   mapButton.hidden=!game;mapButton.textContent=mapOpen?'关闭星图 · M':'全局星图 · M';
-  if (scenes.progress.level0Complete !== savedCompletion) { storeProgress(progressStorage,scenes.progress); savedCompletion=scenes.progress.level0Complete; }
+  if (JSON.stringify(scenes.progress) !== savedCompletion) { storeProgress(progressStorage,scenes.progress); savedCompletion=JSON.stringify(scenes.progress); }
   ctx!.setTransform(dpr,0,0,dpr,0,0);
   if (game) {
     const nextKey = game.phase + ':' + game.players.map(p => p.active).join(',');
