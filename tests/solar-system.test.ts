@@ -17,7 +17,6 @@ import { starMapPoints } from '../src/render/star-map';
 import { developmentRegistry } from '../src/debug/config';
 import { scenes } from '../src/scenes/registry';
 import { createCamera, followGroup, viewBounds } from '../src/camera/camera';
-import { cameraFocus } from '../src/camera/director';
 import { intersects, circleBounds } from '../src/world/geometry';
 
 /** Feedback pilot controls only the two normal player intents, never the ship or planets. */
@@ -42,7 +41,7 @@ function pilot(game:GameState, speed=100, clearance=320) {
       return {targetWorldPosition:aim,abilityActive:aligned&&power>(index?23:6)};
     });
     stepGame(game,createControls(intents[0],intents[1]));
-    followGroup(camera,[game.bodies[0],...game.players],1/60,false,cameraFocus(game));
+    followGroup(camera,[game.bodies[0],...game.players],1/60);
     updateEncounters(game,viewBounds(camera));
   }
   return {phase:game.phase,stage,seconds:game.elapsed,position:game.bodies[0].position,hp:game.health?.current,message:game.message,objectives:game.mission.completedObjectives};
@@ -51,7 +50,7 @@ describe('Solar Exodus physical routes',()=>{
   for(const speed of [90,100,110])it(`flies a real cooperative route from Earth to interstellar space at ${speed}`,()=>{
     const game=createGame(solarSystem);const result=pilot(game,speed);
     expect(result.phase,JSON.stringify(result)).toBe('completed');expect(result.seconds).toBeLessThan(90);
-    expect(game.encounters).toContain('belt-approach');expect(game.mission.completedObjectives).toHaveLength(7);
+    expect(game.encounters).toContain('belt-approach');expect(game.mission.completedObjectives).toHaveLength(6);
   });
   for(const index of [0,1] as const)it(`can complete after ${index?'exploding':'collapsing'} the sun through real node travel and dwell`,()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!;
@@ -148,12 +147,51 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
     expect(length(sub(earth.position,sampleOrbit(earth.orbit!,earth.orbitTime!).position))).toBeGreaterThan(displaced);
     expect(length(earth.stabilizationState!.playerVelocity)).toBeLessThan(0.5);
   });
-  it('places both exit regions beyond the unperturbed Pluto orbit, with a clear gap',()=>{
-    const pluto=solarSystem.bodies.find(b=>b.id==='pluto')!;
-    for(const id of ['pluto-gate','interstellar']) {
-      const gate=solarSystem.bodies.find(b=>b.id===id)!;
-      expect(gate.position.x-gate.radius-(pluto.orbit!.center.x+pluto.orbit!.radius+pluto.radius)).toBeGreaterThan(200);
+  it('keeps only interstellar transfer as the final goal beyond Pluto',()=>{
+    const pluto=solarSystem.bodies.find(b=>b.id==='pluto')!,gate=solarSystem.bodies.find(b=>b.id==='interstellar')!;
+    expect(solarSystem.bodies.filter(b=>b.kind==='wormhole').map(b=>b.id)).toEqual(['interstellar']);
+    expect(solarSystem.mission!.objectives.at(-1)!.requires).toEqual(['outer-pass']);
+    expect(JSON.stringify(solarSystem)).not.toContain('pluto-gate');
+    expect(JSON.stringify(solarSystem)).not.toContain('pluto-exit');
+    expect(gate.position.x-gate.radius-(pluto.orbit!.center.x+pluto.orbit!.radius+pluto.radius)).toBeGreaterThan(200);
+  });
+  it('keeps unforced Mercury at constant solar distance for ten minutes, including more than two orbits',()=>{
+    const game=createGame(solarSystem),mercury=game.bodies.find(b=>b.id==='mercury')!,sun=game.bodies.find(b=>b.id==='sun')!;
+    const radius=length(sub(mercury.position,sun.position));let maxError=0;
+    for(let i=0;i<36000;i++) {
+      integrate([mercury,sun],game.players,1/60);
+      maxError=Math.max(maxError,Math.abs(length(sub(mercury.position,sun.position))-radius));
     }
+    expect(maxError).toBeLessThan(1e-6);
+    expect(mercury.receivesGravity).toBe(false);
+    expect(mercury.orbitTime).toBeCloseTo(600,5);
+  });
+  it('makes Jupiter and the Sun much harder to move without freezing them or limiting Jupiter displacement',()=>{
+    const perturb=(id:string)=>{
+      const game=createGame(solarSystem),body=game.bodies.find(b=>b.id===id)!;
+      const initial={...body.position};
+      for(let i=0;i<600;i++) {
+        game.players[0].position=add(body.position,{x:120,y:0});game.players[0].active=true;
+        integrate([body],game.players,1/60);
+      }
+      const base=body.orbit?sampleOrbit(body.orbit,body.orbitTime!).position:initial;
+      return {distance:length(sub(body.position,base)),body};
+    };
+    const earth=perturb('earth'),jupiter=perturb('jupiter'),sun=perturb('sun');
+    expect(jupiter.distance).toBeGreaterThan(1);
+    expect(jupiter.distance).toBeLessThan(earth.distance/8);
+    expect(sun.distance).toBeGreaterThan(0.1);
+    expect(sun.distance).toBeLessThan(jupiter.distance/5);
+    expect(jupiter.body.displacementLimit).toBeUndefined();expect(jupiter.body.orbit!.maxDrift).toBeUndefined();
+  });
+  it('burns beyond the old boundary and depletes a stationary ship near the core within two seconds',()=>{
+    const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!,ship=game.bodies[0];
+    ship.position=add(sun.position,{x:0,y:300});
+    updateStellar(game,new Map(),1);expect(game.health!.current).toBeLessThan(90);
+    game.health!.current=100;ship.position=add(sun.position,{x:0,y:180});
+    expect(updateStellar(game,new Map(),2)).toContain('灼烧');expect(game.health!.current).toBe(0);
+    game.health!.current=100;ship.position=add(sun.position,{x:0,y:350});
+    updateStellar(game,new Map(),2);expect(game.health!.current).toBe(100);
   });
   it.each([600,6000,600000])('spawns the whole asteroid outside even a %s-unit-wide viewport and aims it inward',width=>{
     const game=createGame(solarSystem);game.bodies[0].position={x:2200,y:0};togglePause(game);

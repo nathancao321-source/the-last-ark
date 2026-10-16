@@ -3,7 +3,7 @@ import { length, sub } from '../physics/vector';
 import { speedLimit } from '../physics/world';
 import type { Trajectory } from '../game/trajectory';
 import type { Camera } from '../camera/camera';
-import { deadZone, isVisible, viewBounds } from '../camera/camera';
+import { isVisible, viewBounds } from '../camera/camera';
 import { edgeMarker, mapPoint, navigationBounds } from '../camera/navigation';
 import { objectivePosition } from '../game/mission';
 import { visibleEntities } from './visibility';
@@ -75,12 +75,6 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     }
   }
   ctx.restore();
-  if(camera.showDeadZone) {
-    const zone=deadZone(camera);ctx.save();ctx.strokeStyle='#94e9dc35';ctx.setLineDash([5,8]);
-    ctx.strokeRect(width/2-zone.x,height/2-zone.y,zone.x*2,zone.y*2);ctx.setLineDash([]);
-    ctx.fillStyle='#94e9dc80';ctx.font='11px system-ui';ctx.textAlign='center';
-    ctx.fillText('镜头缓冲区',width/2,height/2+zone.y+15);ctx.restore();
-  }
   // Navigation and HUD are screen-space, never fed back into simulation.
   const marker = (position: {x:number;y:number}, label: string, color: string, margin = 30, labelOffset = 20) => {
     const edge = edgeMarker(camera, position, ship.position, margin); if (!edge) return;

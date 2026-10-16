@@ -55,8 +55,6 @@ describe('camera and navigation', () => {
   });
 });
 import { followGroup } from '../src/camera/camera';
-import { cameraFocus } from '../src/camera/director';
-import { solarSystem } from '../src/levels/solar-system';
 describe('cooperative automatic framing',()=>{
   const group=(spread:number)=>[{position:{x:0,y:0},velocity:{x:100,y:0},radius:8},{position:{x:spread,y:spread/2},velocity:{x:260,y:0},radius:13},{position:{x:-spread,y:-spread},velocity:{x:0,y:0},radius:13}];
   it('keeps all three participants in frame at any separation, even after resize',()=>{
@@ -72,31 +70,14 @@ describe('cooperative automatic framing',()=>{
     followGroup(camera,bodies,1/60);expect(camera.zoom).toBeGreaterThan(far);expect(camera.zoom).toBeLessThan(0.8);
     for(let i=0;i<1000;i++)followGroup(camera,bodies,1/60);expect(camera.zoom).toBeCloseTo(0.8);expect(bodies).toEqual(before);
   });
-  it('holds still for small motion inside the dead zone and buffers a changed target with continuous velocity',()=>{
-    const c=createCamera({x:0,y:0});
-    const body={position:{x:40,y:10},velocity:{x:0,y:0},radius:8};
-    for(let i=0;i<60;i++)followGroup(c,[body],1/60);
-    expect(c.position).toEqual({x:0,y:0});
-    body.position.x=1000;followGroup(c,[body],1/60);
-    expect(c.position.x).toBeGreaterThan(0);expect(c.position.x).toBeLessThan(10);
-    expect(c.velocity!.x).toBeGreaterThan(0);
-    const previous=c.position.x;followGroup(c,[body],1/60);expect(c.position.x).toBeGreaterThan(previous);
-  });
-  it('focuses nearby Earth, Sun, Pluto and exit without dropping players or altering physics',()=>{
-    for(const id of ['earth','sun','pluto','interstellar']) {
-      const game=createGame(solarSystem),body=game.bodies.find(b=>b.id===id)!;
-      game.bodies[0].position={x:body.position.x,y:body.position.y-200};
-      const before=structuredClone(game),focus=cameraFocus(game)!;
-      expect(focus.position).toEqual(body.position);
-      const camera=createCamera({x:0,y:0});
-      followGroup(camera,[game.bodies[0],...game.players],0,true,focus);
-      expect(camera.showDeadZone).toBe(id==='interstellar');
-      for(const entity of [body,game.bodies[0],...game.players]) {
-        const p=worldToScreen(camera,entity.position);
-        expect(p.x).toBeGreaterThan(0);expect(p.x).toBeLessThan(camera.width);
-        expect(p.y).toBeGreaterThan(0);expect(p.y).toBeLessThan(camera.height);
-      }
-      expect(game).toEqual(before);
-    }
+  it('converges without oscillating when participants remain stationary',()=>{
+    const c=createCamera({x:-1000,y:500}), bodies=group(800);
+    for(const body of bodies)body.velocity={x:0,y:0};
+    for(let i=0;i<1200;i++)followGroup(c,bodies,1/60);
+    const settled=structuredClone(c);
+    for(let i=0;i<600;i++)followGroup(c,bodies,1/60);
+    expect(c.position.x).toBeCloseTo(settled.position.x,9);
+    expect(c.position.y).toBeCloseTo(settled.position.y,9);
+    expect(c.zoom).toBeCloseTo(settled.zoom,9);
   });
 });

@@ -75,7 +75,6 @@ export interface Level {
   mode?: 'mission' | 'exploration';
   shipHealth?: number;
   decorations?: { position: Vec2; radius: number; color: string }[];
-  cameraLandmarks?: { entityId: string; range: number; showDeadZone?: boolean }[];
   waves?: { id: string; bounds: Rect; seed: number; count: number }[];
 }
 export type Phase = 'ready' | 'running' | 'paused' | 'completed' | 'failed';

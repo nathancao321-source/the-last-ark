@@ -17,7 +17,6 @@ import { predictTrajectory } from './game/trajectory';
 import type { Trajectory } from './game/trajectory';
 import { SceneController } from './scenes/controller';
 import { createCamera, followGroup, resizeCamera, setZoom, viewBounds } from './camera/camera';
-import { cameraFocus } from './camera/director';
 import { updateEncounters } from './world/encounters';
 import { scenes as registry } from './scenes/registry';
 import { developmentRegistry } from './debug/config';
@@ -88,7 +87,7 @@ function syncScene(): void {
   mapOpen=false;resumeAfterMap=false;
   mouse.setSuspended(false);
   const ship = scenes.game?.bodies.find(b => b.kind === 'ship');
-  if (ship) followGroup(camera,[ship,...scenes.game!.players],0,true,cameraFocus(scenes.game!));
+  if (ship) followGroup(camera,[ship,...scenes.game!.players],0,true);
   ui.update();
   if (scenes.game) resize();
 }
@@ -115,7 +114,7 @@ function frame(now: number): void {
       prediction = predictTrajectory(game); lastPredictionTime = now; predictionKey = nextKey;
     }
     const ship = game.bodies.find(b => b.kind === 'ship')!;
-    followGroup(camera,[ship,...game.players],seconds,false,cameraFocus(game));
+    followGroup(camera,[ship,...game.players],seconds);
     // Birth is presentation-aware; once born, normal fixed-step physics is camera-independent.
     // Use the exact final view rendered below, after group fit and landmark focus.
     if(!mapOpen&&game.phase==='running')updateEncounters(game,viewBounds(camera));
