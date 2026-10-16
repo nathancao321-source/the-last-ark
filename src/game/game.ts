@@ -33,7 +33,7 @@ export function retryGame(game: GameState): GameState {
   const restored: GameState = game.checkpoint ? structuredClone(game.checkpoint.snapshot) : createGame(game.level);
   restored.phase = 'ready'; restored.players.forEach(p => { p.active = false; }); delete restored.pendingScene;
   if (restored.tutorial) restored.tutorial.acknowledged = false;
-  restored.message = '已恢复检查点 · Space 继续；Shift+R 从头开始';
+  restored.message = '已恢复检查点（保留当时血量）· Space 继续；R 从头开始';
   saveCheckpoint(restored, game.checkpoint?.id ?? 'start');
   return restored;
 }
@@ -96,6 +96,6 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   game.bodies = game.bodies.filter(b => b === ship || capabilities(b).motion !== 'dynamic' || !hits(b, true));
   const checkpoint = evaluateMission(game, previous);
   const lessonCheckpoint = updateTutorial(game, previous, dt, true);
-  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 恢复检查点；Shift+R 重新护航' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
+  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 从头开始；Shift+R 恢复检查点' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
   if (checkpoint || lessonCheckpoint) saveCheckpoint(game, checkpoint ?? lessonCheckpoint!);
 }

@@ -66,7 +66,7 @@ export function updateTutorial(game: GameState, previous: Map<string, Vec2>, dt:
 export function tutorialInstruction(game: GameState): string | undefined {
   const step = currentLesson(game);
   if (!step) return;
-  if (game.phase === 'failed') return game.message + ' 按 R 从当前教学阶段重试；Shift+R 从头开始。';
+  if (game.phase === 'failed') return game.message + ' 按 R 从本关起点重开；Shift+R 从当前教学阶段重试。';
   if (step.condition.type === 'acknowledge') return step.text + ' 按 Space 确认。';
   if (step.condition.type === 'influence' || step.condition.type === 'exit') {
     return step.text + (game.phase === 'running' ? '' : ' 按 Space 发射 / 继续。');

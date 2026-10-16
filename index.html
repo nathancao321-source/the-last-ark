@@ -14,7 +14,7 @@
       <section id="lesson" hidden aria-label="当前教学提示"><div id="lesson-progress" class="sr-only"></div><p id="lesson-text" class="sr-only" role="status" aria-live="polite"></p><button id="skip-lesson" type="button" hidden>跳过当前提示（调试）</button></section>
       <p id="telemetry" role="status" aria-live="off"></p>
       <canvas id="game" width="1100" height="620" tabindex="0" aria-label="双人引力护航游戏。操作方式可为两人独立选择，Space 或手柄 Menu 确认提示及暂停，R 重试。"></canvas>
-      <div id="controls" class="controls"><span><b class="blue">P1 吸引</b> <span id="p1-controls">WASD 移动 · F 开 / 关</span></span><span><b class="gold">P2 排斥</b> <span id="p2-controls">方向键移动 · Enter 开 / 关</span></span><span>Space / 手柄 Menu 确认提示或暂停 · R 检查点 / Shift+R 从头开始 · Esc 关卡选择 · − / + 缩放，0 复位</span></div>
+      <div id="controls" class="controls"><span><b class="blue">P1 吸引</b> <span id="p1-controls">WASD 移动 · F 开 / 关</span></span><span><b class="gold">P2 排斥</b> <span id="p2-controls">方向键移动 · Enter 开 / 关</span></span><span>Space / 手柄 Menu 确认提示或暂停 · R 满血重开 / Shift+R 检查点 · Esc 关卡选择 · − / + 缩放，0 复位</span></div>
       <details id="help" class="hint"><summary>操作与物理说明</summary><p>控制节点会加速移动，松键后柔和制动；技能可在移动中使用。虚线演算未来最多 12 秒，假定释放移动、保持技能开关，并持续飞行（不模拟教学讲解暂停）。红色表示危险，绿色表示抵达目标。暂停也可规划。</p></details>
     </main>
     <script type="module" src="/src/main.ts"></script>

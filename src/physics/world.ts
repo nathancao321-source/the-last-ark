@@ -14,7 +14,7 @@ export const speedLimit = (body: Body): number => Math.min(MAX_SPEED, Math.max(0
 interface Acceleration { total: Vec2; player: Vec2; effectiveField: boolean }
 /** Snapshot all sources first. Separate the player contribution without changing gravity. */
 function accelerations(bodies: Body[], players: Player[], stats: { candidatePairs: number }): Acceleration[] {
-  const gravity = bodies.map(bodyGravity);
+  const gravity = bodies.map(body => bodyGravity(body));
   const sources = new SpatialIndex<number>();
   bodies.forEach((body, i) => {
     if (capabilities(body).gravity && gravity[i].strength > 0) sources.insert(i, circleBounds(body.position, gravity[i].radius));
@@ -31,7 +31,7 @@ function accelerations(bodies: Body[], players: Player[], stats: { candidatePair
     }
     for (const i of body.receivesGravity === false ? [] : sources.query(circleBounds(body.position, 0))) {
       const source = bodies[i];
-      if (source !== body) { stats.candidatePairs++; environment = add(environment, fieldAcceleration(body.position, source.position, gravity[i])); }
+      if (source !== body) { stats.candidatePairs++; environment = add(environment, fieldAcceleration(body.position, source.position, bodyGravity(source, body))); }
     }
     const sum = add(scale(player,body.response),scale(environment,body.gravityResponse ?? body.response));
     const factor = Math.min(1, MAX_ACCELERATION / Math.max(length(sum), 1e-12));

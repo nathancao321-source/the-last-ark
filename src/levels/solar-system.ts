@@ -6,19 +6,22 @@ import { fieldAcceleration } from '../physics/fields';
 import { length } from '../physics/vector';
 import { seededRandom } from '../world/sectors';
 const center={x:900,y:0};
-const sun=createBody({id:'sun',kind:'star',radius:100,position:center,response:0.003,gravityResponse:1,
+const sun=createBody({id:'sun',kind:'star',radius:100,position:center,response:0.0001,gravityResponse:1,
   gravityRadius:6000,gravityStrength:2_400_000,gravitySoftening:100,stabilization:{halfLife:0.9},
   displacementLimit:{center:{...center},radius:60},appearance:{name:'太阳',color:'#ffbe55'},
   stellar:{burnRadius:340,burnPerSecond:80,activationSeconds:3,remnantRadius:32,remnantGravityMultiplier:1.7,remnantResponse:0.35}});
 /** Initial circular speed uses the SAME softened/cutoff solar force as the solver.
  * After creation there is no prescribed orbit or position correction: every body
  * receives local gravity, including mutual planet/ship/asteroid perturbations. */
-function planet(id:string,name:string,x:number,y:number,radius:number,color:string,ring=false,response=0.18):Body {
+function planet(id:string,name:string,x:number,y:number,radius:number,color:string,ring=false):Body {
   const position={x,y},dx=x-center.x,dy=y-center.y,distance=Math.hypot(dx,dy);
   const acceleration=length(fieldAcceleration(position,center,bodyGravity(sun)));
   const speed=Math.sqrt(acceleration*distance);
   return createBody({id,kind:'planet',position,velocity:{x:-dy/distance*speed,y:dx/distance*speed},radius,
-    gravityResponse:1,response,density:3,gravityRadius:Math.max(360,radius*8),
+    // Node coupling is deliberately weak and scales down with volume. This is
+    // independent of natural gravity; small asteroids retain response=1.
+    gravityResponse:1,response:Math.min(0.0125,0.005*(40/radius)**3),density:3,gravityRadius:Math.max(360,radius*8),
+    gravityPeer:{group:'solar-planets',radius:300},
     stabilization:{halfLife:1.2},appearance:{name,color,ring}});
 }
 const planets=[
@@ -26,7 +29,7 @@ const planets=[
   planet('venus','金星',400,200,37,'#d4af78'),
   planet('earth','地球',-80,170,40,'#62a9de'),
   planet('mars','火星',2100,190,31,'#ce8064'),
-  planet('jupiter','木星',2700,-230,82,'#c3a58c',false,0.02),
+  planet('jupiter','木星',2700,-230,82,'#c3a58c'),
   planet('saturn','土星',3150,260,68,'#dfc58f',true),
   planet('uranus','天王星',3550,-200,52,'#84d3d6'),
   planet('neptune','海王星',3950,240,50,'#597ddc'),
@@ -47,7 +50,7 @@ export const solarSystem:Level={
     ...planets,
     ...[[-140,90],[100,-190],[40,250]].map(([x,y],i)=>createBody({id:`belt-rock-${i}`,kind:'asteroid',radius:17+i*3,
       position:{x:2400+x,y},velocity:{x:-8-i*2,y:i%2?4:-4},gravityResponse:1,stabilization:{halfLife:1.1},appearance:{name:'小行星',color:'#929ba6'}})),
-    createBody({id:'interstellar',kind:'wormhole',radius:210,position:{x:5480,y:0},appearance:{name:'星际转移区',color:'#94e9dc'}}),
+    createBody({id:'interstellar',kind:'wormhole',radius:110,position:{x:5480,y:0},appearance:{name:'星际转移区',color:'#94e9dc'}}),
   ],
   waves:[{id:'belt-approach',bounds:{minX:2160,maxX:2560,minY:-650,maxY:650},seed:441,count:2}],
   mission:{objectives:[
@@ -56,7 +59,7 @@ export const solarSystem:Level={
     pass('inner-pass','内行星区域 · 前往火星与小行星带',2150,['sun-pass']),
     pass('belt-pass','小行星带 · 金场可清理来袭碎石',2700,['inner-pass']),
     pass('outer-pass','外行星区域 · 木星、土星、天王星、海王星',4150,['belt-pass']),
-    {id:'transfer',label:'到达星际转移区 · 完成太阳系逃逸',requires:['outer-pass'],target:{entityId:'interstellar'},condition:{type:'near_entity',entityId:'ark',targetId:'interstellar'}},
+    {id:'transfer',label:'星际转移区 · 减速至 ≤ 60 后进入',requires:['outer-pass'],target:{entityId:'interstellar'},condition:{type:'near_entity',entityId:'ark',targetId:'interstellar',maxSpeed:60}},
   ],triggers:['sun-pass','inner-pass','belt-pass','outer-pass'].map(id=>({id:'checkpoint-'+id,
     condition:{type:'objective_complete' as const,objectiveId:id},actions:[{type:'checkpoint' as const,id}]}))},
 };

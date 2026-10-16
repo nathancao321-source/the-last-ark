@@ -97,15 +97,17 @@ export function objectivePosition(game: GameState): Vec2 | undefined {
   return 'position' in target ? target.position : findEntity(game, target.entityId)?.position;
 }
 
-/** A station is a non-solid goal. Excess speed is feedback, never capture or collision. */
+/** Stations and speed-limited transfer gates are non-solid goals, never traps. */
 export function dockingFeedback(game: GameState, previous: Map<string, Vec2>): string | undefined {
   for (const objective of game.level.mission?.objectives ?? []) {
     const condition = objective.condition;
     if (condition.type !== 'near_entity' || condition.maxSpeed === undefined) continue;
     const body = game.bodies.find(b => b.id === condition.entityId);
     const target = game.bodies.find(b => b.id === condition.targetId);
-    if (!body || target?.kind !== 'station' || length(body.velocity) <= condition.maxSpeed) continue;
+    if (!body || !target || !['station','wormhole'].includes(target.kind) || length(body.velocity) <= condition.maxSpeed) continue;
     if (sweptOverlap(previous.get(body.id) ?? body.position, body.position, previous.get(target.id) ?? target.position, target.position, target.radius + body.radius))
-      return `TOO FAST TO DOCK · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再入港`;
+      return target.kind === 'station'
+        ? `TOO FAST TO DOCK · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再入港`
+        : `TOO FAST TO TRANSFER · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再进入`;
   }
 }

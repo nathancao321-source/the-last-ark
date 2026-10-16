@@ -41,6 +41,9 @@ export interface Body extends Entity {
   emitsGravity?: boolean;
   collision?: 'none' | 'hazard' | 'capture';
   gravityRadius?: number;
+  /** Members of the same group interact only within the smaller peer radius.
+   * Other targets (ship, asteroids, stars) retain the source's normal range. */
+  gravityPeer?: { group: string; radius: number };
   gravityStrength?: number;
   gravitySoftening?: number;
   receivesGravity?: boolean;

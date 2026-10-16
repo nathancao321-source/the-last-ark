@@ -13,10 +13,12 @@ export function gravitationalMass(body: Body): number {
  * Source motion comes from the same integrator as the ship, enabling gravity assists.
  * Range/softening/caps remain deliberate gameplay approximations, not real astronomy.
  */
-export function bodyGravity(body: Body): Field {
+export function bodyGravity(body: Body, target?: Body): Field {
+  const radius = body.gravityRadius ?? Math.max(120, body.radius * 330 / REFERENCE_RADIUS);
+  const peers = body.gravityPeer && target?.gravityPeer && body.gravityPeer.group === target.gravityPeer.group;
   return {
     strength: body.gravityStrength ?? 110_000 * gravitationalMass(body) / REFERENCE_VOLUME,
-    radius: body.gravityRadius ?? Math.max(120, body.radius * 330 / REFERENCE_RADIUS),
+    radius: peers ? Math.min(radius, body.gravityPeer!.radius, target!.gravityPeer!.radius) : radius,
     softening: body.gravitySoftening ?? Math.max(24, body.radius * 85 / REFERENCE_RADIUS),
     maxAcceleration: 170,
     polarity: 1,

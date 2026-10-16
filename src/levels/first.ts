@@ -9,7 +9,7 @@ export const firstLevel: Level = {
       condition: { type: 'near_entity', entityId: 'ark', targetId: 'station', maxSpeed: 48, fullContainment: true } }],
     triggers: [{ id: 'after-bypass', condition: { type: 'enter_region', entityId: 'ark',
       region: { shape: 'rect', bounds: { minX: 640, maxX: 700, minY: 100, maxY: 280 } } },
-      actions: [{ type: 'checkpoint', id: 'after-bypass' }, { type: 'hint', text: '已保存绕行检查点 · 制动至 ≤ 48 入港；R 恢复' }] }],
+      actions: [{ type: 'checkpoint', id: 'after-bypass' }, { type: 'hint', text: '已保存绕行检查点 · 制动至 ≤ 48 入港；Shift+R 恢复' }] }],
   },
   players: [
     { id: 'attractor', kind: 'player', position: { x: 350, y: 160 }, radius: 13, speed: 260, acceleration: 650, braking: 260 / 0.6, velocity: { x: 0, y: 0 }, active: false,

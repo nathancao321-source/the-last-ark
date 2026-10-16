@@ -98,7 +98,7 @@ describe('fixed clock and input', () => {
     expect(k.read()).toEqual(createControls({ moveX: 1, moveY: -1, abilityActive: true }, { moveX: -1, moveY: 1, abilityActive: true }));
     k.keyDown('Space'); k.keyDown('Space', true); k.keyDown('Space'); expect(actions).toEqual(['toggle']);
     k.keyUp('Space'); k.keyDown('Space'); expect(actions).toEqual(['toggle', 'toggle']);
-    k.keyDown('KeyR'); expect(actions.at(-1)).toBe('reset');
+    k.keyDown('KeyR'); expect(actions.at(-1)).toBe('restart');
     expect(k.keyDown('KeyZ')).toBe(false); k.clear(); expect(k.read()).toEqual(NO_CONTROLS);
   });
 });

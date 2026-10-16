@@ -20,7 +20,7 @@ export class Keyboard {
       if (code === 'Enter') this.fields[1] = !this.fields[1];
       if (code === 'Space') this.onAction('toggle');
       if (code === 'KeyM') this.onAction('map');
-      if (code === 'KeyR') { this.clear(); this.pressed.add(code); this.onAction(shift ? 'restart' : 'reset'); }
+      if (code === 'KeyR') { this.clear(); this.pressed.add(code); this.onAction(shift ? 'reset' : 'restart'); }
       if (code === 'Escape') this.onAction('title');
       if (code === 'Minus') this.onAction('zoom-out');
       if (code === 'Equal') this.onAction('zoom-in');

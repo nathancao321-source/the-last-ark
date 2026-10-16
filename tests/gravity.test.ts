@@ -21,6 +21,20 @@ function flyby(offset: number, planetSpeed: number) {
 }
 
 describe('volume-derived gravity and orbital integration', () => {
+  it('cuts only same-group planet interactions off at 300 while retaining gravity on ships',()=>{
+    const a=structuredClone(solarSystem.bodies.find(b=>b.id==='jupiter')!);
+    const b=structuredClone(solarSystem.bodies.find(b=>b.id==='saturn')!);
+    a.position={x:0,y:0};b.position={x:400,y:0};a.velocity={x:0,y:0};b.velocity={x:0,y:0};
+    integrate([a,b],[],1/60);
+    expect(a.velocity).toEqual({x:0,y:0});expect(b.velocity).toEqual({x:0,y:0});
+    const ship=createBody({id:'probe',kind:'ship',radius:8,position:{x:400,y:0}});
+    integrate([a,ship],[],1/60);expect(ship.velocity.x).toBeLessThan(0);
+    for(const distance of [299.99,300,300.01]) {
+      const force=length(fieldAcceleration({x:distance,y:0},a.position,bodyGravity(a,b)));
+      expect(force).toBeLessThan(1e-6);
+      if(distance>=300)expect(force).toBe(0);
+    }
+  });
   it.each(solarSystem.bodies.filter(b=>b.kind==='planet').map(b=>b.id))('solar %s attracts the ship and receives its reciprocal gravity without player input',id=>{
     const planet=structuredClone(solarSystem.bodies.find(b=>b.id===id)!);
     const ship=createBody({id:'probe',kind:'ship',radius:8,position:{x:planet.position.x+planet.radius+20,y:planet.position.y}});
@@ -43,7 +57,7 @@ describe('volume-derived gravity and orbital integration', () => {
   });
   it('exchanges real gravity between two planets rather than only affecting the ship',()=>{
     const a=structuredClone(solarSystem.bodies.find(b=>b.id==='earth')!),b=structuredClone(solarSystem.bodies.find(b=>b.id==='jupiter')!);
-    a.position={x:-150,y:0};b.position={x:150,y:0};a.velocity=b.velocity={x:0,y:0};
+    a.position={x:-100,y:0};b.position={x:100,y:0};a.velocity=b.velocity={x:0,y:0};
     integrate([a,b],[],1/60);
     expect(a.velocity.x).toBeGreaterThan(0);expect(b.velocity.x).toBeLessThan(0);
   });
