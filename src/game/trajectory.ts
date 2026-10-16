@@ -14,6 +14,7 @@ export interface Trajectory {
  * Players keep CURRENT toggle states and release movement: existing velocity
  * follows the same assisted braking as live play (no instant forecast freeze).
  * Every celestial body keeps moving and attracting every other eligible body.
+ * Future screen-dependent encounters are excluded until actually spawned.
  */
 export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS): Trajectory {
   const result: Trajectory = { points: [], seconds: 0, outcome: 'horizon' };

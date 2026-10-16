@@ -58,7 +58,7 @@ describe('The Moving World',()=>{
     for(let i=0;i<30 && game.phase==='running';i++)stepGame(game,NO_CONTROLS);
     expect(game.phase).toBe('completed');
   });
-  it('completes the entire prologue through the live wormhole transition, then unlocks only a planned chapter',()=>{
+  it('completes the entire prologue through the live wormhole transition, then continues into Solar Exodus',()=>{
     const c=new SceneController();c.enter('tutorial_part_1');
     const g=c.game!;togglePause(g);togglePause(g);
     positionPlayer(g,0,{x:280,y:230});togglePause(g);
@@ -75,8 +75,8 @@ describe('The Moving World',()=>{
     pilotSecondPart(c.game!); c.step(NO_CONTROLS);
     expect(c.game!.phase).toBe('completed');expect(c.game!.message).toContain('Level 0 Complete');
     expect(c.progress.level0Complete).toBe(true);
-    expect(chapterChoices(c.registry,c.progress).find(choice=>choice.id==='solar_system')).toMatchObject({playable:false,description:'已解锁 · 下一章内容开发中。'});
-    expect(c.enter('solar_system')).toBe(false);expect(scenes.solar_system.level).toBeUndefined();
+    expect(chapterChoices(c.registry,c.progress).find(choice=>choice.id==='solar_system')).toMatchObject({playable:true});
+    expect(c.enter('solar_system')).toBe(true);expect(scenes.solar_system.level?.id).toBe('solar-exodus');
     expect(firstContact.bodies[0].position).toEqual({x:120,y:360});
   });
   it('persists only the chapter unlock, tolerating corrupt or unavailable local storage',()=>{

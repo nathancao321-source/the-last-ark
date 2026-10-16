@@ -10,12 +10,15 @@ import { TutorialOverlay } from './render/tutorial-overlay';
 import { currentLesson } from './game/tutorial';
 import { loadProgress, storeProgress } from './game/progress';
 import { render, telemetry } from './render/canvas';
+import { renderStarMap } from './render/star-map';
 import { mountSceneUI } from './render/scene-ui';
 import type { SceneId } from './scenes/types';
 import { predictTrajectory } from './game/trajectory';
 import type { Trajectory } from './game/trajectory';
 import { SceneController } from './scenes/controller';
-import { createCamera, follow, resizeCamera, setZoom } from './camera/camera';
+import { createCamera, followGroup, resizeCamera, setZoom, viewBounds } from './camera/camera';
+import { cameraFocus } from './camera/director';
+import { updateEncounters } from './world/encounters';
 import { scenes as registry } from './scenes/registry';
 import { developmentRegistry } from './debug/config';
 import { movementTelemetry } from './debug/telemetry';
@@ -40,14 +43,25 @@ let lastPredictionTime = -Infinity;
 let predictionKey = '';
 let revision = -1;
 const overlay = new TutorialOverlay();
-const toggle = () => { if (!overlay.dismiss()) scenes.toggle(); };
+let mapOpen=false, resumeAfterMap=false;
+const mapButton=document.querySelector<HTMLButtonElement>('#star-map')!;
+function toggleMap():void {
+  if(!scenes.game)return;
+  if(!mapOpen){resumeAfterMap=scenes.game.phase==='running';pause(scenes.game);inputs.releaseMovement();}
+  else if(resumeAfterMap&&scenes.game.phase==='paused')scenes.toggle();
+  mapOpen=!mapOpen;clock.reset();canvas.focus();
+  mouse.setSuspended(mapOpen);
+}
+const toggle = () => { if(mapOpen)toggleMap();else if (!overlay.dismiss()) scenes.toggle(); };
+mapButton.addEventListener('click',toggleMap);
 const keyboard = new Keyboard(action => {
   if (action === 'toggle') toggle();
+  if (action === 'map') toggleMap();
   if (action === 'reset' || action === 'restart') scenes.retry(action === 'restart');
-  if (action === 'title') scenes.enter('title');
+  if (action === 'title') {if(mapOpen)toggleMap();else scenes.enter('title');}
   if (action === 'blur') { inputs.releaseMovement(); if (scenes.game) pause(scenes.game); }
-  if (action === 'zoom-in') setZoom(camera, camera.zoom * 1.2);
-  if (action === 'zoom-out') setZoom(camera, camera.zoom / 1.2);
+  if (action === 'zoom-in') setZoom(camera, (camera.preferredZoom??0.8) * 1.2);
+  if (action === 'zoom-out') setZoom(camera, (camera.preferredZoom??0.8) / 1.2);
   if (action === 'zoom-reset') setZoom(camera, 0.8);
   lastPredictionTime = -Infinity; clock.reset();
 });
@@ -71,8 +85,10 @@ const observer = new ResizeObserver(resize); observer.observe(canvas); resize();
 function syncScene(): void {
   if (revision === scenes.revision) return;
   revision = scenes.revision; inputs.reset(); keyboard.clear(); clock.reset(); lastPredictionTime = -Infinity;
+  mapOpen=false;resumeAfterMap=false;
+  mouse.setSuspended(false);
   const ship = scenes.game?.bodies.find(b => b.kind === 'ship');
-  if (ship) follow(camera,ship.position,ship.velocity,0,true);
+  if (ship) followGroup(camera,[ship,...scenes.game!.players],0,true,cameraFocus(scenes.game!));
   ui.update();
   if (scenes.game) resize();
 }
@@ -85,11 +101,12 @@ function frame(now: number): void {
   const lessonKey = lesson && !scenes.game!.tutorial!.acknowledged && scenes.game!.phase !== 'failed' && scenes.game!.phase !== 'completed'
     ? scenes.scene + ':' + scenes.revision + ':' + lesson.id : undefined;
   overlay.sync(lessonKey,lesson ? devices.text(lesson.title + '\n' + lesson.text) : '');
-  if (overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
-  clock.advance(seconds, () => { scenes.step(inputs.read()); syncScene(); });
+  if (!mapOpen && overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
+  clock.advance(seconds, () => { const intent=inputs.read();if(!mapOpen)scenes.step(intent); syncScene(); });
   const game = scenes.game;
   ui.update();
   devices.update();
+  mapButton.hidden=!game;mapButton.textContent=mapOpen?'关闭星图 · M':'全局星图 · M';
   if (scenes.progress.level0Complete !== savedCompletion) { storeProgress(progressStorage,scenes.progress); savedCompletion=scenes.progress.level0Complete; }
   ctx!.setTransform(dpr,0,0,dpr,0,0);
   if (game) {
@@ -98,9 +115,13 @@ function frame(now: number): void {
       prediction = predictTrajectory(game); lastPredictionTime = now; predictionKey = nextKey;
     }
     const ship = game.bodies.find(b => b.kind === 'ship')!;
-    follow(camera,ship.position,ship.velocity,seconds);
+    followGroup(camera,[ship,...game.players],seconds,false,cameraFocus(game));
+    // Birth is presentation-aware; once born, normal fixed-step physics is camera-independent.
+    // Use the exact final view rendered below, after group fit and landmark focus.
+    if(!mapOpen&&game.phase==='running')updateEncounters(game,viewBounds(camera));
     render(ctx!,game,prediction,camera); status.textContent = telemetry(game);
     overlay.draw(ctx!,camera.width,camera.height);
+    if(mapOpen)renderStarMap(ctx!,game,camera.width,camera.height);
     if (debugView) debugView.textContent = movementTelemetry(game);
     canvas.dataset.phase = game.phase; canvas.dataset.fields = game.players.map(p => p.active ? 'on' : 'off').join(',');
     canvas.dataset.prediction = prediction.outcome;
@@ -114,7 +135,8 @@ function frame(now: number): void {
     if (debugView) debugView.textContent = '开发模式：进入试玩，或使用 ?dev=1&scene=coop_test';
   }
   canvas.dataset.scene = scenes.scene; canvas.dataset.zoom = camera.zoom.toFixed(2);
+  canvas.dataset.map=String(mapOpen);
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
-if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
+if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); mapButton.removeEventListener('click',toggleMap); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });

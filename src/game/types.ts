@@ -11,6 +11,12 @@ export interface Entity {
   position: Vec2;
   radius: number;
   layer?: 'world' | 'background' | 'hidden';
+  appearance?: { name: string; color: string; ring?: boolean };
+}
+export interface Orbit { center: Vec2; radius: number; phase: number; angularSpeed: number; maxDrift?: number }
+export interface StellarConfig {
+  burnRadius: number; burnPerSecond: number; activationSeconds: number; blastRadius: number;
+  remnantRadius: number; remnantGravityMultiplier: number; remnantResponse: number;
 }
 export interface StabilizationConfig {
   halfLife: number;
@@ -34,6 +40,14 @@ export interface Body extends Entity {
   emitsGravity?: boolean;
   collision?: 'none' | 'hazard' | 'capture';
   gravityRadius?: number;
+  gravityStrength?: number;
+  gravitySoftening?: number;
+  receivesGravity?: boolean;
+  orbit?: Orbit;
+  orbitTime?: number;
+  displacementLimit?: { center: Vec2; radius: number };
+  stellar?: StellarConfig;
+  stellarState?: { status: 'star' | 'neutron' | 'exploded'; blueSeconds: number; goldSeconds: number };
   stabilization?: StabilizationConfig;
   stabilizationState?: StabilizationState;
 }
@@ -53,11 +67,16 @@ export interface Level {
   /** Explicit optional mission boundary, independent of the camera. */
   missionBounds?: Rect;
   mission?: Mission;
+  initialObjectives?: string[];
   tutorial?: TutorialConfig;
   seed?: number;
   stabilizationEnabled?: boolean;
   scoring?: { threeStarsSeconds: number; twoStarsSeconds: number };
   mode?: 'mission' | 'exploration';
+  shipHealth?: number;
+  decorations?: { position: Vec2; radius: number; color: string }[];
+  cameraLandmarks?: { entityId: string; range: number; showDeadZone?: boolean }[];
+  waves?: { id: string; bounds: Rect; seed: number; count: number }[];
 }
 export type Phase = 'ready' | 'running' | 'paused' | 'completed' | 'failed';
 export interface GameState {
@@ -65,6 +84,9 @@ export interface GameState {
   mission: MissionState;
   distance: number;
   tutorial?: TutorialState;
+  health?: { current: number; max: number };
+  encounters?: string[];
+  hazardMessage?: string;
   pendingScene?: SceneId;
   checkpoint?: { id: string; snapshot: Omit<GameState, 'checkpoint'> };
 }

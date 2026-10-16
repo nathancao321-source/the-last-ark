@@ -31,10 +31,10 @@ export function mountDeviceUI(inputs: PlayerInputs, keyboard: Keyboard, mouse: M
       select.forEach((element,i)=> {
         for(const option of element.options) option.disabled=option.value!=='keyboard' && option.value===selected[1-i];
         const choice=selected[i];
-        const message=choice==='keyboard' ? (i===0?'WASD 移动 / F 技能':'方向键移动 / Enter 技能') : choice==='mouse' ? '地图内移动鼠标追踪 / 左键切换技能' : pads[choice==='xbox0'?0:1].status;
+        const message=choice==='keyboard' ? (i===0?'WASD 移动 / F 技能':'方向键移动 / Enter 技能') : choice==='mouse' ? `持续追踪屏幕鼠标 / 左键技能 / 右键切换制动 · ${mouse.isBraking?'已制动':'追踪中'}` : pads[choice==='xbox0'?0:1].status;
         if(status[i].textContent!==message)status[i].textContent=message;
         const help=document.querySelector<HTMLElement>(`#p${i+1}-controls`)!;
-        const controls=choice==='keyboard' ? message : choice==='mouse' ? '移动鼠标追踪 · 左键开 / 关' : '左摇杆移动 · A 开 / 关';
+        const controls=choice==='keyboard' ? message : choice==='mouse' ? '鼠标追踪 · 左键技能 · 右键制动' : '左摇杆移动 · A 开 / 关';
         if(help.textContent!==controls)help.textContent=controls;
       });
     },

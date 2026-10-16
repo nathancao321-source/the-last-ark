@@ -1,5 +1,6 @@
 import type { SceneRegistry } from '../scenes/types';
 import { cooperationLevel } from '../levels/cooperation';
+import { solarSections } from '../levels/solar-system';
 /** Called ONLY in Vite development mode. Values become level config, so forecasts
  * and checkpoints use exactly the same settings. No runtime physics monkey patching.
  */
@@ -7,6 +8,13 @@ export function developmentRegistry(base: SceneRegistry, search: string): SceneR
   const params = new URLSearchParams(search), result = structuredClone(base);
   if (params.get('dev') !== '1') return result;
   result.coop_test = {id:'coop_test',name:'开发合作测试',status:'available',level:structuredClone(cooperationLevel)};
+  const section=params.get('section');
+  if(section && Object.hasOwn(solarSections,section) && result.solar_system.level) {
+    const preset=solarSections[section as keyof typeof solarSections],level=result.solar_system.level;
+    level.bodies.find(b=>b.kind==='ship')!.position={...preset.position};
+    level.initialObjectives=[...preset.completed];
+    level.players.forEach((p,i)=>{p.position={x:preset.position.x+(i?-80:150),y:preset.position.y+(i?150:-150)};});
+  }
   const number = (key: string, min: number, max: number): number | undefined => {
     const raw=params.get(key);if(raw===null || raw.trim()==='') return;
     const value=Number(raw);return Number.isFinite(value) && value>=min && value<=max ? value : undefined;

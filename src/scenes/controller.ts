@@ -30,8 +30,9 @@ export class SceneController {
     stepGame(this.game, input);
     if (this.scene === 'tutorial_part_2' && this.game.phase === 'completed') {
       this.progress.level0Complete = true;
-      this.game.message = 'Level 0 Complete · 下一章已解锁（内容开发中）';
+      this.game.message = 'Level 0 Complete · 下一章已解锁：Solar Exodus';
     }
+    if(this.scene==='solar_system' && this.game.phase==='completed')this.game.message='Level 1 Complete · 已离开太阳系';
     const next = this.game.pendingScene;
     if (next) {
       const arrival = { from: this.scene, seconds: this.game.elapsed, distance: this.game.distance };

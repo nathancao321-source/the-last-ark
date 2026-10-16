@@ -7,6 +7,7 @@ import { capabilities } from '../game/entities';
 import { SpatialIndex } from '../world/spatial-index';
 import { circleBounds } from '../world/geometry';
 import { stabilize } from './stabilization';
+import { drift, constrainDisplacement } from './orbits';
 export const MAX_ACCELERATION = 170;
 export const MAX_SPEED = 240;
 export const speedLimit = (body: Body): number => Math.min(MAX_SPEED, Math.max(0, body.maxSpeed ?? MAX_SPEED));
@@ -28,7 +29,7 @@ function accelerations(bodies: Body[], players: Player[], stats: { candidatePair
       if (length(acceleration) * body.response > (body.stabilization?.fieldEpsilon ?? 1e-4)) effectiveField = true;
       player = add(player, acceleration);
     }
-    for (const i of sources.query(circleBounds(body.position, 0))) {
+    for (const i of body.receivesGravity === false ? [] : sources.query(circleBounds(body.position, 0))) {
       const source = bodies[i];
       if (source !== body) { stats.candidatePairs++; environment = add(environment, fieldAcceleration(body.position, source.position, gravity[i])); }
     }
@@ -59,7 +60,7 @@ export function integrate(bodies: Body[], players: Player[], dt: number, stabili
   bodies.forEach((body, i) => {
     if (capabilities(body).motion === 'static') return;
     kick(body,before[i],dt/2);
-    body.position = add(body.position, scale(body.velocity, dt));
+    drift(body,dt);
   });
   const after = accelerations(bodies, players, stats);
   bodies.forEach((body, i) => {
@@ -70,6 +71,7 @@ export function integrate(bodies: Body[], players: Player[], dt: number, stabili
     const factor = Math.min(1,speedLimit(body)/Math.max(length(body.velocity),1e-12));
     body.velocity = limit(body.velocity,speedLimit(body));
     if (body.stabilizationState) body.stabilizationState.playerVelocity = scale(body.stabilizationState.playerVelocity,factor);
+    constrainDisplacement(body);
   });
   return stats;
 }

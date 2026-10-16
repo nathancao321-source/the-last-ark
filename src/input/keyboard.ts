@@ -1,11 +1,11 @@
 import type { Controls, PlayerControlIntent, PlayerIndex } from './intent';
 import type { PlayerInputSource } from './sources';
-const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', 'KeyR', 'Escape', 'Minus', 'Equal', 'Digit0']);
+const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyM', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', 'KeyR', 'Escape', 'Minus', 'Equal', 'Digit0']);
 const CHANNEL_KEYS = [
   ['KeyD', 'KeyA', 'KeyS', 'KeyW', 'KeyF'],
   ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Enter'],
 ] as const;
-type Action = 'toggle' | 'reset' | 'restart' | 'blur' | 'title' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
+type Action = 'toggle' | 'map' | 'reset' | 'restart' | 'blur' | 'title' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
 export class Keyboard {
   readonly pressed = new Set<string>();
   private fields: [boolean, boolean] = [false, false];
@@ -19,6 +19,7 @@ export class Keyboard {
       if (code === 'KeyF') this.fields[0] = !this.fields[0];
       if (code === 'Enter') this.fields[1] = !this.fields[1];
       if (code === 'Space') this.onAction('toggle');
+      if (code === 'KeyM') this.onAction('map');
       if (code === 'KeyR') { this.clear(); this.pressed.add(code); this.onAction(shift ? 'restart' : 'reset'); }
       if (code === 'Escape') this.onAction('title');
       if (code === 'Minus') this.onAction('zoom-out');

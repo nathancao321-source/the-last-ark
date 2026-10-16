@@ -5,7 +5,7 @@ export interface PlayerControlIntent {
   readonly moveX: number;
   readonly moveY: number;
   readonly abilityActive: boolean;
-  /** A latched WORLD point, never a screen point reprojected every simulation step.
+  /** A WORLD point snapshot. Sources decide whether to latch it or refresh it from a screen pointer.
    * Nonzero movement axes take precedence over this optional target. */
   readonly targetWorldPosition?: Readonly<Vec2>;
 }

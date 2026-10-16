@@ -8,6 +8,7 @@ import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback }
 import { SpatialIndex } from '../world/spatial-index';
 import { contains, sweptBounds } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
+import { updateStellar } from './stellar';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
   const { checkpoint: _previous, ...state } = game;
@@ -23,6 +24,8 @@ export function createGame(level: Level): GameState {
   const game: GameState = { level: config, bodies: structuredClone(config.bodies), players: structuredClone(config.players), phase: 'ready', elapsed: 0,
     message: '准备就绪 · Space 发射；可先调整玩家位置', mission: emptyMissionState(), distance: 0 };
   initializeTutorial(game);
+  game.mission.completedObjectives=[...(config.initialObjectives ?? [])];
+  if(config.shipHealth)game.health={current:config.shipHealth,max:config.shipHealth};
   saveCheckpoint(game, 'start');
   return game;
 }
@@ -73,6 +76,8 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   const ship = game.bodies.find(b => b.kind === 'ship');
   if (!ship) { lose(game, '关卡缺少方舟'); return; }
   game.distance += length(sub(ship.position, previous.get(ship.id)!));
+  const stellarFailure=updateStellar(game,previous,dt);
+  if(stellarFailure){lose(game,stellarFailure);return;}
   const hazards = new SpatialIndex<typeof ship>();
   const dangerRadius = (b: typeof ship) => capabilities(b).collision === 'capture' ? b.captureRadius ?? b.radius : b.radius;
   for (const body of game.bodies) if (body !== ship && capabilities(body).collision !== 'none') {
@@ -91,6 +96,6 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   game.bodies = game.bodies.filter(b => b === ship || capabilities(b).motion !== 'dynamic' || !hits(b, true));
   const checkpoint = evaluateMission(game, previous);
   const lessonCheckpoint = updateTutorial(game, previous, dt, true);
-  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 恢复检查点；Shift+R 重新护航' : dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
+  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 恢复检查点；Shift+R 重新护航' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
   if (checkpoint || lessonCheckpoint) saveCheckpoint(game, checkpoint ?? lessonCheckpoint!);
 }

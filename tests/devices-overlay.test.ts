@@ -13,7 +13,7 @@ const pad = (): PadState => ({connected:true,mapping:'standard',axes:[0,0],butto
 describe('real Gamepad adapter contract (synthetic standard Xbox reports)',()=>{
   it('applies a radial deadzone and preserves analog magnitude',()=>{
     expect(stickIntent(0.1,-0.1)).toEqual({moveX:0,moveY:0});
-    expect(stickIntent(0.59,0).moveX).toBeCloseTo(0.5);
+    expect(stickIntent(0.625,0).moveX).toBeCloseTo(0.5);
     const diagonal=stickIntent(1,1);expect(Math.hypot(diagonal.moveX,diagonal.moveY)).toBeCloseTo(1);
     expect(stickIntent(NaN,Infinity)).toEqual({moveX:0,moveY:0});
   });
@@ -75,12 +75,24 @@ describe('mouse event adapter',()=>{
     const event=(type:string,x:number,y:number,button=0)=>{const e=new Event(type);Object.assign(e,{clientX:x,clientY:y,button,pointerType:'mouse'});canvas.dispatchEvent(e);};
     return {mouse,camera,detach,event};
   }
-  it('uses pointer events to latch a world target, never reprojects unchanged client coordinates',()=>{
+  it('reprojects a stationary pointer after camera movement without another pointer event',()=>{
     const {mouse,camera,detach,event}=fixture();event('pointermove',750,310);
     const target=mouse.read().targetWorldPosition;expect(target).toEqual({x:250,y:0});
-    follow(camera,{x:2000,y:1000},{x:100,y:0},1,true);event('pointermove',750,310);
-    expect(mouse.read().targetWorldPosition).toEqual(target);
+    follow(camera,{x:2000,y:1000},{x:100,y:0},1,true);
+    expect(mouse.read().targetWorldPosition).toEqual({x:2315,y:1000});
     event('pointermove',751,310);expect(mouse.read().targetWorldPosition).not.toEqual(target);detach();
+  });
+  it('right click latches braking across release, pointer and camera motion; next click resumes',()=>{
+    const {mouse,camera,detach,event}=fixture(),game=createGame(firstContact);
+    event('pointerdown',950,310);
+    const input=()=>({players:[mouse.read(),{moveX:0,moveY:0,abilityActive:false}] as const});
+    for(let i=0;i<30;i++)stepGame(game,input());
+    event('pointerdown',950,310,2);follow(camera,{x:4000,y:0},{x:0,y:0},1,true);
+    event('pointerup',950,310,2);event('pointermove',960,320);
+    expect(mouse.read().targetWorldPosition).toBeUndefined();expect(mouse.read().abilityActive).toBe(true);
+    for(let i=0;i<90;i++)stepGame(game,input());
+    expect(Math.hypot(game.players[0].velocity.x,game.players[0].velocity.y)).toBe(0);
+    event('pointerdown',950,310,2);expect(mouse.read().targetWorldPosition!.x).toBeGreaterThan(4000);detach();
   });
   it('toggles only left clicks on the assigned pointer and resets on unassignment',()=>{
     const {mouse,detach,event}=fixture();event('pointerdown',750,310,2);expect(mouse.read().abilityActive).toBe(false);
@@ -113,5 +125,22 @@ describe('on-map teaching fade',()=>{
     const alpha=overlay.alpha;overlay.sync('scene:1:move','左摇杆');expect(overlay.text).toBe('左摇杆');expect(overlay.alpha).toBe(alpha);
     overlay.sync('scene:2:move','retry');expect(overlay.alpha).toBe(0);expect(overlay.update(NaN)).toBeUndefined();
     overlay.sync(undefined);expect(overlay.dismiss()).toBe(false);
+  });
+});
+
+// Regressions for actual controller release and noisy return-to-center reports.
+describe('Xbox release drift regression',()=>{
+  it('settles after release with drift and remains still for ten seconds while ability stays enabled',()=>{
+    const report=pad(),xbox=new XboxInput(0,()=>[report],()=>true,()=>{}),game=createGame(firstContact);
+    xbox.read();report.axes=[1,0];report.buttons[0].pressed=true;
+    const input=()=>({players:[xbox.read(),{moveX:0,moveY:0,abilityActive:false}] as const});
+    for(let i=0;i<90;i++)stepGame(game,input());
+    report.axes=[0.12,-0.17];report.buttons[0].pressed=false;
+    for(let i=0;i<40;i++)stepGame(game,input());
+    expect(game.players[0].velocity).toEqual({x:0,y:0});const stopped={...game.players[0].position};
+    for(let i=0;i<600;i++){report.axes=[0.19*Math.sin(i),0.19*Math.cos(i)];stepGame(game,input());}
+    expect(game.players[0].position).toEqual(stopped);expect(game.players[0].active).toBe(true);
+    report.axes=[0.29,0];expect(xbox.read().moveX).toBe(0);
+    report.axes=[0.8,0];expect(xbox.read().moveX).toBeGreaterThan(0);
   });
 });

@@ -15,9 +15,9 @@ export function gravitationalMass(body: Body): number {
  */
 export function bodyGravity(body: Body): Field {
   return {
-    strength: 110_000 * gravitationalMass(body) / REFERENCE_VOLUME,
+    strength: body.gravityStrength ?? 110_000 * gravitationalMass(body) / REFERENCE_VOLUME,
     radius: body.gravityRadius ?? Math.max(120, body.radius * 330 / REFERENCE_RADIUS),
-    softening: Math.max(24, body.radius * 85 / REFERENCE_RADIUS),
+    softening: body.gravitySoftening ?? Math.max(24, body.radius * 85 / REFERENCE_RADIUS),
     maxAcceleration: 170,
     polarity: 1,
   };

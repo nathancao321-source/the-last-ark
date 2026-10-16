@@ -9,7 +9,7 @@ export function chapterChoices(registry: SceneRegistry, progress: CampaignProgre
   return CHAPTERS.filter(id => id !== 'coop_test' || registry[id].status === 'available').map(id => {
     const scene = registry[id];
     return { id, name: scene.name, playable: scene.status === 'available' && !!scene.level,
-      description: id === 'solar_system' && progress.level0Complete ? '已解锁 · 下一章内容开发中。' : scene.description ?? '后续内容，尚未制作。' };
+      description: id === 'solar_system' && progress.level0Complete ? '已解锁 · '+scene.description : scene.description ?? '后续内容，尚未制作。' };
   });
 }
 
@@ -17,6 +17,7 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
   const element = <T extends HTMLElement>(id: string) => document.querySelector<T>('#' + id)!;
   const menu = element('level-menu'), cards = element('level-cards');
   const name = element('scene-name'), back = element<HTMLButtonElement>('back-menu');
+  const next=element<HTMLButtonElement>('next-chapter');
   const lesson = element('lesson'), progress = element('lesson-progress'), instruction = element('lesson-text');
   const skipButton = element<HTMLButtonElement>('skip-lesson'), canvas = element('game');
   const controls = element('controls'), help = element('help');
@@ -32,14 +33,16 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
     click(button, () => enter(choice.id));
   }
   click(back, () => enter('title')); click(skipButton, skip);
+  click(next,()=>enter('solar_system'));
   const text = (node: HTMLElement, value: string) => { if (node.textContent !== value) node.textContent = value; };
   return {
     update() {
       const game = controller.game, step = game && currentLesson(game);
       const solar = cards.querySelector('[data-scene="solar_system"] span');
-      if (solar && controller.progress.level0Complete && solar.textContent !== '已解锁 · 下一章内容开发中。') solar.textContent = '已解锁 · 下一章内容开发中。';
+      if (solar && controller.progress.level0Complete) text(solar as HTMLElement,'已解锁 · '+controller.registry.solar_system.description);
       text(name, controller.registry[controller.scene].name);
       menu.hidden = controller.scene !== 'title'; back.hidden = controller.scene === 'title';
+      next.hidden=!(controller.scene==='tutorial_part_2'&&game?.phase==='completed');
       canvas.hidden = !game; controls.hidden = !game; help.hidden = !game;
       lesson.hidden = !step;
       skipButton.hidden = !debug || !step || step.condition.type === 'exit' || game?.phase === 'failed' || game?.phase === 'completed';

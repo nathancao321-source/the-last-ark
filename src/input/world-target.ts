@@ -4,10 +4,9 @@ import type { Vec2 } from '../physics/vector';
 
 export interface CanvasBounds { left: number; top: number; width: number; height: number }
 
-/** Future pointer adapters call capture ONLY on a deliberate pointer position event.
- * Store the world point, not the camera or client coordinates. Following/zoom/resize
- * therefore cannot turn a stationary pointer into an implicit ship-follow command.
- * This helper does not install mouse handlers or enable a mouse control mode. */
+/** Pure world-point snapshot. Sources choose when to capture: MouseInput now
+ * refreshes every fixed step for screen tracking; latched sources may capture once.
+ * This helper itself neither retains a camera nor installs event handlers. */
 export class WorldTarget {
   private target?: Vec2;
   capture(client: Readonly<Vec2>, bounds: CanvasBounds, camera: Camera): void {
