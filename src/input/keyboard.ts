@@ -46,8 +46,9 @@ export class Keyboard {
   source(index: PlayerIndex): PlayerInputSource { return this.channels[index]; }
   read(): Controls { return { players: [this.readPlayer(0), this.readPlayer(1)] }; }
   attach(target: Window): () => void {
-    const down = (event: KeyboardEvent) => { if (this.keyDown(event.code, event.repeat, event.shiftKey)) event.preventDefault(); };
-    const up = (event: KeyboardEvent) => { if (this.keyUp(event.code)) event.preventDefault(); };
+    const isControl = (event: KeyboardEvent) => event.target instanceof Element && !!event.target.closest('button, input, select, textarea, summary');
+    const down = (event: KeyboardEvent) => { if (!isControl(event) && this.keyDown(event.code, event.repeat, event.shiftKey)) event.preventDefault(); };
+    const up = (event: KeyboardEvent) => { const handled = this.keyUp(event.code); if (handled && !isControl(event)) event.preventDefault(); };
     const blur = () => { this.releaseKeys(); this.onAction('blur'); };
     const visibility = () => { if (target.document.hidden) blur(); };
     target.addEventListener('keydown', down); target.addEventListener('keyup', up); target.addEventListener('blur', blur); target.document.addEventListener('visibilitychange', visibility);

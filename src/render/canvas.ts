@@ -19,14 +19,6 @@ export function telemetry(game: GameState): string {
 function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, fill = true): void {
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.strokeStyle = color; fill ? ctx.fill() : ctx.stroke();
 }
-export function renderTitle(ctx: CanvasRenderingContext2D, camera: Camera): void {
-  ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, camera.width, camera.height);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#e5eaf4'; ctx.font = '26px system-ui'; ctx.fillText('THE LAST ARK', camera.width / 2, camera.height / 2 - 48);
-  ctx.font = '16px system-ui'; ctx.fillText('Space / 点击上方按钮 · 进入原试玩关', camera.width / 2, camera.height / 2);
-  ctx.font = '13px system-ui'; ctx.fillStyle = '#92a0b3';
-  ctx.fillText('教学 / Solar Exodus / Beyond the Horizon / Endless', camera.width / 2, camera.height / 2 + 48);
-  ctx.fillText('后续场景规划中，本次仅开放原试玩关', camera.width / 2, camera.height / 2 + 76);
-}
 export function render(ctx: CanvasRenderingContext2D, game: GameState, trajectory: Trajectory, camera: Camera): void {
   const { width, height } = camera;
   const ship = game.bodies.find(b => b.kind === 'ship')!;
@@ -39,7 +31,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff70' : '#e9bd4870', false);
   }
   if (trajectory.points.length > 1) {
-    const color = trajectory.outcome === 'failed' ? '#ed9b9b' : trajectory.outcome === 'completed' ? '#64d98b' : '#b5c8e0';
+    const color = trajectory.outcome === 'failed' ? '#ed9b9b' : trajectory.outcome === 'completed' || trajectory.outcome === 'transition' ? '#64d98b' : '#b5c8e0';
     ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.5 / camera.zoom; ctx.setLineDash([5 / camera.zoom, 6 / camera.zoom]);
     ctx.beginPath(); ctx.moveTo(trajectory.points[0].x, trajectory.points[0].y);
     for (const point of trajectory.points.slice(1)) ctx.lineTo(point.x, point.y);
@@ -64,7 +56,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     const i = player.id === 'attractor' ? 0 : 1;
     circle(ctx, player.position.x, player.position.y, player.radius, i === 0 ? '#409eff' : '#e9bd48');
     ctx.fillStyle = '#e5eaf4'; ctx.font = '14px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText((i === 0 ? 'P1 [F]' : 'P2 [Enter]') + (player.active ? ' 开' : ' 关'), player.position.x, player.position.y - 23);
+    ctx.fillText((i === 0 ? 'P1 吸引' : 'P2 排斥') + (player.active ? ' 开' : ' 关'), player.position.x, player.position.y - 23);
     if (game.phase === 'paused' || game.phase === 'ready') {
       ctx.font = '12px system-ui'; ctx.fillText('(' + player.position.x.toFixed(0) + ', ' + player.position.y.toFixed(0) + ')', player.position.x, player.position.y + 30);
     }
@@ -94,7 +86,12 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   }
   if (target) { const p = mapPoint(target,bounds,panel); circle(ctx,p.x,p.y,4,'#64d98b',false); }
   ctx.textAlign = 'left'; ctx.font = '12px system-ui'; ctx.fillStyle = '#aab8ca'; ctx.fillText('导航 · 当前已载入区域', panel.minX, panel.minY-7);
-  ctx.fillStyle = game.phase === 'failed' ? '#ff9a9a' : '#c4cede'; ctx.font = '14px system-ui'; ctx.fillText(game.message, 16, 25, width-32);
+  const feedback = game.phase === 'failed' || game.phase === 'completed' || game.message.startsWith('TOO FAST');
+  ctx.fillStyle = game.phase === 'failed' || game.message.startsWith('TOO FAST') ? '#ff9a9a' : '#c4cede'; ctx.font = '14px system-ui'; ctx.fillText(game.tutorial && !feedback ? STATUS[game.phase] + ' · ' + game.level.name : game.message, 16, 25, width-32);
+  if (game.phase === 'completed' && game.level.id === 'moving-world') {
+    ctx.fillStyle='#64d98b';ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText('Level 0 Complete',width/2,height/2-20);
+    ctx.font='15px system-ui';ctx.fillText('Solar Exodus 已解锁 · 内容开发中',width/2,height/2+16);ctx.textAlign='left';
+  }
   ctx.fillStyle = '#92a0b3'; ctx.font = '12px system-ui';
   const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全入港', transition: '场景出口' }[trajectory.outcome];
   ctx.fillText('预测 ' + trajectory.seconds.toFixed(1) + ' s · ' + outcome + ' · 缩放 ' + camera.zoom.toFixed(2) + (target ? ' · 目标距离 ' + length(sub(target,ship.position)).toFixed(0) : ''),16,46);

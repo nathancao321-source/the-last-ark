@@ -7,11 +7,15 @@
   </head>
   <body>
     <main>
-      <header><h1>THE LAST ARK <small>最后的方舟 · 世界架构原型</small></h1><span>双人同屏 / 共享键盘</span></header>
+      <header><h1>THE LAST ARK <small>最后的方舟</small></h1><span>双人同屏 / 键盘 · 鼠标 · Xbox</span></header>
+      <nav class="scene-nav" aria-label="当前章节"><strong id="scene-name"></strong><button id="back-menu" type="button" hidden>关卡选择 · Esc</button></nav>
+      <details id="device-settings"><summary>操作方式 · 键盘 / 鼠标 / Xbox</summary><div class="device-grid"><label>P1 蓝色节点 <select id="p1-device" aria-label="P1 操作方式"></select><small id="p1-device-status"></small></label><label>P2 金色节点 <select id="p2-device" aria-label="P2 操作方式"></select><small id="p2-device-status"></small></label></div></details>
+      <section id="level-menu" aria-label="关卡选择"><h2>选择关卡</h2><p class="hint">第一次来？从 First Contact 开始。也可以返回原试玩练习。</p><div id="level-cards"></div></section>
+      <section id="lesson" hidden aria-label="当前教学提示"><div id="lesson-progress" class="sr-only"></div><p id="lesson-text" class="sr-only" role="status" aria-live="polite"></p><button id="skip-lesson" type="button" hidden>跳过当前提示（调试）</button></section>
       <p id="telemetry" role="status" aria-live="off"></p>
-      <button id="start" type="button">进入原试玩关</button><canvas id="game" width="1100" height="620" tabindex="0" aria-label="双人引力护航游戏。WASD 和方向键移动，F 切换吸引，Enter 切换排斥，空格开始或暂停，R 重试。"></canvas>
-      <div class="controls"><span><b class="blue">P1 吸引</b> WASD 移动 · F 开 / 关</span><span><b class="gold">P2 排斥</b> 方向键移动 · Enter 开 / 关</span><span>Space 开始 / 暂停 / 继续 · R 检查点 / Shift+R 从头开始 · Esc 标题 · − / + 缩放，0 复位</span></div>
-      <p class="hint">控制节点会加速移动，松键后柔和制动；技能可在移动中使用。大天体也能推拉，离开有效力场后逐渐消除玩家造成的速度扰动。虚线演算未来最多 12 秒，假定玩家松开移动键并保持技能开关；包含辅助制动、天体稳定机制和引力。红色表示危险，绿色表示安全入港。暂停也可规划。</p>
+      <canvas id="game" width="1100" height="620" tabindex="0" aria-label="双人引力护航游戏。操作方式可为两人独立选择，Space 或手柄 Menu 确认提示及暂停，R 重试。"></canvas>
+      <div id="controls" class="controls"><span><b class="blue">P1 吸引</b> <span id="p1-controls">WASD 移动 · F 开 / 关</span></span><span><b class="gold">P2 排斥</b> <span id="p2-controls">方向键移动 · Enter 开 / 关</span></span><span>Space / 手柄 Menu 确认提示或暂停 · R 检查点 / Shift+R 从头开始 · Esc 关卡选择 · − / + 缩放，0 复位</span></div>
+      <details id="help" class="hint"><summary>操作与物理说明</summary><p>控制节点会加速移动，松键后柔和制动；技能可在移动中使用。虚线演算未来最多 12 秒，假定释放移动、保持技能开关，并持续飞行（不模拟教学讲解暂停）。红色表示危险，绿色表示抵达目标。暂停也可规划。</p></details>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

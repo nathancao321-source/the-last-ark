@@ -2,6 +2,7 @@ import type { Vec2 } from '../physics/vector';
 import type { Rect } from '../world/geometry';
 import type { Mission, MissionState } from './mission';
 import type { SceneId } from '../scenes/types';
+import type { TutorialConfig, TutorialState } from './tutorial';
 export interface Field { radius: number; strength: number; softening: number; maxAcceleration: number; polarity: 1 | -1 }
 export type EntityKind = 'ship' | 'player' | 'asteroid' | 'planet' | 'star' | 'black_hole' | 'station' | 'wormhole';
 export interface Entity {
@@ -52,6 +53,7 @@ export interface Level {
   /** Explicit optional mission boundary, independent of the camera. */
   missionBounds?: Rect;
   mission?: Mission;
+  tutorial?: TutorialConfig;
   seed?: number;
   stabilizationEnabled?: boolean;
   scoring?: { threeStarsSeconds: number; twoStarsSeconds: number };
@@ -62,6 +64,7 @@ export interface GameState {
   level: Level; bodies: Body[]; players: [Player, Player]; phase: Phase; elapsed: number; message: string;
   mission: MissionState;
   distance: number;
+  tutorial?: TutorialState;
   pendingScene?: SceneId;
   checkpoint?: { id: string; snapshot: Omit<GameState, 'checkpoint'> };
 }

@@ -4,9 +4,10 @@ import { applyPlayerIntent } from '../physics/player';
 import { integrate } from '../physics/world';
 import { sweptOverlap } from '../physics/collision';
 import { capabilities } from './entities';
-import { emptyMissionState, evaluateMission, currentObjective } from './mission';
+import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback } from './mission';
 import { SpatialIndex } from '../world/spatial-index';
 import { contains, sweptBounds } from '../world/geometry';
+import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
   const { checkpoint: _previous, ...state } = game;
@@ -21,22 +22,38 @@ export function createGame(level: Level): GameState {
   };
   const game: GameState = { level: config, bodies: structuredClone(config.bodies), players: structuredClone(config.players), phase: 'ready', elapsed: 0,
     message: '准备就绪 · Space 发射；可先调整玩家位置', mission: emptyMissionState(), distance: 0 };
+  initializeTutorial(game);
   saveCheckpoint(game, 'start');
   return game;
 }
 export function retryGame(game: GameState): GameState {
   const restored: GameState = game.checkpoint ? structuredClone(game.checkpoint.snapshot) : createGame(game.level);
   restored.phase = 'ready'; restored.players.forEach(p => { p.active = false; }); delete restored.pendingScene;
+  if (restored.tutorial) restored.tutorial.acknowledged = false;
   restored.message = '已恢复检查点 · Space 继续；Shift+R 从头开始';
   saveCheckpoint(restored, game.checkpoint?.id ?? 'start');
   return restored;
 }
 export function togglePause(game: GameState): void {
+  const lesson = currentLesson(game);
+  if ((game.phase === 'ready' || game.phase === 'paused') && lesson && !game.tutorial!.acknowledged) {
+    if (lesson.condition.type === 'acknowledge') {
+      const checkpoint = advanceLesson(game); if (checkpoint) saveCheckpoint(game, checkpoint);
+    } else {
+      game.tutorial!.acknowledged = true;
+      if (['influence','exit','body_perturbed'].includes(lesson.condition.type)) game.phase = 'running';
+    }
+    return;
+  }
   if (game.phase === 'ready' || game.phase === 'paused') { game.phase = 'running'; game.message = currentObjective(game)?.label ?? '护航中'; }
   else if (game.phase === 'running') { game.phase = 'paused'; game.message = '已暂停 · 可移动玩家；Space 继续'; }
 }
 export function pause(game: GameState): void { if (game.phase === 'running') togglePause(game); }
 function lose(game: GameState, message: string): void { game.phase = 'failed'; game.message = message + ' · R 重试'; }
+/** DEV UI calls this; skipping never completes the mission or teleports a body. */
+export function skipTeachingStep(game: GameState): void {
+  const checkpoint = advanceLesson(game); if (checkpoint) saveCheckpoint(game, checkpoint);
+}
 export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void {
   if (game.phase === 'completed' || game.phase === 'failed') return;
   if (!Number.isFinite(dt) || dt <= 0) return;
@@ -44,7 +61,11 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   game.players.forEach((player, i) => {
     applyPlayerIntent(player, input.players[i], dt);
   });
-  if (game.phase !== 'running') return;
+  if (game.phase !== 'running') {
+    const checkpoint = updateTutorial(game, previous, dt, false);
+    if (checkpoint) saveCheckpoint(game, checkpoint);
+    return;
+  }
   const invalid = () => game.bodies.some(b => !finite(b.position) || !finite(b.velocity)) || game.players.some(p => !finite(p.position) || !finite(p.velocity));
   if (invalid()) { lose(game, '模拟数值异常'); return; }
   integrate(game.bodies, game.players, dt, game.level.stabilizationEnabled !== false); game.elapsed += dt;
@@ -69,6 +90,7 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   // Offscreen bodies remain simulated. Only configured capture hazards remove dynamic bodies.
   game.bodies = game.bodies.filter(b => b === ship || capabilities(b).motion !== 'dynamic' || !hits(b, true));
   const checkpoint = evaluateMission(game, previous);
-  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 恢复检查点；Shift+R 重新护航' : game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
-  if (checkpoint) saveCheckpoint(game, checkpoint);
+  const lessonCheckpoint = updateTutorial(game, previous, dt, true);
+  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 恢复检查点；Shift+R 重新护航' : dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
+  if (checkpoint || lessonCheckpoint) saveCheckpoint(game, checkpoint ?? lessonCheckpoint!);
 }

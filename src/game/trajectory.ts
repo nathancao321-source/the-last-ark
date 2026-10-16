@@ -20,6 +20,9 @@ export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS)
   if (game.phase === 'completed' || game.phase === 'failed') return result;
   const { checkpoint: _checkpoint, ...state } = game;
   const simulation: GameState = structuredClone(state);
+  // Preview continuous physical flight, omitting pedagogical pauses/checkpoints only.
+  // Mission triggers (including wormholes), forces and collisions remain identical.
+  delete simulation.tutorial;
   simulation.phase = 'running';
   const input: Controls = {
     players: [

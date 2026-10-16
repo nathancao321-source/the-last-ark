@@ -86,10 +86,10 @@ describe('mission conditions and checkpoints',()=>{
 describe('layered scene state machine',()=>{
   it('starts at title and keeps later levels explicitly unavailable',()=>{
     const controller=new SceneController();expect(controller.scene).toBe('title');controller.step(NO_CONTROLS);expect(controller.game).toBeUndefined();
-    controller.toggle();expect(controller.scene).toBe('prototype');expect(controller.game!.phase).toBe('ready');
+    controller.toggle();expect(controller.scene).toBe('tutorial_part_1');expect(controller.game!.phase).toBe('ready');
     const before=structuredClone(controller.game);
-    for(const id of ['tutorial_part_1','tutorial_part_2','solar_system','black_hole','endless'] as const) expect(controller.enter(id)).toBe(false);
-    expect(controller.game).toEqual(before);expect(controller.scene).toBe('prototype');
+    for(const id of ['solar_system','black_hole','endless'] as const) expect(controller.enter(id)).toBe(false);
+    expect(controller.game).toEqual(before);expect(controller.scene).toBe('tutorial_part_1');
   });
   it('preserves identity while paused/failed/completed and fully resets on scene reentry',()=>{
     const c=new SceneController();c.enter('prototype');c.toggle();c.step(NO_CONTROLS);c.toggle();
@@ -108,7 +108,7 @@ describe('layered scene state machine',()=>{
     expect(c.scene).toBe('tutorial_part_1');expect(c.game!.phase).toBe('ready');expect(c.game!.elapsed).toBe(0);
     expect(c.game!.bodies[0].position).toEqual({x:-2000,y:5000});expect(c.game!.mission.firedTriggers).toEqual([]);
     expect(registry.tutorial_part_1.level!.bodies[0].position).toEqual({x:-2000,y:5000});
-    expect(scenes.tutorial_part_1.status).toBe('planned');
+    expect(scenes.tutorial_part_1.status).toBe('available');
   });
   it('distinguishes retry from complete restart and resets input toggles',()=>{
     const actions:string[]=[],k=new Keyboard(a=>actions.push(a));
