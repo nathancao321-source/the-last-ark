@@ -111,7 +111,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     ctx.fillStyle='#dce4ee';ctx.font='12px system-ui';ctx.fillText(`船体 ${Math.ceil(game.health.current)} / ${game.health.max}`,176,69);
     const sun=game.bodies.find(b=>b.stellar),state=sun?.stellarState;
     const stellar=state?.status==='exploded'?'太阳已爆炸（不再产生引力）':state?.status==='neutron'?'中子星 · 强引力 / 无灼烧 / 可推动':`太阳内停留3秒：蓝色坍缩 ${(state?.blueSeconds??0).toFixed(1)} / 金色引爆 ${(state?.goldSeconds??0).toFixed(1)}`;
-    ctx.fillText(stellar,16,89,width-32);ctx.fillText('橙圈灼烧，核心碰撞致命；爆炸半径520 · M 星图',16,108,width-32);
+    ctx.fillText(stellar,16,89,width-32);ctx.fillText(`橙圈为灼烧 / 爆炸共同范围（${sun?.stellar?.burnRadius??0}）· M 星图`,16,108,width-32);
   }
   ctx.fillStyle = '#92a0b3'; ctx.font = '12px system-ui';
   const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全入港', transition: '场景出口' }[trajectory.outcome];

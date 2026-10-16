@@ -15,7 +15,8 @@ export interface Entity {
 }
 export interface Orbit { center: Vec2; radius: number; phase: number; angularSpeed: number; maxDrift?: number }
 export interface StellarConfig {
-  burnRadius: number; burnPerSecond: number; activationSeconds: number; blastRadius: number;
+  /** Shared visible heat and explosion radius: one source of truth. */
+  burnRadius: number; burnPerSecond: number; activationSeconds: number;
   remnantRadius: number; remnantGravityMultiplier: number; remnantResponse: number;
 }
 export interface StabilizationConfig {
@@ -43,6 +44,9 @@ export interface Body extends Entity {
   gravityStrength?: number;
   gravitySoftening?: number;
   receivesGravity?: boolean;
+  /** Environmental acceleration response, independent of player field response.
+   * Legacy levels default to response; physically integrated solar bodies use 1. */
+  gravityResponse?: number;
   orbit?: Orbit;
   orbitTime?: number;
   displacementLimit?: { center: Vec2; radius: number };

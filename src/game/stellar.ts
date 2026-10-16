@@ -19,7 +19,7 @@ export function updateStellar(game: GameState, previous: Map<string,Vec2>, dt: n
     if(state.goldSeconds+1e-9>=config.activationSeconds) {
       state.status='exploded';star.emitsGravity=false;star.collision='none';star.motion='static';star.layer='hidden';
       star.velocity={x:0,y:0};star.affectedByFields=false;
-      if(sweptOverlap(previous.get(ship.id)??ship.position,ship.position,previous.get(star.id)??star.position,star.position,config.blastRadius+ship.radius)) return '太阳爆炸：方舟位于爆炸范围内';
+      if(sweptOverlap(previous.get(ship.id)??ship.position,ship.position,previous.get(star.id)??star.position,star.position,config.burnRadius+ship.radius)) return '太阳爆炸：方舟位于爆炸范围内';
       game.hazardMessage='太阳已引爆 · 方舟在爆炸范围外，继续逃逸';continue;
     }
     if(state.blueSeconds+1e-9>=config.activationSeconds) {

@@ -10,7 +10,6 @@ import { NO_CONTROLS } from '../src/game/types';
 import { positionPlayer } from './helpers';
 import { updateStellar } from '../src/game/stellar';
 import { integrate } from '../src/physics/world';
-import { sampleOrbit } from '../src/physics/orbits';
 import { predictTrajectory } from '../src/game/trajectory';
 import { updateEncounters } from '../src/world/encounters';
 import { starMapPoints } from '../src/render/star-map';
@@ -20,7 +19,7 @@ import { createCamera, followGroup, viewBounds } from '../src/camera/camera';
 import { intersects, circleBounds } from '../src/world/geometry';
 
 /** Feedback pilot controls only the two normal player intents, never the ship or planets. */
-function pilot(game:GameState, speed=100, clearance=320) {
+function pilot(game:GameState, speed=100, clearance=600) {
   const waypoints=[{x:450,y:-clearance},{x:1000,y:-clearance-20},{x:1450,y:-clearance+20},{x:2100,y:-clearance-20},{x:3000,y:-clearance-20},{x:4170,y:-clearance-20},{x:4900,y:0},{x:5480,y:0}];
   const camera=createCamera(game.bodies[0].position);
   let stage=0;
@@ -57,7 +56,10 @@ describe('Solar Exodus physical routes',()=>{
     positionPlayer(game,index,sun.position);togglePause(game);
     for(let i=0;i<182;i++)stepGame(game,NO_CONTROLS);
     expect(sun.stellarState?.status).toBe(index?'exploded':'neutron');expect(game.phase).toBe('running');
-    const result=pilot(game,100,index?320:520);expect(result.phase,JSON.stringify(result)).toBe('completed');
+    pause(game);
+    positionPlayer(game,0,add(game.bodies[0].position,{x:-100,y:-180}));
+    positionPlayer(game,1,add(game.bodies[0].position,{x:100,y:180}));
+    const result=pilot(game,100,700);expect(result.phase,JSON.stringify(result)).toBe('completed');
   });
   it('does not award an unassisted straight flight a free boost or safe bypass',()=>{
     const game=createGame(solarSystem);togglePause(game);for(let i=0;i<2400&&game.phase==='running';i++)stepGame(game,NO_CONTROLS);
@@ -76,15 +78,18 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
     expect(game.level.decorations).toHaveLength(100);expect(game.bodies.length).toBeLessThan(20);
     expect(game.level.missionBounds).toBeUndefined();
   });
-  it('retains analytical orbital baseline and actual player perturbations without planet N-body forces',()=>{
+  it('lets environmental gravity bend planets and retains player-only damping',()=>{
     const game=createGame(solarSystem),earth=game.bodies.find(b=>b.id==='earth')!;
-    for(let i=0;i<600;i++)integrate(game.bodies,[],1/60);
-    const expected=sampleOrbit(earth.orbit!,10);expect(earth.position.x).toBeCloseTo(expected.position.x,8);expect(earth.position.y).toBeCloseTo(expected.position.y,8);
-    game.players[0].position=add(earth.position,{x:100,y:0});game.players[0].active=true;
-    for(let i=0;i<60;i++)integrate(game.bodies,game.players,1/60);
-    expect(length(earth.stabilizationState!.playerVelocity)).toBeGreaterThan(1);
-    game.players[0].active=false;for(let i=0;i<600;i++)integrate(game.bodies,game.players,1/60);
-    expect(length(earth.stabilizationState!.playerVelocity)).toBeLessThan(0.2);expect(length(earth.velocity)).toBeGreaterThan(1);
+    const coast=structuredClone(earth),start=structuredClone(earth);
+    for(let i=0;i<600;i++){integrate(game.bodies,[],1/60);integrate([coast],[],1/60);}
+    expect(length(sub(earth.position,coast.position))).toBeGreaterThan(10);
+    expect(earth.orbit).toBeUndefined();expect(earth.receivesGravity).not.toBe(false);
+    game.players[0].position=add(start.position,{x:100,y:0});game.players[0].active=true;
+    for(let i=0;i<60;i++)integrate([start],game.players,1/60);
+    expect(length(start.stabilizationState!.playerVelocity)).toBeGreaterThan(1);
+    game.players[0].active=false;for(let i=0;i<600;i++)integrate([start],game.players,1/60);
+    expect(length(start.stabilizationState!.playerVelocity)).toBeLessThan(0.2);
+    expect(length(start.velocity)).toBeGreaterThan(1);
   });
   it('weakly moves the sun but enforces a configured maximum displacement',()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!,initial={...sun.position};
@@ -113,10 +118,26 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
   });
   it('an explosion affects only the sun and fails the ship inside the configured blast radius',()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!;
-    game.players[1].position={...sun.position};game.bodies[0].position={x:900,y:400};
+    game.players[1].position={...sun.position};game.bodies[0].position={x:900,y:300};
     const other=structuredClone(game.bodies.filter(b=>b!==sun));
     const failure=updateStellar(game,new Map(),3);expect(failure).toContain('爆炸');
     expect(game.bodies.filter(b=>b!==sun)).toEqual(other);expect(sun).toMatchObject({emitsGravity:false,collision:'none',layer:'hidden'});
+  });
+  it.each([330,350,400])('shares the same heat/blast boundary at ship center distance %s',distance=>{
+    const heat=createGame(solarSystem),blast=createGame(solarSystem);
+    const sun=blast.bodies.find(b=>b.id==='sun')!,ship=blast.bodies[0];
+    ship.position={x:sun.position.x,y:sun.position.y+distance};heat.bodies[0].position={...ship.position};
+    updateStellar(heat,new Map(),1);
+    blast.players[1].position={...sun.position};const failure=updateStellar(blast,new Map(),3);
+    expect(!!failure).toBe(heat.health!.current<100);
+    if(distance===400)expect(failure).toBeUndefined(); // old 520 blast radius must not survive
+  });
+  it('enables gravity on physical solar asteroids while keeping decorative debris outside the solver',()=>{
+    const game=createGame(solarSystem);game.bodies[0].position={x:2200,y:0};togglePause(game);
+    updateEncounters(game,{minX:1600,maxX:2800,minY:-400,maxY:400});
+    const rocks=game.bodies.filter(b=>b.kind==='asteroid');expect(rocks).toHaveLength(5);
+    for(const rock of rocks){expect(rock.emitsGravity).not.toBe(false);expect(bodyGravity(rock).strength).toBeGreaterThan(0);expect(bodyGravity(rock).radius).toBeGreaterThan(0);}
+    expect(game.level.decorations).toHaveLength(100);
   });
   it('cancels simultaneous projections and resets interrupted dwell; neutron stars lose heat but retain stronger gravity',()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!,original=bodyGravity(sun).strength;
@@ -134,17 +155,16 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
     saveCheckpoint(game,'belt');const retry=retryGame(game);updateEncounters(retry,view);expect(retry.bodies).toHaveLength(count);
     const before=structuredClone(game);predictTrajectory(game,2);expect(game).toEqual(before);
   });
-  it('lets sustained fields move an orbiting planet arbitrarily beyond its old 140-unit leash',()=>{
+  it('lets sustained fields move a planet arbitrarily beyond its old 140-unit leash',()=>{
     const game=createGame(solarSystem),earth=game.bodies.find(b=>b.id==='earth')!;
+    const initial=structuredClone(earth);
     for(let i=0;i<7200;i++) {
       game.players[0].position=add(earth.position,{x:100,y:0});game.players[0].active=true;
       integrate([earth],game.players,1/60);
     }
-    expect(earth.orbit?.maxDrift).toBeUndefined();
-    const displaced=length(sub(earth.position,sampleOrbit(earth.orbit!,earth.orbitTime!).position));
-    expect(displaced).toBeGreaterThan(5000);
+    expect(earth.orbit).toBeUndefined();expect(earth.displacementLimit).toBeUndefined();
+    expect(length(sub(earth.position,add(initial.position,scale(initial.velocity,120))))).toBeGreaterThan(5000);
     game.players[0].active=false;for(let i=0;i<1200;i++)integrate([earth],game.players,1/60);
-    expect(length(sub(earth.position,sampleOrbit(earth.orbit!,earth.orbitTime!).position))).toBeGreaterThan(displaced);
     expect(length(earth.stabilizationState!.playerVelocity)).toBeLessThan(0.5);
   });
   it('keeps only interstellar transfer as the final goal beyond Pluto',()=>{
@@ -153,28 +173,34 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
     expect(solarSystem.mission!.objectives.at(-1)!.requires).toEqual(['outer-pass']);
     expect(JSON.stringify(solarSystem)).not.toContain('pluto-gate');
     expect(JSON.stringify(solarSystem)).not.toContain('pluto-exit');
-    expect(gate.position.x-gate.radius-(pluto.orbit!.center.x+pluto.orbit!.radius+pluto.radius)).toBeGreaterThan(200);
+    expect(gate.position.x-gate.radius-(pluto.position.x+pluto.radius)).toBeGreaterThan(200);
   });
-  it('keeps unforced Mercury at constant solar distance for ten minutes, including more than two orbits',()=>{
+  it('maintains a genuine Mercury orbit in the solar field for ten minutes without prescribed drift',()=>{
     const game=createGame(solarSystem),mercury=game.bodies.find(b=>b.id==='mercury')!,sun=game.bodies.find(b=>b.id==='sun')!;
-    const radius=length(sub(mercury.position,sun.position));let maxError=0;
+    sun.motion='static';const radius=length(sub(mercury.position,sun.position));let maxError=0;
     for(let i=0;i<36000;i++) {
       integrate([mercury,sun],game.players,1/60);
       maxError=Math.max(maxError,Math.abs(length(sub(mercury.position,sun.position))-radius));
     }
-    expect(maxError).toBeLessThan(1e-6);
-    expect(mercury.receivesGravity).toBe(false);
-    expect(mercury.orbitTime).toBeCloseTo(600,5);
+    expect(maxError/radius).toBeLessThan(0.005);
+    expect(mercury.receivesGravity).not.toBe(false);expect(mercury.orbit).toBeUndefined();
+  });
+  it('keeps unforced Mercury clear of the sun during a full mission with all mutual gravity active',()=>{
+    const game=createGame(solarSystem),mercury=game.bodies.find(b=>b.id==='mercury')!,sun=game.bodies.find(b=>b.id==='sun')!;
+    let clearance=Infinity;
+    for(let i=0;i<5400;i++) {integrate(game.bodies,[],1/60);clearance=Math.min(clearance,length(sub(mercury.position,sun.position))-mercury.radius-sun.radius);}
+    expect(clearance).toBeGreaterThan(0);
+    expect(game.bodies.every(b=>Number.isFinite(length(b.position))&&Number.isFinite(length(b.velocity)))).toBe(true);
   });
   it('makes Jupiter and the Sun much harder to move without freezing them or limiting Jupiter displacement',()=>{
     const perturb=(id:string)=>{
       const game=createGame(solarSystem),body=game.bodies.find(b=>b.id===id)!;
-      const initial={...body.position};
+      const initial={...body.position},initialVelocity={...body.velocity};
       for(let i=0;i<600;i++) {
         game.players[0].position=add(body.position,{x:120,y:0});game.players[0].active=true;
         integrate([body],game.players,1/60);
       }
-      const base=body.orbit?sampleOrbit(body.orbit,body.orbitTime!).position:initial;
+      const base=add(initial,scale(initialVelocity,10));
       return {distance:length(sub(body.position,base)),body};
     };
     const earth=perturb('earth'),jupiter=perturb('jupiter'),sun=perturb('sun');
@@ -182,7 +208,7 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
     expect(jupiter.distance).toBeLessThan(earth.distance/8);
     expect(sun.distance).toBeGreaterThan(0.1);
     expect(sun.distance).toBeLessThan(jupiter.distance/5);
-    expect(jupiter.body.displacementLimit).toBeUndefined();expect(jupiter.body.orbit!.maxDrift).toBeUndefined();
+    expect(jupiter.body.displacementLimit).toBeUndefined();expect(jupiter.body.orbit).toBeUndefined();
   });
   it('burns beyond the old boundary and depletes a stationary ship near the core within two seconds',()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!,ship=game.bodies[0];

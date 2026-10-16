@@ -5,6 +5,8 @@ import { fieldAcceleration } from '../src/physics/fields';
 import { integrate, MAX_SPEED } from '../src/physics/world';
 import { length, sub } from '../src/physics/vector';
 import { firstLevel } from '../src/levels/first';
+import { solarSystem } from '../src/levels/solar-system';
+import { createBody } from '../src/game/entities';
 
 function flyby(offset: number, planetSpeed: number) {
   const planet: Body = { id: 'source', kind: 'planet', radius: 50, density: 4, response: 0, affectedByFields: true, position: { x: 0, y: 0 }, velocity: { x: planetSpeed, y: 0 } };
@@ -19,6 +21,32 @@ function flyby(offset: number, planetSpeed: number) {
 }
 
 describe('volume-derived gravity and orbital integration', () => {
+  it.each(solarSystem.bodies.filter(b=>b.kind==='planet').map(b=>b.id))('solar %s attracts the ship and receives its reciprocal gravity without player input',id=>{
+    const planet=structuredClone(solarSystem.bodies.find(b=>b.id===id)!);
+    const ship=createBody({id:'probe',kind:'ship',radius:8,position:{x:planet.position.x+planet.radius+20,y:planet.position.y}});
+    const initial={...planet.velocity};
+    integrate([planet,ship],[],1/60);
+    expect(ship.velocity.x).toBeLessThan(-0.01);
+    expect(planet.velocity.x-initial.x).toBeGreaterThan(0);
+  });
+  it('separates player field immunity from environmental gravity reception',()=>{
+    const source=createBody({id:'source',kind:'planet',radius:50,position:{x:0,y:0},motion:'static'});
+    const target=createBody({id:'target',kind:'asteroid',radius:10,position:{x:100,y:0},affectedByFields:false});
+    integrate([source,target],firstLevel.players,1/60);
+    expect(target.velocity.x).toBeLessThan(0);
+  });
+  it('lets low-response heavy planets accelerate normally in an external gravitational field',()=>{
+    const source=createBody({id:'source',kind:'star',radius:100,position:{x:0,y:0},motion:'static'});
+    const targets=[0.003,0.02,0.18].map(response=>createBody({id:'target',kind:'planet',radius:20,position:{x:200,y:0},response,gravityResponse:1}));
+    for(const target of targets)integrate([source,target],[],1/60);
+    expect(targets[0].velocity).toEqual(targets[1].velocity);expect(targets[1].velocity).toEqual(targets[2].velocity);
+  });
+  it('exchanges real gravity between two planets rather than only affecting the ship',()=>{
+    const a=structuredClone(solarSystem.bodies.find(b=>b.id==='earth')!),b=structuredClone(solarSystem.bodies.find(b=>b.id==='jupiter')!);
+    a.position={x:-150,y:0};b.position={x:150,y:0};a.velocity=b.velocity={x:0,y:0};
+    integrate([a,b],[],1/60);
+    expect(a.velocity.x).toBeGreaterThan(0);expect(b.velocity.x).toBeLessThan(0);
+  });
   it.each([0, 1] as const)('player %s visibly moves the large planet, more slowly than a small body', playerIndex => {
     const planet = structuredClone(firstLevel.bodies[1]);
     const small = { ...structuredClone(planet), id: 'small', kind: 'asteroid' as const, radius: 18, response: 1 };

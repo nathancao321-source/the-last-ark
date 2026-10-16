@@ -22,8 +22,8 @@ function accelerations(bodies: Body[], players: Player[], stats: { candidatePair
   return bodies.map(body => {
     let player = { x: 0, y: 0 }, environment = { x: 0, y: 0 };
     let effectiveField = false;
-    if (!body.affectedByFields || capabilities(body).motion !== 'dynamic') return {total:environment,player,effectiveField};
-    for (const source of players) if (source.active) {
+    if (capabilities(body).motion !== 'dynamic') return {total:environment,player,effectiveField};
+    for (const source of players) if (body.affectedByFields && source.active) {
       const acceleration = fieldAcceleration(body.position, source.position, source.field);
       // Even two cancelling fields count as active; a field outside range does not.
       if (length(acceleration) * body.response > (body.stabilization?.fieldEpsilon ?? 1e-4)) effectiveField = true;
@@ -33,7 +33,7 @@ function accelerations(bodies: Body[], players: Player[], stats: { candidatePair
       const source = bodies[i];
       if (source !== body) { stats.candidatePairs++; environment = add(environment, fieldAcceleration(body.position, source.position, gravity[i])); }
     }
-    const sum = scale(add(player, environment), body.response);
+    const sum = add(scale(player,body.response),scale(environment,body.gravityResponse ?? body.response));
     const factor = Math.min(1, MAX_ACCELERATION / Math.max(length(sum), 1e-12));
     return { total: scale(sum, factor), player: scale(player, body.response * factor), effectiveField };
   });

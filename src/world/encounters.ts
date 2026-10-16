@@ -23,7 +23,7 @@ export function updateEncounters(game: GameState, view: Rect): void {
         y:ship.position.y+(i%2?1:-1)*(170+random()*70)};
       const delta=sub(ship.position,position);
       game.bodies.push(createBody({id:`${wave.id}-${i}`,kind:'asteroid',radius,position,
-        velocity:scale(delta,55/length(delta)),emitsGravity:false,gravityRadius:0,stabilization:{halfLife:1},appearance:{name:'接近中的碎石',color:'#9aa3ad'}}));
+        velocity:scale(delta,55/length(delta)),gravityResponse:1,stabilization:{halfLife:1},appearance:{name:'接近中的碎石',color:'#9aa3ad'}}));
     }
   }
 }
