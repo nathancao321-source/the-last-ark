@@ -1,6 +1,6 @@
 import type { Controls, GameState, Level } from './types';
 import { finite, length, sub } from '../physics/vector';
-import { applyPlayerIntent } from '../physics/player';
+import { stepNode } from '../physics/node-gravity';
 import { integrate } from '../physics/world';
 import { sweptOverlap } from '../physics/collision';
 import { capabilities } from './entities';
@@ -32,7 +32,7 @@ export function createGame(level: Level): GameState {
 }
 export function retryGame(game: GameState): GameState {
   const restored: GameState = game.checkpoint ? structuredClone(game.checkpoint.snapshot) : createGame(game.level);
-  restored.phase = 'ready'; restored.players.forEach(p => { p.active = false; }); delete restored.pendingScene;
+  restored.phase = 'ready'; restored.players.forEach(p => { p.active = false; if(p.capture)p.capture.abilityActive=false; }); delete restored.pendingScene;
   if (restored.tutorial) restored.tutorial.acknowledged = false;
   restored.message = '已恢复检查点（保留当时血量）· Space 继续；R 从头开始';
   saveCheckpoint(restored, game.checkpoint?.id ?? 'start');
@@ -63,7 +63,7 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   if (!Number.isFinite(dt) || dt <= 0) return;
   const previous = new Map([...game.bodies, ...game.players].map(b => [b.id, { ...b.position }]));
   game.players.forEach((player, i) => {
-    applyPlayerIntent(player, input.players[i], dt);
+    stepNode(player, input.players[i], game.bodies, dt, game.phase === 'running', game.elapsed);
   });
   if (game.phase !== 'running') {
     const checkpoint = updateTutorial(game, previous, dt, false);

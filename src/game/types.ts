@@ -26,6 +26,25 @@ export interface StabilizationConfig {
   fieldEpsilon?: number;
 }
 export interface StabilizationState { playerVelocity: Vec2; idleTime: number }
+export interface NodeInfluence {
+  gravityMultiplier: number;
+  /** Sum of node gravity is capped below its own movement acceleration. */
+  maxAccelerationRatio: number;
+  steeringSeconds: number;
+  jetPeriod: number;
+  jetSeconds: number;
+  reformSeconds: number;
+  ejectionDistance: number;
+}
+export interface NodeCapture {
+  sourceId: string;
+  phase: 'captured' | 'jet' | 'reforming';
+  elapsed: number;
+  releaseAt: number;
+  abilityActive: boolean;
+  origin: Vec2;
+  destination: Vec2;
+}
 export interface Body extends Entity {
   kind: Exclude<EntityKind, 'player'>;
   velocity: Vec2;
@@ -38,6 +57,7 @@ export interface Body extends Entity {
   maxSpeed?: number;
   captureRadius?: number;
   captureMessage?: string;
+  nodeInfluence?: NodeInfluence;
   /** Optional radial damage, independent of gravity and capture. No velocity edits. */
   damageZone?: { radius: number; damagePerSecond: number; message: string; failureMessage: string };
   motion?: 'dynamic' | 'static' | 'kinematic';
@@ -66,6 +86,7 @@ export interface Player extends Entity {
   velocity: Vec2; acceleration: number; braking: number;
   /** Future world-target control: near-target easing time; has no effect on keyboard axes. */
   targetArrivalSeconds?: number;
+  capture?: NodeCapture;
 }
 export interface Port { position: Vec2; radius: number; maxEntrySpeed: number }
 export interface Level {

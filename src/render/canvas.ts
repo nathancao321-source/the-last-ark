@@ -8,6 +8,7 @@ import { edgeMarker, mapPoint, navigationBounds } from '../camera/navigation';
 import { objectivePosition } from '../game/mission';
 import { visibleEntities } from './visibility';
 import { efficiency } from '../game/scoring';
+import { drawGammaJet, drawCapturedNode } from './node-effects';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -54,6 +55,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     const end = trajectory.points.at(-1)!;
     if (isVisible(camera, end, 4)) circle(ctx, end.x, end.y, 4, color, false);
   }
+  for(const body of game.bodies)if(body.nodeInfluence&&isVisible(camera,body.position,body.nodeInfluence.ejectionDistance))drawGammaJet(ctx,body,game.elapsed,camera.zoom);
   for (const body of visibleEntities(camera, game.bodies)) {
     if (body.kind === 'ship') {
       ctx.save(); ctx.translate(body.position.x, body.position.y); ctx.rotate(Math.atan2(body.velocity.y, body.velocity.x));
@@ -81,6 +83,10 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   }
   for (const player of visibleEntities(camera, game.players)) {
     const i = player.id === 'attractor' ? 0 : 1;
+    if(player.capture) {
+      drawCapturedNode(ctx,player,game,camera.zoom);
+      continue;
+    }
     const markerRadius=Math.max(player.radius,6/camera.zoom);
     circle(ctx, player.position.x, player.position.y, markerRadius, i === 0 ? '#409eff' : '#e9bd48');
     ctx.fillStyle = '#e5eaf4'; ctx.font = `${12/camera.zoom}px system-ui`; ctx.textAlign = 'center';
@@ -135,6 +141,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     if(hole) {
       ctx.fillText(`黑洞不可推动 · 外部引力 ${hole.gravityRadius} / 潮汐 ${hole.damageZone!.radius} / 事件视界 ${hole.captureRadius}`,16,89,width-32);
       ctx.fillText('紫色虚线：引力边缘 · 红圈：持续损伤 · 黑色核心：进入立即撕碎',16,108,width-32);
+      if(hole.nodeInfluence)ctx.fillText('节点强牵引 · 视界内撕碎 · 每5秒向上喷流 · 外侧重组后恢复控制',16,126,width-32);
     }
   }
   ctx.fillStyle = '#92a0b3'; ctx.font = '12px system-ui';

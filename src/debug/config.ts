@@ -20,7 +20,7 @@ export function developmentRegistry(base: SceneRegistry, search: string): SceneR
     const preset=blackHoleSections[section as keyof typeof blackHoleSections],level=result.black_hole.level;
     const ship=level.bodies.find(b=>b.kind==='ship')!;
     ship.position={...preset.position};ship.velocity={...preset.velocity};level.initialObjectives=[...preset.completed];
-    level.players.forEach((p,i)=>{p.position={x:preset.position.x+(i?-80:130),y:preset.position.y+(i?150:-160)};});
+    level.players.forEach((p,i)=>{p.position='nodePositions' in preset?{...preset.nodePositions[i]}:{x:preset.position.x+(i?-80:130),y:preset.position.y+(i?150:-160)};});
   }
   const number = (key: string, min: number, max: number): number | undefined => {
     const raw=params.get(key);if(raw===null || raw.trim()==='') return;

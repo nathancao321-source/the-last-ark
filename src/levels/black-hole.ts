@@ -9,6 +9,7 @@ const sagittarius = createBody({id:'sagittarius-a',kind:'black_hole',position:{x
   motion:'static',affectedByFields:false,response:0,receivesGravity:false,
   gravityStrength:5_000_000,gravityRadius:1600,gravitySoftening:130,
   collision:'capture',captureRadius:100,captureMessage:'越过事件视界：方舟被撕碎',
+  nodeInfluence:{gravityMultiplier:8,maxAccelerationRatio:0.85,steeringSeconds:0.4,jetPeriod:5,jetSeconds:0.8,reformSeconds:0.45,ejectionDistance:620},
   damageZone:{radius:360,damagePerSecond:45,message:'潮汐撕裂 · 正在损伤船体，远离红圈',failureMessage:'方舟被潮汐力撕碎'},
   appearance:{name:'Sagittarius A* · 事件视界',color:'#b08fe4',ring:true}});
 
@@ -59,4 +60,6 @@ export const galacticRest: Level = {
 export const blackHoleSections = {
   horizon: {position:{x:900,y:-550},velocity:{x:85,y:0},completed:['approach']},
   escape: {position:{x:2850,y:0},velocity:{x:45,y:0},completed:['approach','bypass']},
+  capture: {position:{x:0,y:-900},velocity:{x:0,y:0},completed:[],
+    nodePositions:[{x:1300,y:0},{x:1320,y:0}]},
 };

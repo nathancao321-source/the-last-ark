@@ -27,8 +27,8 @@ export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS)
   simulation.phase = 'running';
   const input: Controls = {
     players: [
-      { moveX: 0, moveY: 0, abilityActive: simulation.players[0].active },
-      { moveX: 0, moveY: 0, abilityActive: simulation.players[1].active },
+      { moveX: 0, moveY: 0, abilityActive: simulation.players[0].capture?.abilityActive ?? simulation.players[0].active },
+      { moveX: 0, moveY: 0, abilityActive: simulation.players[1].capture?.abilityActive ?? simulation.players[1].active },
     ],
   };
   const ship = simulation.bodies.find(body => body.kind === 'ship')!;

@@ -11,7 +11,8 @@ export function movementTelemetry(game: GameState): string {
   return game.players.map((p,i)=>{
     const force=p.active ? fieldAcceleration(ship.position,p.position,p.field) : {x:0,y:0};
     return 'P'+(i+1)+' 位置 ('+p.position.x.toFixed(1)+','+p.position.y.toFixed(1)+') 速度 ('+p.velocity.x.toFixed(1)+','+p.velocity.y.toFixed(1)+') |v|='+length(p.velocity).toFixed(1)
-      +' | 力场 '+(p.active?'开':'关')+' 源强度='+p.field.strength+' 对飞船 |a|='+length(force).toFixed(3);
+      +' | 力场 '+(p.active?'开':'关')+' 源强度='+p.field.strength+' 对飞船 |a|='+length(force).toFixed(3)
+      +(p.capture?` | ${p.capture.phase==='captured'?'已捕获':p.capture.phase==='jet'?'伽马喷流':'重组中'} ${p.capture.elapsed.toFixed(2)}s`:'');
   }).join('\n')+'\n飞船速度='+length(ship.velocity).toFixed(2)+' 完成/运行时间='+game.elapsed.toFixed(2)+'s 航程='+game.distance.toFixed(1)
     +`\n天体引力（限幅前）=(${gravity.x.toFixed(3)},${gravity.y.toFixed(3)}) |a|=${length(gravity).toFixed(3)} 来源：`
     +sources.filter(s=>length(s.acceleration)>0.001).map(s=>`${s.body.appearance?.name??s.body.id} ${length(s.acceleration).toFixed(3)}`).join(' / ')
