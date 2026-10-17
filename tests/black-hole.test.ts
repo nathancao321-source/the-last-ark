@@ -139,7 +139,7 @@ describe('black hole physics and three distinct regions',()=>{
   });
 });
 
-describe('chapter progression without an endless universe',()=>{
+describe('chapter progression into exploration',()=>{
   it('keeps development exit spawns separate from normal play and reaches the real goal under physics',()=>{
     const registry=developmentRegistry(scenes,'?dev=1&scene=black_hole&section=escape');
     const game=createGame(registry.black_hole.level!);togglePause(game);
@@ -147,17 +147,17 @@ describe('chapter progression without an endless universe',()=>{
     expect(game.phase).toBe('completed');expect(scenes.black_hole.level!.bodies[0].position).toEqual({x:0,y:0});
     expect(developmentRegistry(scenes,'?scene=black_hole&section=escape').black_hole.level!.bodies[0].position).toEqual({x:0,y:0});
   });
-  it('continues from Solar Exodus to Level 2, then to the safe galaxy-edge arrival scene',()=>{
+  it('continues from Solar Exodus to Level 2, then to endless exploration',()=>{
     const c=new SceneController();c.enter('solar_system');expect(c.nextScene()).toBeUndefined();
     c.game!.phase='completed';c.step(NO_CONTROLS);expect(c.progress.level1Complete).toBe(true);expect(c.nextScene()).toBe('black_hole');
     c.enter(c.nextScene()!);expect(c.game).toEqual(createGame(blackHoleLevel));
     expect(pilot(c.game!).phase).toBe('completed');c.step(NO_CONTROLS);
-    expect(c.progress.level2Complete).toBe(true);expect(c.game!.message).toContain('Level 2 Complete');expect(c.nextScene()).toBe('galactic_rest');
-    c.enter(c.nextScene()!);expect(c.scene).toBe('galactic_rest');expect(c.game!.health!.current).toBe(100);expect(c.game!.level.scoring).toBeUndefined();
+    expect(c.progress.level2Complete).toBe(true);expect(c.game!.message).toContain('Level 2 Complete');expect(c.nextScene()).toBe('endless');
+    c.enter(c.nextScene()!);expect(c.scene).toBe('endless');expect(c.game!.health!.current).toBe(100);expect(c.game!.level.scoring).toBeUndefined();
     c.toggle();for(let i=0;i<60;i++)c.step(NO_CONTROLS);expect(c.game!.phase).toBe('running');
-    expect(c.enter('endless')).toBe(false);expect(c.scene).toBe('galactic_rest');
+    expect(c.enter('endless')).toBe(true);expect(c.scene).toBe('endless');
     expect(chapterChoices(c.registry).find(v=>v.id==='black_hole')!.playable).toBe(true);
-    expect(chapterChoices(c.registry).find(v=>v.id==='endless')!.playable).toBe(false);
+    expect(chapterChoices(c.registry).find(v=>v.id==='endless')!.playable).toBe(true);
   });
   it('persists chapter completion and accepts old progress saves',()=>{
     let value=JSON.stringify({version:1,level0Complete:true});const storage={getItem:()=>value,setItem:(_key:string,v:string)=>{value=v;}};

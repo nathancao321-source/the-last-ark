@@ -3,6 +3,7 @@ import type { Rect } from '../world/geometry';
 import type { Mission, MissionState } from './mission';
 import type { SceneId } from '../scenes/types';
 import type { TutorialConfig, TutorialState } from './tutorial';
+import type { UniverseState } from '../world/universe';
 export interface Field { radius: number; strength: number; softening: number; maxAcceleration: number; polarity: 1 | -1 }
 export type EntityKind = 'ship' | 'player' | 'asteroid' | 'planet' | 'star' | 'black_hole' | 'station' | 'wormhole';
 export interface Entity {
@@ -46,6 +47,10 @@ export interface NodeCapture {
   destination: Vec2;
 }
 export interface Body extends Entity {
+  /** Procedural home chunk, independent of current drifting position. */
+  chunk?: { x: number; y: number };
+  /** A returning cached body overlapping the ship waits harmlessly until separated. */
+  spawnPending?: boolean;
   kind: Exclude<EntityKind, 'player'>;
   velocity: Vec2;
   affectedByFields: boolean;
@@ -104,6 +109,7 @@ export interface Level {
   stabilizationEnabled?: boolean;
   scoring?: { threeStarsSeconds: number; twoStarsSeconds: number };
   mode?: 'mission' | 'exploration';
+  procedural?: boolean;
   shipHealth?: number;
   decorations?: { position: Vec2; radius: number; color: string }[];
   waves?: { id: string; bounds: Rect; seed: number; count: number }[];
@@ -113,6 +119,7 @@ export interface GameState {
   level: Level; bodies: Body[]; players: [Player, Player]; phase: Phase; elapsed: number; message: string;
   mission: MissionState;
   distance: number;
+  universe?: UniverseState;
   tutorial?: TutorialState;
   health?: { current: number; max: number };
   encounters?: string[];

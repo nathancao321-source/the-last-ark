@@ -28,4 +28,5 @@ export class PlayerInputs {
   }
   releaseMovement(): void { this.sources.forEach(source => source.releaseMovement()); }
   reset(): void { this.sources.forEach(source => source.reset()); }
+  resetPlayer(index:PlayerIndex):void { this.sources[index].reset(); }
 }

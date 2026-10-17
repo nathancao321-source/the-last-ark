@@ -20,6 +20,7 @@ export const ENTITY_DEFAULTS: Record<EntityKind, Capabilities> = {
   wormhole: { stabilizable: false, motion: 'static', gravity: false, collision: 'none', response: 0, density: 0 },
 };
 export function capabilities(body: Body): Capabilities {
+  if(body.spawnPending)return {stabilizable:false,motion:'static',gravity:false,collision:'none',response:0,density:0};
   if (body.layer === 'background') return { stabilizable: false, motion: 'static', gravity: false, collision: 'none', response: 0, density: 0 };
   const defaults = ENTITY_DEFAULTS[body.kind];
   return { stabilizable: defaults.stabilizable, motion: body.motion ?? defaults.motion, gravity: body.emitsGravity ?? defaults.gravity,

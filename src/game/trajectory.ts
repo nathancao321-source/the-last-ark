@@ -2,6 +2,7 @@ import type { Controls, GameState } from './types';
 import type { Vec2 } from '../physics/vector';
 import { finite } from '../physics/vector';
 import { FIXED_DT, stepGame } from './game';
+import { SECTOR_SIZE } from '../world/sectors';
 
 export const PREDICTION_SECONDS = 12;
 export interface Trajectory {
@@ -34,14 +35,17 @@ export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS)
   const ship = simulation.bodies.find(body => body.kind === 'ship')!;
   if (!finite(ship.position) || !finite(ship.velocity)) return result;
   result.points.push({ ...ship.position });
-  const steps = Math.ceil(Math.min(PREDICTION_SECONDS, Math.max(0, seconds)) / FIXED_DT);
+  // Streamed exploration forecasts are bounded to three seconds to keep the main thread responsive.
+  const steps = Math.ceil(Math.min(game.universe?3:PREDICTION_SECONDS, Math.max(0, seconds)) / FIXED_DT);
   for (let i = 0; i < steps; i++) {
     stepGame(simulation, input);
     // stepGame mutates phase; TypeScript otherwise retains the earlier literal narrowing.
     const phase = simulation.phase as GameState['phase'];
     result.seconds = (i + 1) * FIXED_DT;
     if (finite(ship.position) && ((i + 1) % 6 === 0 || phase !== 'running' || simulation.pendingScene || i === steps - 1)) {
-      result.points.push({ ...ship.position });
+      const dx=simulation.universe&&game.universe?(simulation.universe.origin.x-game.universe.origin.x)*SECTOR_SIZE:0;
+      const dy=simulation.universe&&game.universe?(simulation.universe.origin.y-game.universe.origin.y)*SECTOR_SIZE:0;
+      result.points.push({x:ship.position.x+dx,y:ship.position.y+dy});
     }
     if (simulation.pendingScene) { result.outcome = 'transition'; break; }
     if (phase === 'completed' || phase === 'failed') {

@@ -4,8 +4,8 @@ import type { Vec2 } from '../physics/vector';
 export const SECTOR_SIZE = 2048;
 export interface SectorKey { x: number; y: number }
 export interface SectorData { key: SectorKey; seed: number; bodies: Body[] }
-/** Future streaming adapter: save dynamic state before unload; load must restore
- * saved bodies before generating from the sector seed. Not wired to an infinite world.
+/** Optional future asynchronous persistence adapter. The live bounded synchronous
+ * loader is in universe.ts; this interface is reserved for disk/worker-backed sectors.
  */
 export interface SectorProvider {
   load(key: SectorKey, seed: number): Promise<SectorData>;

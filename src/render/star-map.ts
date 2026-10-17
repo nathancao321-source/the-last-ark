@@ -1,6 +1,7 @@
 import type { GameState } from '../game/types';
 import { navigationBounds, mapPoint } from '../camera/navigation';
 import { currentObjective, objectivePosition } from '../game/mission';
+import { explorationText } from '../world/universe';
 export function starMapPoints(game:GameState) {
   return [...game.bodies,...game.players].filter(body=>body.layer!=='hidden'&&body.layer!=='background');
 }
@@ -10,8 +11,8 @@ export function renderStarMap(ctx:CanvasRenderingContext2D,game:GameState,width:
   const panel={minX:45,minY:120,maxX:width-45,maxY:height-55};
   ctx.save();ctx.fillStyle='#080d16';ctx.fillRect(0,0,width,height);
   ctx.fillStyle='#e5eaf4';ctx.textAlign='left';ctx.font='20px system-ui';ctx.fillText('全局星图 · M / Space 关闭',22,32);
-  ctx.font='13px system-ui';ctx.fillText('查看星图时暂停 · 蓝 P1 / 金 P2 / 白 方舟 / 绿 目标',22,58);
-  ctx.fillText(currentObjective(game)?.label??game.message,22,82,width-44);
+  ctx.font='13px system-ui';ctx.fillText(game.universe?explorationText(game).split('\n')[0]:'查看星图时暂停 · 蓝 P1 / 金 P2 / 白 方舟 / 绿 目标',22,58,width-44);
+  ctx.fillText(game.universe?explorationText(game).split('\n')[1]:currentObjective(game)?.label??game.message,22,82,width-44);
   ctx.strokeStyle='#324156';ctx.strokeRect(panel.minX,panel.minY,panel.maxX-panel.minX,panel.maxY-panel.minY);
   for(const wave of game.level.waves??[]) {
     const a=mapPoint({x:wave.bounds.minX,y:wave.bounds.minY},bounds,panel),b=mapPoint({x:wave.bounds.maxX,y:wave.bounds.maxY},bounds,panel);
@@ -31,5 +32,6 @@ export function renderStarMap(ctx:CanvasRenderingContext2D,game:GameState,width:
     }
   }
   if(target){const p=mapPoint(target,bounds,panel);ctx.strokeStyle='#64d98b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);ctx.stroke();}
+  if(game.universe){ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillStyle='#c3b2e0';ctx.fillText('最近发现：'+(game.universe.discoveries.slice(-3).map(d=>`${d.kind==='triple'?'三日系统':'遥远星云'} (${d.key.x},${d.key.y})`).join(' / ')||'尚无记录'),22,height-20,width-44);}
   ctx.restore();
 }

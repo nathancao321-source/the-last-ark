@@ -10,6 +10,7 @@ import { contains, sweptBounds } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 import { updateStellar } from './stellar';
 import { updateDamageZones } from './damage-zones';
+import { initializeUniverse, rebaseUniverse, streamUniverse } from '../world/universe';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
   const { checkpoint: _previous, ...state } = game;
@@ -27,6 +28,7 @@ export function createGame(level: Level): GameState {
   initializeTutorial(game);
   game.mission.completedObjectives=[...(config.initialObjectives ?? [])];
   if(config.shipHealth)game.health={current:config.shipHealth,max:config.shipHealth};
+  if(config.procedural)initializeUniverse(game);
   saveCheckpoint(game, 'start');
   return game;
 }
@@ -61,9 +63,12 @@ export function skipTeachingStep(game: GameState): void {
 export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void {
   if (game.phase === 'completed' || game.phase === 'failed') return;
   if (!Number.isFinite(dt) || dt <= 0) return;
+  let frameShift={x:0,y:0};
+  if(game.universe){frameShift=rebaseUniverse(game);streamUniverse(game,frameShift.x!==0||frameShift.y!==0);}
   const previous = new Map([...game.bodies, ...game.players].map(b => [b.id, { ...b.position }]));
   game.players.forEach((player, i) => {
-    stepNode(player, input.players[i], game.bodies, dt, game.phase === 'running', game.elapsed);
+    const intent=input.players[i],target=intent.targetWorldPosition;
+    stepNode(player, target?{...intent,targetWorldPosition:{x:target.x+frameShift.x,y:target.y+frameShift.y}}:intent, game.bodies, dt, game.phase === 'running', game.elapsed);
   });
   if (game.phase !== 'running') {
     const checkpoint = updateTutorial(game, previous, dt, false);
@@ -101,6 +106,6 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   game.bodies = game.bodies.filter(b => b === ship || capabilities(b).motion !== 'dynamic' || !hits(b, true));
   const checkpoint = evaluateMission(game, previous);
   const lessonCheckpoint = updateTutorial(game, previous, dt, true);
-  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 从头开始；Shift+R 恢复检查点' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? '护航中';
+  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 从头开始；Shift+R 恢复检查点' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? game.universe?.notice ?? '护航中';
   if (checkpoint || lessonCheckpoint) saveCheckpoint(game, checkpoint ?? lessonCheckpoint!);
 }

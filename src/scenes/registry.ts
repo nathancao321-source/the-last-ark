@@ -4,6 +4,7 @@ import { movingWorld } from '../levels/moving-world';
 import { solarSystem } from '../levels/solar-system';
 import { blackHoleLevel, galacticRest } from '../levels/black-hole';
 import type { SceneRegistry } from './types';
+import { endlessLevel } from '../levels/endless';
 export const scenes: SceneRegistry = {
   title: { id: 'title', name: 'THE LAST ARK', status: 'available' },
   coop_test: { id: 'coop_test', name: '开发合作测试', status: 'planned' },
@@ -15,7 +16,7 @@ export const scenes: SceneRegistry = {
     completion:{message:'Level 1 Complete · 准备远距跃迁至银河深渊',nextScene:'black_hole',nextLabel:'远距跃迁 · Beyond the Horizon'} },
   black_hole: { id: 'black_hole', name: 'Level 2 · BEYOND THE HORIZON / 银河深渊',status: 'available',level:blackHoleLevel,
     description:'抵达银河中心附近。合作绕过不可移动的黑洞、潮汐危险区和漂流残骸，经独立出口跃迁至银河边缘。',
-    completion:{message:'Level 2 Complete · 方舟越过银河深渊，前往银河边缘',nextScene:'galactic_rest',nextLabel:'继续 · 银河边缘休整'} },
-  galactic_rest: {id:'galactic_rest',name:'银河边缘 · 航程休整',status:'available',level:galacticRest,description:'安全抵达。后续无限探索尚未开放，可返回章节选择重玩。'},
-  endless: { id: 'endless', name: 'Endless Mode', status: 'planned' },
+    completion:{message:'Level 2 Complete · 方舟越过银河深渊，群星之间的航程开始',nextScene:'endless',nextLabel:'继续 · Beyond the Stars'} },
+  galactic_rest: {id:'galactic_rest',name:'银河边缘 · 航程休整',status:'available',level:galacticRest,description:'保留的安全休整场景。可返回章节选择进入群星之间。'},
+  endless: { id: 'endless', name: 'BEYOND THE STARS / 群星之间', description:'自由探索程序化宇宙，寻找三日系统与遥远星云。H/J召回节点；K保存，L恢复。',status: 'available',level:endlessLevel },
 };

@@ -139,7 +139,7 @@ describe('teaching safety and real physical effects', () => {
 
   it('offers both tutorial parts and allows an independent first-part replay', () => {
     const choices = chapterChoices(registry);
-    expect(choices.filter(c => c.playable).map(c => c.id)).toEqual(['tutorial_part_1','prototype','tutorial_part_2','solar_system','black_hole']);
+    expect(choices.filter(c => c.playable).map(c => c.id)).toEqual(['tutorial_part_1','prototype','tutorial_part_2','solar_system','black_hole','endless']);
     expect(choices.find(c => c.id === 'tutorial_part_2')!.playable).toBe(true);
     const scenes = new SceneController(); scenes.enter('tutorial_part_2'); expect(scenes.game!.level.id).toBe('moving-world');
     scenes.enter('tutorial_part_1'); expect(scenes.game).toEqual(createGame(firstContact)); expect(scenes.arrival).toBeUndefined();

@@ -21,6 +21,9 @@ import { updateEncounters } from './world/encounters';
 import { scenes as registry } from './scenes/registry';
 import { developmentRegistry } from './debug/config';
 import { movementTelemetry } from './debug/telemetry';
+import { recallNode, explorationText } from './world/universe';
+import { SECTOR_SIZE } from './world/sectors';
+import { loadExploration, storeExploration } from './game/exploration-save';
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
 const ctx = canvas.getContext('2d');
 if (!ctx) throw new Error('此浏览器不支持 Canvas 2D。');
@@ -53,7 +56,30 @@ function toggleMap():void {
 }
 const toggle = () => { if(mapOpen)toggleMap();else if (!overlay.dismiss()) scenes.toggle(); };
 mapButton.addEventListener('click',toggleMap);
+const explorationTools=document.querySelector<HTMLElement>('#exploration-tools')!;
+const explorationNotice=document.querySelector<HTMLElement>('#exploration-notice')!;
+function saveExplorationUI():void {
+  if(!scenes.game?.universe){explorationNotice.textContent='请先进入无限探索';return;}
+  const ok=storeExploration(progressStorage,scenes.game);
+  explorationNotice.textContent=scenes.game.message=scenes.game.universe.notice=ok?'探索已保存到本机 · L 恢复':'保存失败：当前状态不可保存或浏览器存储不可用';
+  canvas.focus();
+}
+function loadExplorationUI():void {
+  const restored=loadExploration(progressStorage);
+  if(restored){scenes.scene='endless';scenes.game=restored;scenes.revision++;explorationNotice.textContent='已恢复 · Space 继续';canvas.focus();}
+  else explorationNotice.textContent='没有可用探索存档，或存档损坏';
+}
+const newUniverse=()=>{
+  const seed=Number(document.querySelector<HTMLInputElement>('#universe-seed')!.value);
+  if(!Number.isInteger(seed)||seed<0||seed>4294967295){explorationNotice.textContent='请输入 0–4294967295 的整数 Seed';return;}
+  scenes.registry.endless.level!.seed=seed;scenes.enter('endless');explorationNotice.textContent='新探索已准备，旧存档保留至下一次保存';canvas.focus();
+};
+const saveButton=document.querySelector<HTMLButtonElement>('#save-universe')!,loadButton=document.querySelector<HTMLButtonElement>('#load-universe')!,newButton=document.querySelector<HTMLButtonElement>('#new-universe')!;
+saveButton.addEventListener('click',saveExplorationUI);loadButton.addEventListener('click',loadExplorationUI);newButton.addEventListener('click',newUniverse);
 const keyboard = new Keyboard(action => {
+  if((action==='recall-p1'||action==='recall-p2')&&scenes.game?.universe){const index=action==='recall-p1'?0:1;if(recallNode(scenes.game,index))inputs.resetPlayer(index);}
+  if(action==='save')saveExplorationUI();
+  if(action==='load')loadExplorationUI();
   if (action === 'toggle') toggle();
   if (action === 'map') toggleMap();
   if (action === 'reset' || action === 'restart') scenes.retry(action === 'restart');
@@ -101,16 +127,26 @@ function frame(now: number): void {
     ? scenes.scene + ':' + scenes.revision + ':' + lesson.id : undefined;
   overlay.sync(lessonKey,lesson ? devices.text(lesson.title + '\n' + lesson.text) : '');
   if (!mapOpen && overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
-  clock.advance(seconds, () => { const intent=inputs.read();if(!mapOpen)scenes.step(intent); syncScene(); });
+  clock.advance(seconds, () => {
+    const origin=scenes.game?.universe?{...scenes.game.universe.origin}:undefined;
+    const intent=inputs.read();if(!mapOpen)scenes.step(intent);
+    const next=scenes.game?.universe?.origin;
+    if(origin&&next&&(origin.x!==next.x||origin.y!==next.y)) {
+      camera.position.x-=(next.x-origin.x)*SECTOR_SIZE;camera.position.y-=(next.y-origin.y)*SECTOR_SIZE;
+      lastPredictionTime=-Infinity;
+    }
+    syncScene();
+  });
   const game = scenes.game;
   ui.update();
   devices.update();
+  explorationTools.hidden=!!game&&!game.universe;saveButton.disabled=!game?.universe;
   mapButton.hidden=!game;mapButton.textContent=mapOpen?'关闭星图 · M':'全局星图 · M';
   if (JSON.stringify(scenes.progress) !== savedCompletion) { storeProgress(progressStorage,scenes.progress); savedCompletion=JSON.stringify(scenes.progress); }
   ctx!.setTransform(dpr,0,0,dpr,0,0);
   if (game) {
     const nextKey = game.phase + ':' + game.players.map(p => p.active).join(',');
-    if (now - lastPredictionTime >= 100 || nextKey !== predictionKey) {
+    if (now - lastPredictionTime >= (game.universe?400:100) || nextKey !== predictionKey) {
       prediction = predictTrajectory(game); lastPredictionTime = now; predictionKey = nextKey;
     }
     const ship = game.bodies.find(b => b.kind === 'ship')!;
@@ -121,7 +157,7 @@ function frame(now: number): void {
     render(ctx!,game,prediction,camera); status.textContent = telemetry(game);
     overlay.draw(ctx!,camera.width,camera.height);
     if(mapOpen)renderStarMap(ctx!,game,camera.width,camera.height);
-    if (debugView) debugView.textContent = movementTelemetry(game);
+    if (debugView) debugView.textContent = movementTelemetry(game)+(game.universe?'\n'+explorationText(game):'');
     canvas.dataset.phase = game.phase; canvas.dataset.fields = game.players.map(p => p.active ? 'on' : 'off').join(',');
     canvas.dataset.prediction = prediction.outcome;
     if (game.tutorial) canvas.dataset.lesson = game.level.tutorial!.steps[game.tutorial.step].id;
@@ -138,4 +174,4 @@ function frame(now: number): void {
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
-if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); mapButton.removeEventListener('click',toggleMap); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
+if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });

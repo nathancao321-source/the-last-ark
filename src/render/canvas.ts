@@ -9,12 +9,13 @@ import { objectivePosition } from '../game/mission';
 import { visibleEntities } from './visibility';
 import { efficiency } from '../game/scoring';
 import { drawGammaJet, drawCapturedNode } from './node-effects';
+import { explorationText } from '../world/universe';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
   const result = efficiency(game);
   return game.level.name + ' | ' + STATUS[game.phase] + ' | 速度 ' + length(ship.velocity).toFixed(1) + ' / 限速 ' + speedLimit(ship)
-    + ' | 方舟 (' + ship.position.x.toFixed(0) + ', ' + ship.position.y.toFixed(0) + ') | ' + game.elapsed.toFixed(1) + ' s'
+    + (game.universe?' | 方舟局部 (':' | 方舟 (') + ship.position.x.toFixed(0) + ', ' + ship.position.y.toFixed(0) + ') | ' + game.elapsed.toFixed(1) + ' s'
     + (result ? ' | 航程 ' + result.distance.toFixed(1) + (result.stars ? ' | ' + '★'.repeat(result.stars) + '☆'.repeat(3-result.stars) : '') : '');
 }
 function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, fill = true): void {
@@ -67,7 +68,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
       ctx.fillStyle = '#9de3b3'; ctx.font = '15px system-ui'; ctx.textAlign = 'center';
       ctx.fillText(body.appearance?.name??(body.kind === 'station' ? '空间港 · 低速抵达' : '虫洞'), body.position.x, body.position.y + body.radius + 26);
     } else {
-      circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'));
+      circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'),!body.spawnPending);
       if(body.appearance?.ring){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}
       if (body.kind === 'black_hole') {
         ctx.save();ctx.strokeStyle='#d6b28c';ctx.lineWidth=5/camera.zoom;ctx.beginPath();
@@ -128,7 +129,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   }
   if(game.phase==='completed'&&game.level.id==='solar-exodus') {ctx.fillStyle='#64d98b';ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText('Level 1 Complete',width/2,height/2);ctx.textAlign='left';}
   if(game.phase==='completed'&&game.level.id==='beyond-the-horizon') {ctx.fillStyle='#64d98b';ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText('Level 2 Complete',width/2,height/2);ctx.textAlign='left';}
-  if(game.level.id==='galactic-rest') {ctx.fillStyle='#c4cede';ctx.font='14px system-ui';ctx.fillText('已抵达银河边缘 · 安全休整 · 无限探索尚未开放 · Esc 返回章节',16,92,width-32);}
+  if(game.level.id==='galactic-rest') {ctx.fillStyle='#c4cede';ctx.font='14px system-ui';ctx.fillText('已抵达银河边缘 · 安全休整 · Esc 返回章节，选择群星之间',16,92,width-32);}
   if(game.health) {
     ctx.fillStyle='#242d3a';ctx.fillRect(16,59,150,10);ctx.fillStyle=game.health.current<35?'#ff7b69':'#7cdd9b';ctx.fillRect(16,59,150*game.health.current/game.health.max,10);
     ctx.fillStyle='#dce4ee';ctx.font='12px system-ui';ctx.fillText(`船体 ${Math.ceil(game.health.current)} / ${game.health.max}`,176,69);
@@ -148,4 +149,5 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全入港', transition: '场景出口' }[trajectory.outcome];
   ctx.fillText('预测 ' + trajectory.seconds.toFixed(1) + ' s · ' + outcome + ' · 缩放 ' + camera.zoom.toFixed(2) + (target ? ' · 目标距离 ' + length(sub(target,ship.position)).toFixed(0) : ''),16,46);
   ctx.fillText('P1 ' + (game.players[0].active ? '开' : '关') + ' / P2 ' + (game.players[1].active ? '开' : '关') + ' · 检查点 ' + (game.checkpoint?.id ?? '无'),16,height-16);
+  if(game.universe){ctx.fillStyle='#c3b2e0';ctx.fillText(explorationText(game).split('\n')[0],16,90,width-32);ctx.fillText('H / J 召回 P1 / P2 · K 保存 · L 恢复 · M 星图与发现线索',16,110,width-32);}
 }
