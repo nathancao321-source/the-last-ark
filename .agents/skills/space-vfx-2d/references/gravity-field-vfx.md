@@ -5,7 +5,8 @@
 先记住一条：
 
 > **正式画面里，引力不画成曲线、箭头、网格或磁场线。**
-> 引力由 **粒子运动 + 明暗层次 + 局部空间压缩/扩张 + 运动拖尾 + 短暂脉冲** 来表达。
+> 引力由 **星空形变 + 低对比度明暗褶皱 + 交互驱动的短暂空间扰动** 来表达；节点光晕与拖尾辅助定位。
+> **§3–7 和 §10.4 为 Deprecated / Rejected Experiment**，仅保留技术记录，不是正式实现路径。
 > 线条与箭头属于**开发调试可视化**，默认关闭。
 
 ---
@@ -32,7 +33,7 @@ export function fieldAcceleration(target: Vec2, source: Vec2, field: Field): Vec
    → 这就是为什么**不用场线**：用数值积分去复现直线，既难看又附带积分误差。曲率只在**两个场重叠**处才出现。
 
 2. **`field.radius` 是硬截断。** 超出就是 `{x:0, y:0}`，一点力都没有。
-   → 粒子也必须继承这个硬边界。在场外还"被吸引"的粒子是在说谎。
+   → 基础形变继承该范围并在边缘平滑归零；历史粒子实验也要求场外不受力。短暂视觉扰动可在单独标定的软包络内衰减，它不表示范围外存在真实力。
 
 3. **`polarity` 已经写进了返回值。** `+1` 吸引、`-1` 排斥，方向自动指向正确的一侧。
    → **粒子不需要知道自己是蓝的还是金的，也能得到正确方向。** 颜色只是身份标签，不是方向来源。
@@ -49,13 +50,13 @@ export function fieldAcceleration(target: Vec2, source: Vec2, field: Field): Vec
 
 ### 规则
 
-1. **有 `fieldAccelerationInto` 就复用它。** 它已经存在（`src/physics/fields.ts`），是非分配版本，与本仓库 `capabilitiesInto` / `bodyGravityInto` / `queryInto` 同一套约定。
+1. **有 `fieldAccelerationInto` 就复用它。** 原作者记录的该接口是非分配版本，当前分支需先核对，与本仓库 `capabilitiesInto` / `bodyGravityInto` / `queryInto` 同一套约定。
 2. **物理层没有取样接口时，写一个只读适配器，不要重写引力公式。**
-3. 渲染层**永远不允许**出现第二份 `1/(d²+s²)`。
+3. 渲染层**永远不允许**出现第二份 `1/(d²+s²)`。当前分支只有分配版 `fieldAcceleration` 时，先用只读适配器调用它并测成本；不要改物理接口来迎合本规范，也不要把示例 import 当成已存在。
 
 ### 非分配取样
 
-粒子循环里每个粒子每帧都要取样，**绝不能用分配版**——`sub` / `scale`（`src/physics/vector.ts`）每次都返回新 `Vec2`，500 粒子 × 2 源 × 60 帧 = 每秒 6 万个垃圾对象。
+星点 / 控制点循环里每点每帧都要取样，**绝不能用分配版**——`sub` / `scale`（`src/physics/vector.ts`）每次都返回新 `Vec2`，500 粒子 × 2 源 × 60 帧 = 每秒 6 万个垃圾对象。
 
 ```ts
 // 模块级 scratch，全流程复用
@@ -66,7 +67,7 @@ const sampleScratch = { x: 0, y: 0 };
 
 `src/render/field-visuals.ts` 的 `drawNetForceArrow` 里已经有**一份正确的合力求和**：先遍历 `active` 的玩家场，再遍历所有 `caps.gravity && strength > 0` 且 `body !== ship` 的天体。这个顺序精确对应 `src/physics/world.ts` 的 `accelerations()`。
 
-把它提取成一个可复用的只读函数，箭头与粒子共用同一份，**保证两者永不打架**：
+在这些接口已存在的分支，把它提取成可复用的只读函数，箭头与视觉采样共用同一份，**保证两者永不打架**：
 
 ```ts
 // src/render/vfx/field-sampler.ts —— 新增，只读
@@ -77,12 +78,13 @@ import { capabilitiesInto, emptyCapabilities } from '../../game/entities';
 const caps = emptyCapabilities();
 const gravity = emptyField();
 const out = { x: 0, y: 0 };
+const target = { x: 0, y: 0 }; // scratch，避免热循环分配
 
 /** 与 world.ts accelerations() 同序的合力：先激活玩家场，再非自身的引力天体。
  *  返回模块级 out（同一实例），调用方不得持有。 */
 export function sampleNetAcceleration(game: GameState, x: number, y: number): Vec2 {
   let ax = 0, ay = 0;
-  const target = { x, y };
+  target.x = x; target.y = y;
   for (let i = 0; i < game.players.length; i++) {
     const player = game.players[i];
     if (!player.active) continue;
@@ -108,7 +110,9 @@ export function sampleNetAcceleration(game: GameState, x: number, y: number): Ve
 
 ---
 
-## 3. 粒子系统设计
+## 3. 粒子系统设计（Deprecated / Rejected Experiment）
+
+> **§3–7 整体归档**：下列生成速率、粒子算法、环形脉冲、调参建议和命令式表述仅说明当时实验，均不授权恢复为正式引力视觉。通用池化 / 批处理知识仍可供天体特效复用。正式路径从 §8–10 继续。
 
 ### 3.1 结构（SoA，定容，零分配）
 
@@ -170,7 +174,7 @@ while (pool.emitAccum >= 1) { spawnOne(pool); pool.emitAccum -= 1; }
 
 ---
 
-## 4. 实现案例一：蓝球吸引粒子
+## 4. 实现案例一：蓝球吸引粒子（Deprecated / Rejected Experiment）
 
 ### 表现目标
 
@@ -227,7 +231,7 @@ if (Math.hypot(p.x - player.position.x, p.y - player.position.y) < player.radius
 
 > ### ⚠️ 上面这份样例代码有两个已实测的 bug（2026-10-16 补记）
 >
-> THE LAST ARK 按本节实现了一版蓝球/金球粒子，然后**被玩家整个否掉**。否掉的第一原因是"**这种东西不能在开始之后持续一直地朝着中心动**"——即下面第 3 条的判据问题，**它是设计层面的，改代码救不回来**。但在删之前，实测还抓出样例代码本身的两个实现 bug。**照抄本节会同时踩中两个**，所以先改代码再谈别的：
+> THE LAST ARK 按本节实现了一版蓝球/金球粒子，然后**被玩家整个否掉**。否掉的第一原因是"**这种东西不能在开始之后持续一直地朝着中心动**"——即下面第 3 条的判据问题，**它是设计层面的，改代码救不回来**。但在删之前，实测还抓出样例代码本身的两个实现 bug。**照抄本节会同时踩中两个**，下述修法仅为实验查错记录，**不恢复该方案**：
 >
 > **bug 1 —— 切向取自力向量，导致吸引场与排斥场手性相反。** `const dx = a.x/mag, dy = a.y/mag` 是**加速度**方向；`-dy, dx` 是把它转 90°。而场的极性是 `field.polarity` 乘进 `magnitude` 的（`fields.ts:5-12`），所以吸引者处的 `a` 指向内、排斥者处指向外，**同一个旋转得到相反的手性**。实测结果：**吸引场只有 8.9% 的粒子与自己的流向一致**——91% 的云在逆流，唯一同向的是"够年轻、还没被掰过来"的那批。
 >
@@ -239,7 +243,7 @@ if (Math.hypot(p.x - player.position.x, p.y - player.position.y) < player.radius
 >
 > 唯一可能的反对理由"逐池固定会让云像刚体一样整体旋转"是**错的**：角速度 `speed·SWIRL_FRACTION/r` 跟着场自身的衰减走，实测 0.5R 处 0.145 rad/s 对 0.95R 处 0.0056 rad/s，**差 26 倍**——那是差动旋转（对数螺线），正是下落的形状。
 >
-> **bug 3（不是代码，是判据）** —— 即使上面两条都修对、手性全是 1.0、径向速度 −28.2 也测出来了，玩家仍然否掉了整个效果。理由见 `SKILL.md` 第 8 节与 `performance-and-qa.md`：**持续动画本身不携带信息**。在动手写粒子之前先回答"它在相邻两帧之间携带新信息吗"，答不上来就不要写。
+> **bug 3（不是代码，是判据）** —— 即使上面两条都修对、手性全是 1.0、径向速度 −28.2 也测出来了，玩家仍然否掉了整个效果。原稿曾将其归因为“持续动画本身不携带信息”，这一绝对判断现已修订：允许安静的连续氛围变化，但本实验的持续径向流动不符合玩家目标，仍然弃用。详见 `SKILL.md` §8。
 
 ### 绘制
 
@@ -247,7 +251,7 @@ if (Math.hypot(p.x - player.position.x, p.y - player.position.y) < player.radius
 
 ---
 
-## 5. 实现案例二：金球排斥粒子
+## 5. 实现案例二：金球排斥粒子（Deprecated / Rejected Experiment）
 
 ### 与蓝球的三处刻意差异
 
@@ -299,7 +303,7 @@ ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
 
 ---
 
-## 6. 实现案例四：双场叠加时的方向来源（本节是重点）
+## 6. 实验中的双场方向来源（Deprecated / Rejected Experiment）
 
 当蓝金同时开启、两个场重叠时：
 
@@ -332,7 +336,7 @@ ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
 
 ---
 
-## 7. 两个必须分开的量
+## 7. 实验中的两个量（Deprecated / Rejected Experiment）
 
 | | 真实加速度 | 视觉粒子速度 |
 | --- | --- | --- |
@@ -388,53 +392,237 @@ width    *= 0.6 + 0.8 * speedT;      // 0.6× → 1.4×
 
 ---
 
-## 9. 空间明暗效果
+## 9. 空间形变与 Spacetime Luminance Ripple（正式规范）
 
-两个机制，都**必须柔和**，不得产生明显的画面扭曲故障。
+这是对原 §9.1 星空位移及 §9.2 静态明暗盘的定向升级。下述参数是**待试玩调优的起始值**；公式与伪代码是规范，不代表当前分支已实现。不改变 `render`、`updateVisuals`、相机或物理接口；新状态仅放入渲染侧 `VisualState`，通过已有更新 / 重置入口接入。
 
-### 9.1 星空位移（推荐，性价比最高）
+### 9.1 星空位移：真实强弱、先合成、后限幅
 
-背景星点是**屏幕空间**画出来的（`src/render/starfield.ts` 的 `drawStarfield`，每个星一个 `ctx.rect`）。在 `ctx.rect` 之前对每颗星做一次径向位移，就能得到"星点向内压缩 / 向外推开"的印象：
+所有采样都基于**未变形**星点，不将上一帧输出反馈为下一帧输入，也不逐场改写采样位置。
 
-```ts
-// 对每个激活的玩家节点求和
-let sx = starScreenX, sy = starScreenY;
-for (const node of activeNodes) {
-  const dx = starScreenX - node.screenX, dy = starScreenY - node.screenY;
-  const d = Math.hypot(dx, dy);
-  const reach = node.field.radius * camera.zoom;
-  if (d >= reach || d < 1e-3) continue;
-  const k = (1 - d / reach) ** 2;                       // 边缘平滑，无硬边
-  const pull = (node.polarity === 1 ? -1 : 1) * k * MAX_DISPLACE;
-  sx += (dx / d) * pull;
-  sy += (dy / d) * pull;
-}
-ctx.rect(sx, sy, layer.size, layer.size);
+取样源清单与既有 `collectFields` / §2 合力适配器的约定保持一致，不因节点身份色遗漏叠加源，不把真实天体位置改为视觉快照位置；玩家开启 / 关闭的余效仅在渲染副本中存在。若当前分支缺少这些接口，按 SKILL.md §4 核对后适配，不改变源收集的玩法语义。
+
+记世界点为 `x`，源位置为 `p_i`，半径为 `R_i`，极性 `s_i=+1` 为蓝色吸引、`-1` 为金色排斥。只读调用 §2 的真实场采样器得到 `a_i(x)`；不要在渲染层复制逆平方律。
+
+```text
+r_i = |x-p_i|
+W_i(x) = max(0, 1-(r_i/R_i)^2)^2           // 紧支撑，边界值和一阶导数都为零
+A(x) = Σ a_i(x)                          // 原始场矢量和，不先逐源归一化 / 限幅
+Phi(v; v0) = v / sqrt(v0^2 + |v|^2)      // 各向同性压缩，零点无需归一化
+C(x) = Π [1-W_i(x)*(1-r_i/sqrt(r_i^2+core_i^2))]
+D_base_css(x) = baseDisplacePx * C(x) * Phi(A(x); accelerationRef)
 ```
 
-- `MAX_DISPLACE` 起始值：吸引 **14 CSS px**，排斥 **10 CSS px**。
-- 两个节点叠加后总量**钳制在 24 px** 以内。
-- **只在 `medium` / `high` 档开启**，`low` / `off` 跳过（在 `drawStarfield` 上加一个参数控制）。
-- 成本：每星每节点约 8 次浮点运算。500 星 × 2 节点 = 8000 次/帧，可忽略。
+- 同一 `accelerationRef > 0` 用于所有源；**不能**每个场除以自己的最大场强，不能先把每个非零场单位化，否则弱场会与强场等权。真实接口已包含距离衰减、软化、范围 taper 与单源加速度上限；不要重复套一份距离衰减到 `a_i`。
+- 在合成后才用 `Phi`，蓝球附近星点向内，金球向外；等大反向场相消，改变遍历顺序只允许浮点舍入差。不要按源分别钳位再累加。
+- `C` 是**共同的视觉中心软化因子**，不改合向量方向：真实采样器在 `r≈0` 有零点特判，邻近方向却可能骤转；该因子让视觉中心连续趋零。`core_i=max(0.04R_i, 1 world unit)` 起步，最终合成再限幅。不要逐源软化后声称方向仍精确等于真实合力。
+- `R_i<=0` 或无效数据跳过并记调试计数；对正常已激活场，实际边界仍是 `field.radius`。`C` 只防视觉中心奇点，不引入真实软化参数。
+- 最终位移含 §9.3 的事件扰动，并作一次连续软限幅：`D=D_raw/sqrt(1+|D_raw|²/maxStarDisplacementPx²)`；长度严格小于配置上限，近零斜率为 1，不按 x/y 分别截断。上限为 0 时直接关闭位移，避免除零。
+- 不移动 `Body.position`、节点、轨迹、碰撞轮廓或预测终点。它是背景透镜近似，不是物体受力积分。
 
-> 这**只作用于背景星点**，绝不作用于任何世界实体、碰撞半径或天体位置。
+**关闭与强度突变**：`VisualState` 保存只读复制的场快照（id、位置、Field 值）与可见权重。物理场关闭后快照不立刻删除，权重目标变 0；重开复用同 id 状态，目标变 1。采用 `w += (target-w)*(1-exp(-dt/tau))`，强度、范围等渲染副本也平滑趋近新值。极性翻转用旧 / 新快照交叉淡变，不在某帧突然改符号。权重在采样后乘入 `a_i`；用于 `C` 的 `W_i` 同乘该权重，消退源不留下中心孔。**过渡期间的中心保护**：当 `0<w_i<1`，该源的原始采样额外乘 `r_i/sqrt(r_i²+((1-w_i)*core_i)²)` 再乘权重；`w_i=1` 时此额外因子定义为 1，`w_i=0` 时跳过。这样权重渐变时也不会把真实场的中心特判变成星点跳跃；这一过渡修饰不保证即时合力方向，稳态公式仍是先求真实矢量和再作共同软化。权重低于阈值时继续到残差小于 0.01 CSS px / 0.0001 alpha 才回收。**这是视觉余效，不能宣称消退期间等于即时物理合力**；调试合力箭头始终采样实时 GameState。场稳定后才要求基础形变与真实合力同向。
 
-### 9.2 节点下方的明暗盘
+**相机、视差与 DPR**：
 
-一个缓存的径向渐变盘，半径 = `field.radius`：
+```ts
+// 概念步骤；热路径使用复用的 Vec2 / Into 适配，不为每颗星创建对象。
+const s0 = unwarpedStarScreenPosition; // 已按既有 tile / 视差层计算，CSS px
+const x = screenToWorld(camera, s0);   // 同一帧相机，得到视觉取样平面上的世界点
+sampleDisturbanceInto(sample, x, vfx); // vfx 只读引用本帧场快照、事件与 visualTime
+const sx = s0.x + sample.dxCss;
+const sy = s0.y + sample.dyCss;
+// 在既有亮度桶路径内 ctx.rect(sx, sy, layer.size, layer.size)
+```
 
-- **吸引**：`WARP_DARKEN`，峰值 alpha ≤ 0.22，`source-over` 画在粒子**之下**。
-- **排斥**：`WARP_LIGHTEN`，峰值 alpha ≤ 0.14，`lighter`。
+节点和事件中心都经 `worldToScreen(camera,p)` 投影，`reachCss=R*camera.zoom`；也可如上统一在世界平面采样。**不要**把有视差星点的原始 tile 坐标直接当物理世界点，或对节点位置乘星层视差。不同深度层仅可乘固定 `layerWarpWeight∈[0,1]`，不能改变采样方向。
 
-**必须渐变到 0 alpha**，不能有可见的边缘——有边就变成了"一个圆盘"，正是要避免的观感。渐变同样**必须缓存**（按 `polarity + 量化 radius` 作 key，坐标建在原点，绘制前 `translate`）。
+星点本底仍由固定 seed、tile 索引和当前相机推导；不可存储累计屏幕偏移、逐帧重新随机或在屏幕坐标上做时间平滑。只平滑渲染参数与事件强度。在最终 DPR 变换只应用一次的 CSS 坐标阶段绘制；世界变换中画明暗印章时，位移 CSS px 必须除以 `zoom` 才能当世界长度。不要再次乘 DPR。位移上限额外取 `min(configMax,0.08*referenceRadius*camera.zoom)`，`referenceRadius` 在场景建立时取固定的玩家场参考半径；不按星点是否进入某个场切换“最近范围”，避免叠加区限幅跳变。随极小 zoom 连续减弱，不假设 zoom≥0.3。此值仅在绘制阶段由当前相机派生，不用于事件触发。
 
-### 9.3 明确不做
+视口剔除 / tile 枚举增加 `maxStarDisplacementPx + starSize` 的 CSS padding；保留既有连续 tile 身份，星点只在未变形坐标上枚举一次，避免跨 tile 边界重复或突现。
 
-**不做屏幕空间扭曲、不做像素级位移、不用 `ctx.filter`。** Canvas 2D 没有便宜的画面扭曲手段；用 `drawImage` 做位移采样会直接吃掉帧预算，且与"克制"取向冲突。上面两条已经足够表达"局部空间被影响"。
+### 9.2 明暗褶皱：替代静态径向暗盘 / 亮盘
+
+定义确定性、空间连续、低频的 `N(x,t)∈[-1,1]`，例如两三个不同方向的正弦 / 余弦的加权和（总权重≤1），相位由 `seededRandom(hash(id))` 预生成。空间频率约 `1/spatialScale`，静态基底的 `N(x,0)` 固定；不逐帧重随机、不画闭合等高线。
+
+```text
+m_i(x) = 1 + irregularity*N_i((x-p_i)/spatialScale, 0)
+B_static(x) = C(x) * Σ [-s_i * beta_i * |a_i(x)|/sqrt(accelerationRef²+|a_i(x)|²)
+                  * W_i(x) * m_i(x)]
+```
+
+这里的 `C` 也使明暗在源中心连续；`a_i` 包含可见权重；`beta_blue≈0.07`、`beta_gold≈0.035` 为起点。蓝色以压暗为主，金色以微亮为主；相反极性先在标量层合成，不能把两种彩色加法光晕各自画满后再“混色”。标量表示空间质感，**不是合力大小或方向**，抵消检验以 §9.1 的向量为准。
+
+静止且稳定时，允许 `H_idle=idleAmplitude*visibleWeight*W*N_slow(x,t)`：用两种不成简单整数比的慢频率（约 23 s 与 37 s）及固定空间相位，明暗峰值约 0.002，星点幅度≤0.15 CSS px。不能把整个范围半径按正弦反复缩放；若能明显看出循环，降低幅度或关闭 idle。该项也同时进入 §9.3 的向量与明暗通道。
+
+### 9.3 统一传播扰动：同一个 H 驱动两种输出
+
+每次事件创建一个定容记录 `j`：源 id、**触发时的世界原点** `o_j`、移动方向 `u_j`、极性 `s_j`、幅度 `b_j`、范围 `R_j`、年龄 `t_j` 与固定 seed。事件发出后不把原点绑在移动节点上，否则已传播波会跟着节点滑动。蓝 / 金都可向外传递“状态变化的消息”；蓝色的主收缩感来自基础向内位移，不能误把传播速度设为负。
+
+```text
+r = |x-o_j|;   rSoft = sqrt(r²+core_j²)-core_j
+q = (rSoft - propagationSpeed*t_j)/spatialScale + 0.18*N_j(x,0)
+G(q) = (1-q²)*exp(-q²/2)                 // 宽的明暗褶皱，而非细圆环
+S(z) = z²*(3-2z), z∈[0,1]
+T(t) = S(clamp(t/attackSeconds,0,1))*exp(-t/decaySeconds)
+       * [1-S(clamp((t-(life-tailSeconds))/tailSeconds,0,1))]
+W_j(x) = max(0, 1-(r/R_j)²)^2
+H_j(x,t) = b_j*T(t)*W_j(x)*(1+irregularity*N_j(x,0))*G(q)
+e_j = (x-o_j)/sqrt(r²+core_j²)
+D_event_css(x,t) = rippleDisplacePx * Σ H_j * (-s_j*e_j + dragGain*u_j)
+B_event(x,t) = rippleLuminanceAmplitude * Σ (-s_j*H_j)
+D_raw = D_base_css + D_event_css + D_idle_css
+B_raw = B_static + B_event + B_idle
+B(x,t) = brightnessCap*tanh(B_raw/brightnessCap)
+```
+
+`brightnessCap` 按正负分别选 `maxLightenAlpha` / `maxDarkenAlpha`，二者为 0 时对应通道输出 0。`D_idle_css`、`B_idle` 使用同一 `H_idle` 和上述软方向，而非各自独立的时钟。一个位置调用一次采样器可同时得到 `dxCss,dyCss,luminance`；星点和明暗控制点在同一 visualTime 采样同一组记录。`G` 的符号变化允许极轻的亮 / 暗肩部，不能用白线勾出波峰。
+
+`spatialScale≈0.25R` 的宽波包、固定低频不规则形状和缓慢时间包络共同消掉明显的同心圆边界。半径 `R_j` 默认取事件时 `field.radius`；可选最多 `1.15R` 的余波范围，**仅视觉**，不改物理截断。`life=4*decaySeconds`，最后 `tailSeconds=0.25*decaySeconds` 用平滑窗精确归零后回收；只靠指数到期硬删除会跳变。
+
+**触发规则**（只读 GameState / 既有输入结果，不接管输入）：
+
+- `active: false→true`：触发一次；持续按住不重播。
+- 场强、半径、软化、上限或极性变化：比较渲染副本在 `0.25R / 0.5R / 0.75R` 的真实采样幅值（不要在 `R` 上采样，那里恒为零）；变化超过迟滞阈值时触发。极性单独检测，避免等幅翻转漏报。
+- 移动：用节点**世界位移 / dt**（若已有可靠世界速度可复用），低通后计算速度超过阈值的部分。`motionEnergy += max(0,speed-speedThreshold)*dt/motionDistance`；超过 1 且冷却结束时消耗并触发一次，能量累积设上限 1，不补发排队事件。速度高、变化大时幅度增加并钳至 `maxEventAmplitude`。慢移动可微调稳定褶皱的剪切朝向，不连续发波。
+- 幅度示例 `b=clamp(kOn*activation + kField*fieldDelta + kMove*speedExcess,0,maxEventAmplitude)`；各项均先归一化。停下后不立即清事件，按 `T` 自然衰减。
+- 关闭：基础形变 / 明暗权重平滑趋零；可发一次较弱的恢复事件（约开启幅度的 0.25），默认禁用强反向闪光。淡出快照不能发移动事件。
+- 每源冷却约 0.18 s，全局最多 4 个事件。槽满时丢弃本次事件，**不硬删仍可见旧事件**；不扩容、不重置旧事件年龄。瞬移 / checkpoint 与 `scenes.revision` 走既有重置，不将跨场景位移当速度。
+
+这些是**艺术化传播扰动，不是真正的广义相对论引力波**；不引入真实力的传播延迟、额外加速度或新物理时间步。
+
+### 9.4 Canvas 2D 的具体映射（无需整屏像素变形）
+
+1. 保留星空亮度桶批绘，在每颗星 `rect` 前用 §9.1 算输出位置。只改绘制坐标，保留星点本底缓存。
+2. 在背景 ROI 上布置**世界坐标锚定的稀疏控制网格**，覆盖场 / 余波的有界包络。每个控制点采样上述 `B`，取绝对值为 `globalAlpha`，负值用近黑 `WARP_DARKEN`、正值用低饱和 `WARP_LIGHTEN`，均 `source-over`。使用近乎中性的明暗，不用大块纯蓝 / 金填充。
+3. 控制点绘制缓存的柔和印章。推荐可分离平滑核 `K(u,v)=h(u)h(v)`，`h(u)=1-S(|u|)`（`|u|<1`，否则 0）；相邻网格间距等于核半宽。无限网格的核权重和为 1，背景外圈零样本补边，因此低对比度纹理连续且不堆亮。可在首次绘制时将核烘成很小的固定 sprite（如 64×64，明 / 暗各一张）；不是每帧全屏像素处理。缓存只在绘制阶段懒建，模块 import 不访问 DOM。
+4. 每点只画合成后的一个符号通道。先对所有场 / 事件求和、限幅，再绘制；`ΣK=1` 且每点 alpha≤统一上限，避免场越多越亮。`source-over` 只是亮度近似，不是 HDR 光学求解；正负值先合成，重叠处不要额外 `lighter`。缓存色用不透明固定 token，实际 alpha = 核 alpha × `globalAlpha`，不要把 8 位 token 的低 alpha 再乘一次当成上限。
+5. 原有缓存径向渐变可继续用于节点光晕或极弱基底，但**不能**用 2–3 个缩放渐变盘冒充褶皱。若选择多个径向软印章替代网格核，需限制总 alpha 权重，并实测没有圆盘 / 扫描环；它只是较粗的美术近似，不能声称满足核的分区求和性质。
+6. 绘制顺序为背景底 / 星云 → 已形变星点 → 明暗褶皱背景层 → 预测线 / 尾迹 / 天体 / 节点 / 飞船 → HUD；沿用既有屏幕 / 世界变换，局部 save/restore，不重写渲染架构。若当前星云在世界 pass 内，背景明暗也放在该 pass 的最后、预测线之前，不再重复覆盖一层。
+
+网格间距起步约 `0.5R`，不规则细节波长不少于两倍间距。为免稀疏采样漏掉波包，取 `effectiveSpatialScale=max(configuredSpatialScale,2*gridSpacing)`，**两通道共同使用该尺度**；调整网格时在视觉状态中平滑该尺度，不能只把明暗变粗而让星点播放另一种波；最多 medium 64 / high 96 个可见控制点（两节点为主的目标预算）。按未变形 ROI 及印章半宽做剔除。容量不足时先降低空间频率、用更粗网格，不随机跳过点；网格原点与 seed 固定在世界上，不随相机平移重置。变更网格间距需迟滞与短暂交叉淡变，**两套网格合计仍不得超预算**，不能在缩放时瞬时换格。
+
+每帧只更新控制点 alpha / 少量渲染参数。若预算仍不足，先关 idle，再减控制点密度 / 幅度或禁用明暗传播，保留基础星光形变。Canvas 2D 不能廉价扭曲整张星云 / 背景图；本方案用星点偏移和低频明暗重建产生相近空间感，不承诺真实透镜成像、逐像素折射或全背景位移。禁止实时 `getImageData/putImageData` 全屏循环、`ctx.filter`、昂贵模糊或以 WebGL Shader / Three.js 为前提。
+
+### 9.5 独立开关与参数（仅渲染侧，起始值待测）
+
+保留 `QualitySpec.warp` 总门控，新增项是视觉配置 / spec 的可选字段建议，不改变任何物理接口。缺失项按对应档位默认值；`fx=off` 无条件优先，不创建新缓存、不采样、不提交新绘制。
+
+| 参数 | 起始值 / 单位 | 用途 |
+| --- | --- | --- |
+| `starWarp` | medium/high true | 星点通道总开关，含基底 / 事件 / idle；与明暗独立 |
+| `luminanceRipple` | medium/high true | 明暗基底、idle、事件明暗的独立开关；不关星点形变 |
+| `interactionRipple` | medium/high true | 共享事件通道；关闭时星点与明暗都去掉事件项 |
+| `idleRipple` | false（试玩后可开） | 极低幅度稳态起伏，独立禁用 |
+| `baseDisplacePx` | 14 CSS px | 静态形变系数；蓝 / 金差别首先来自真实强度 |
+| `maxStarDisplacementPx` | 24 CSS px | 含事件的最终总位移上限 |
+| `accelerationRef` | 60 world units/s² | 公共强度映射参考值，非物理上限 |
+| `rippleDisplacePx` | 2 CSS px | 共享事件的星点幅度 |
+| `rippleLuminanceAmplitude` | 0.025 alpha | 明暗事件波幅 |
+| `maxDarkenAlpha / maxLightenAlpha` | 0.10 / 0.06 | 多场合成后的明暗上限 |
+| `propagationSpeed` | 0.8R/s，事件创建时换算世界速度 | 波峰传播速度，不改真实场 |
+| `decaySeconds / attackSeconds` | 0.85 / 0.09 s | 平滑衰减 / 起始建立 |
+| `spatialScale` | 0.25R world units | 宽波包 / 不规则形状尺度；受网格 Nyquist 限制，必要时增大 |
+| `irregularity / dragGain` | 0.18 / 0.15 | 非规则度 / 运动方向剪切 |
+| `fieldSmoothSeconds / releaseSeconds` | 0.12 / 0.35 s | 建立与关闭恢复 |
+| `speedThreshold / motionDistance` | 60 world units/s / 0.2R world units | 运动事件门槛 / 累积距离 |
+| `eventCooldown / maxEvents` | 0.18 s / 4 | 限频 / 定容池 |
+| `maxEventAmplitude` | 1（无量纲） | 单事件幅度钳制 |
+| `maxLuminanceSamples` | medium 64 / high 96 | 网格 / drawImage 上限，交叉淡变含在内 |
+
+建议 `?dev=1` 下提供 `vfxLuminance=0/1`、`vfxInteraction=0/1`、`vfxIdle=0/1`、`vfxStarWarp=0/1` 的独立调试覆盖；**这些是拟议调试项，当前未实现**。解析留在视觉配置层，质量总开关仍在生产可用的 `parseQuality` 路径；不改关卡配置。调试关闭明暗后，星点仍应播放共享事件；关闭 interaction 后两通道都只剩基底。所有数值先验有限性与合法范围，零幅度 / 零容量为安全旁路。
 
 ---
 
-## 10. Canvas 2D 实现伪代码（完整更新循环）
+## 10. Canvas 2D 更新与绘制伪代码
+
+### 10.1 正式更新循环（渲染侧，保持原入口）
+
+以下 helper 均为概念名，接入时复用真实接口；不是向项目添加的已实现 API。读取物理状态，无 `Camera` 参数，摄像机不产生交互事件。
+
+```ts
+function updateSpacetime(vfx, game, revision, frameSeconds) {
+  if (revision !== vfx.revision) {
+    resetSpacetime(vfx); // 挂在既有 resetVisuals，不改场景控制器
+    vfx.revision = revision;
+    seedPreviousSourceSnapshots(vfx, game); // 首帧不把位置差当高速运动
+  }
+  if (!vfx.spec.warp || vfx.quality === 'off') return;
+  if (!game || game.phase !== 'running') return; // pause / ready / ended 冻结
+  const dt = clamp(frameSeconds, 0, 0.1); // 沿用视觉时钟，非新的物理步长
+  if (dt === 0) return;
+  vfx.time += dt;
+
+  forEachSourceSlot(vfx, game, (slot, source) => {
+    // 读取 active、世界位置与 Field；没有 source 的旧 slot 仍需 release。
+    const event = compareWithPrevious(slot, source, dt);
+    smoothVisualCopies(slot, source, dt); // exp smoothing；关闭保留残余快照
+    if (vfx.spec.interactionRipple && event.aboveThreshold && slot.cooldown <= 0) {
+      tryEmitIntoFreeSlot(vfx.events, event); // 定容；满则丢本次，不覆盖旧波
+      slot.cooldown = vfx.config.eventCooldown;
+    }
+    slot.cooldown = Math.max(0, slot.cooldown - dt);
+    copyPreviousInto(slot, source); // 即使关闭事件通道也更新，恢复时不积压
+  });
+  // 先处理新事件，再统一推进；每种帧率只允许阈值越界≤一个视觉步的时间误差。
+  forEachLiveEvent(vfx.events, e => {
+    e.age += dt;
+    if (e.age >= e.life) e.alive = false; // T 在 life 处已经连续归零
+  });
+  retireInvisibleSourceSlots(vfx); // 只回收低于可见残差阈值的消退源
+}
+```
+
+`forEach...` 仅为可读伪代码；实际热循环用固定数组 / 索引，不逐帧分配闭包、对象或数组。事件关闭时可让既有事件自然过期但不采样；`resetVisuals` 清池、相位、源快照、前值和 motionEnergy；缓存资源按既有生命周期清理。`ready` 无事件，首次进入 running 时只按真实激活沿发波。暂停冻结时间与输出，结束后不增长。
+
+### 10.2 一次采样，同时得到位移和明暗
+
+```ts
+function sampleDisturbanceInto(out, x, vfx) {
+  // 全部 scratch / 输出复用；先取真实场向量和，后映射，不在星点之间积分。
+  sampleVisualFieldSumInto(base, x, vfx.sourceSlots); // §9.1；复用真实场采样
+  let dx = base.dxCss, dy = base.dyCss, b = base.luminance;
+  forEachLiveEvent(vfx.events, e => {
+    if (!vfx.spec.interactionRipple) return;
+    const h = sampleSharedPacket(e, x); // §9.3 的 H，星点和网格都调用同一公式
+    samplePacketDirectionInto(directionScratch, e, x); // -s*e_j + dragGain*u_j
+    dx += h * directionScratch.x * vfx.config.rippleDisplacePx;
+    dy += h * directionScratch.y * vfx.config.rippleDisplacePx;
+    b += -e.polarity * h * vfx.config.rippleLuminanceAmplitude;
+    // directionScratch 是局部采样结果；不修改 event 的世界原点或方向。
+  });
+  addSharedIdleIntoIfEnabled(outScratch, x, vfx); // 关闭时必须覆盖输出为零
+  dx += outScratch.dxCss; dy += outScratch.dyCss; b += outScratch.luminance;
+  softLimitDisplacementInto(out, dx, dy, effectiveMaxPx(vfx));
+  if (!vfx.spec.starWarp) { out.dxCss = 0; out.dyCss = 0; }
+  out.luminance = vfx.spec.luminanceRipple ? signedSoftCap(b, vfx.config) : 0;
+}
+```
+
+局部传播方向在每个采样点计算，不能在 event 上存一个固定径向量；若 `starWarp` 关闭，整个星点位移通道输出零，明暗可独立保留；`interactionRipple` 决定两通道是否含事件项。`warp=false / fx=off` 则整体旁路；调试菜单明确此关系。
+
+### 10.3 绘制流程
+
+```ts
+// 屏幕阶段：对未变形星点，反投影 → sampleDisturbanceInto → CSS 偏移 → 原亮度桶 rect。
+// 背景世界阶段：对固定网格控制点，调用同一采样器，只消费 luminance。
+ctx.save();
+ctx.globalCompositeOperation = 'source-over';
+forEachVisibleLuminanceCell(vfx, camera, cell => {
+  sampleDisturbanceInto(sample, cell.worldPosition, vfx);
+  if (Math.abs(sample.luminance) < 0.0001) return;
+  ctx.globalAlpha = Math.abs(sample.luminance);
+  const stamp = sample.luminance < 0 ? cache.darkKernel : cache.lightKernel;
+  ctx.drawImage(stamp, cell.x - cell.halfWidth, cell.y - cell.halfWidth,
+                2 * cell.halfWidth, 2 * cell.halfWidth);
+});
+ctx.restore(); // alpha、composite、transform 不泄漏给实体 / HUD
+```
+
+控制点位于世界变换内，尺寸也是世界单位；不要又用 `worldToScreen` 转一次。静态、idle、event 共用标量 `B`，禁止各自重复绘制整场盘。medium 的额外调用上限由可见网格点数决定，不随历史事件数量无界增长。
+
+### 10.4 原粒子更新与批绘记录（Deprecated / Rejected Experiment）
+
+> 以下原代码仅归档。包含已弃用的常驻粒子与规则环，不可接入正式引力路径；`fieldIntensityAtEdge` 也不是可用强度指标（真实边界场强为零）。通用定容与批量绘制知识仅供天体特效借鉴。
 
 ```ts
 export function updateFieldVfx(vfx: FieldVfx, game: GameState, visuals: VisualState, camera: Camera, dt: number): void {
@@ -519,13 +707,16 @@ export function drawParticles(ctx: CanvasRenderingContext2D, pool: ParticlePool,
 1. **三圈等高线 + 边界环** —— 既有 `drawFields`（`field-visuals.ts`），按 `RING_FRACTIONS` 绘制。边界环必须精确落在 `field.radius` 上。
 2. **合力箭头** —— 既有 `drawNetForceArrow`，屏幕空间，长度映射 16–64 px。
 3. **逐天体加速度矢量** —— 对每个 `affectedByFields` 的 body，从其位置画一条线，长度 ∝ `|a| * body.response`（**这里要乘 response、要做上限钳制**，因为它表达的是那个物体真实受力），颜色用 `NET_FORCE`。
-4. **数值读数** —— 复用 `src/debug/telemetry.ts` 的既有面板，不要新建面板。
+4. **空间扰动读数** —— 可见源 / 消退源数、事件数、最大星点位移、明暗正负峰值、网格点数、事件触发原因；显示 §9.5 的独立开关。不将这些标量称为真实力。
+5. **数值读数** —— 复用 `src/debug/telemetry.ts` 的既有面板，不要新建面板。
 
 Debug 叠层画在**所有正式画面之上**，可以牺牲美观，但不得改变任何模拟状态。
 
 ---
 
 ## 12. 常见错误与避免方法
+
+> 粒子相关行仅适用于 §3–7 / §10.4 的历史实验与合适的天体粒子；不得据此恢复场粒子。正式场特效优先检查采样坐标、合成后限幅、共享 H、世界网格锚点及关闭余效。
 
 | # | 错误 | 现象 | 正确做法 |
 | --- | --- | --- | --- |
@@ -547,6 +738,17 @@ Debug 叠层画在**所有正式画面之上**，可以牺牲美观，但不得�
 ---
 
 ## 13. 完成前的自检
+
+正式引力路径：
+
+- [ ] 基础星光形变按真实矢量和映射，中心 / 边界连续，最终总位移有上限。
+- [ ] 星点与明暗共享同一事件 seed、原点、时间及包络；没有独立循环圆环。
+- [ ] 开关、快速移动、场强变化及关闭都按 §9 平滑过渡；静态帧不积累漂移。
+- [ ] 明暗先合成再限幅，重叠不持续增亮，缓存与事件数均有界。
+- [ ] 相机平移 / 缩放 / tile 跨界与 DPR=1/2 无突现；所有实际实体位置不变。
+- [ ] 完成 `performance-and-qa.md` §5.1 / §7.3 的自动与试玩验收，未测项明确列出。
+
+以下原粒子自检保留为 **Deprecated / Rejected Experiment**，不是正式交付条件：
 
 - [ ] 渲染层里没有第二份引力公式。
 - [ ] 粒子更新循环里没有对象分配（无 `{x,y}` 字面量、无 `.filter`、无展开）。
