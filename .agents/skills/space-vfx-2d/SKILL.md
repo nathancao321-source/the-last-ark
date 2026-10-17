@@ -45,8 +45,8 @@ description: 在 THE LAST ARK 这类 TypeScript + Vite + Canvas 2D 的二维物�
 | C3 | **帧率无关。** 不用固定每帧增量；粒子按经过时间更新。 | `tests/game.test.ts` 与 `tests/camera.test.ts` 断言 30/60/144 FPS 下模拟状态逐位相同。 |
 | C4 | **`src/render/*` 必须能在 node 下被 import。** 模块顶层禁止触碰 `document` / `window` / `getContext`。 | `vitest.config.ts` 未设 `environment`（默认 node），任何模块顶层 DOM 访问会让整个测试文件在 import 时炸掉。**import 本身就是这条的测试。** |
 | C5 | **零运行时依赖。** 不引入 PixiJS / Three.js / 任何 npm 包。 | 项目既有的零依赖承诺。 |
-| C6 | **无外部美术资源。** 全部代码绘制，程序化细节用确定性 PRNG。 | 同上。随机源只用既有的 `seededRandom`（`src/world/sectors.ts`，mulberry32）。 |
-| C7 | **`fx=off` 必须永远保持"加特效之前"的逐像素画面。** 每个新效果都必须有一个 spec 开关把它关掉，且**关掉的方式必须能被测试观测到**——判据用 `fx=off` 一帧里不出现 `globalCompositeOperation === 'lighter'`，不要用"绘制了哪几种形状"。 | 它是性能 A/B 基线，也是出问题时二分定位的工具。只有它不动，对照才成立。**这条被真实破坏过一次**：节点辉光不在任何门控之内，`fx=off` 悄悄多了发光节点，而当时的形状清单断言（`['arc','fill','stroke']`）对它免疫，因为新效果画的也是这三种形状。**形状清单对新增同形状绘制天然无效**；加色混合才是这批效果的共同签名。**但它是必要不充分的**：场的明暗染走 `source-over`（`lighter` 压不暗东西，而压缩感必须是真的减亮度），所以一个非加色混合、又忘了加 spec 门控的新效果仍能溜过去。若某个新效果不用 `lighter`，必须为它补一条同等强度的门控断言，不能默认它没问题。 |
+| C6 | **当前版本优先程序化绘制，不主动新增外部美术素材。** 未来仅在用户明确批准时允许二维 Sprite、贴图和背景插画；仍使用 Canvas 2D，零新增依赖，不得未经授权迁移到三维框架。 | 程序化细节继续用既有 `seededRandom`（`src/world/sectors.ts`，mulberry32），保持确定性；批准二维素材不等于批准更换框架。 |
+| C7 | **`fx=off` 必须保持“加特效之前”的逐像素画面。** 每项新增效果必须有可观测的 spec 门控测试，覆盖 `source-over` 暗化、星点位移、明暗印章、光晕及余效；并在同一运行环境、相同初始状态与确定性 seed 下对比改动前 / 后的 off 基线图像，见 `references/performance-and-qa.md` §7.6。 | 保留失败记录：节点辉光曾漏门控，形状清单断言（`arc/fill/stroke`）未发现，因为新增效果画的是同类形状。“没有 `globalCompositeOperation === 'lighter'`”只能作为辅助断言，不能证明全部特效已关闭；`source-over` 暗化也必须彻底旁路。 |
 | C8 | **TS 5.9 strict**：`noUnusedLocals` / `noUnusedParameters` / `verbatimModuleSyntax`（类型导入必须 `import type`）。 | `npm run build` 会直接失败。 |
 
 ### 禁止事项
@@ -176,12 +176,12 @@ ctx.restore();
 
 | 你要做的事 | 读这份 |
 | --- | --- |
-| 定颜色 / 光晕层级 / 动画节奏 / 看禁忌 | `references/art-direction.md` |
-| **星空形变、明暗褶皱、统一扰动、节点拖尾**；§3–7 为弃用实验档案 | `references/gravity-field-vfx.md` |
-| 太阳、行星、黑洞、虫洞、星云、星空、LOD | `references/celestial-effects.md` |
-| 性能预算、质量档位、浏览器验收、截图、评分表 | `references/performance-and-qa.md` |
+| 定颜色 / 光晕层级 / 动画节奏 / 看禁忌 | `references/art-direction.md` §1–3、§4、§6–9 |
+| **星空形变、明暗褶皱、统一扰动、节点拖尾** | `references/gravity-field-vfx.md` §1–2、§8–9、§10.1–10.3、§11；§3–7 / §10.4 仅为弃用档案 |
+| 太阳、行星、黑洞、虫洞、星云、星空、LOD | `references/celestial-effects.md` §1–7、§8（相机适配）、§9（LOD 汇总） |
+| 性能预算、质量档位、浏览器验收、截图、评分表 | `references/performance-and-qa.md` §1–6、§7.1–7.6、§9；off 门控 / 图像基线专见 §7.6 |
 
-典型任务是“让蓝球金球改变空间质感” → 先读 `art-direction.md`，再读 `gravity-field-vfx.md` §1–2、§8–11，最后按 `performance-and-qa.md` 验收。§3–7 与 §10.4 仅为 Deprecated / Rejected Experiment，不得照做为正式引力效果。
+典型任务是“让蓝球金球改变空间质感” → 先读 `art-direction.md`，再读 `gravity-field-vfx.md` §1–2、§8–9、§10.1–10.3、§11，最后按 `performance-and-qa.md` 验收。§3–7 与 §10.4 仅为 Deprecated / Rejected Experiment，不得照做为正式引力效果。
 
 ---
 
@@ -210,7 +210,7 @@ ctx.restore();
 一次改动算完成，需要同时满足：
 
 - [ ] `npm run check` 全绿。
-- [ ] `fx=off` 画面与改动前逐像素一致（这是二分定位工具，不能坏）。**判据**：`fx=off` 一帧里没有任何 `globalCompositeOperation === 'lighter'`。**不要用形状清单**——它对新增的同形状绘制免疫，这条契约就是这么被破坏过一次的（见 C7）。
+- [ ] `fx=off` 画面与改动前逐像素一致（这是二分定位工具，不能坏）。**判据**：逐项特效门控测试 + 同一运行环境、相同初始状态与确定性 seed 的改动前 / 后 off 图像对比（`performance-and-qa.md` §7.6）。没有 `lighter` 仅为辅助断言；`source-over` 暗化及缓存余效也必须关闭，不能用形状清单代替门控证明（见 C7）。
 - [ ] 有测试断言"渲染不改 `GameState`"（形如 `expect(a).toEqual(b)` 或 `structuredClone` 快照对比）。
 - [ ] 粒子/特效在暂停时冻结、在 `ready` 时为空、在 `completed`/`failed` 时停止增长。
 - [ ] **真实浏览器实测过**：给了帧时间/绘制调用数，看了 Console，有截图。
@@ -237,7 +237,7 @@ ctx.restore();
 
 **Deprecated / Rejected Experiment（2026-10-16，保留技术记录）**：持续蓝球吸引粒子 / 金球排斥粒子已实现后被玩家否决并删除。原稿记录径向速度 −28.2（零场 +0.01）、四池手性 1.0，说明方向测试通过仍不代表美术成功；这些为历史记录，本次未重测。切向取自力向量导致极性手性翻转、逐粒子符号冲淡旋转结构两个 bug 仍保留在 `gravity-field-vfx.md` §4，供查错，不再是待办或推荐路线。
 
-新规范的公式、Canvas 近似与验收场景见 `gravity-field-vfx.md` §9–10 及 `performance-and-qa.md` §5.1、§7.3。实现正确、截图合格和玩家实际试玩认可是三种证据，不能互相替代。
+新规范的公式、Canvas 近似与验收场景见 `gravity-field-vfx.md` §9、§10.1–10.3 及 `performance-and-qa.md` §5.1、§7.3、§7.6。实现正确、截图合格和玩家实际试玩认可是三种证据，不能互相替代。
 
 ---
 
