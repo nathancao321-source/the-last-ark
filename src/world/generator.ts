@@ -18,6 +18,16 @@ export function landmarks(seed:number):Record<DiscoveryKind,SectorKey> {
   return {triple:{x:3+Math.floor(random()*2),y:0},nebula:{x:12+Math.floor(random()*4),y:-3}};
 }
 export const chunkId=(key:SectorKey)=>`${key.x},${key.y}`;
+/** Node coupling is independent of environmental gravity. Smaller bodies respond
+ * more, while even a large procedural star can visibly move under sustained input. */
+export const ENDLESS_NODE_RESPONSE={
+  star:{referenceRadius:60,response:0.008,min:0.004,max:0.02},
+  planet:{referenceRadius:25,response:0.04,min:0.012,max:0.09},
+} as const;
+function nodeResponse(kind:'star'|'planet',radius:number):number {
+  const config=ENDLESS_NODE_RESPONSE[kind];
+  return Math.max(config.min,Math.min(config.max,config.response*(config.referenceRadius/radius)**3));
+}
 /** Seed only the initial tangential velocity from the same softened, finite-range
  * force used by the integrator. No orbit script or corrective force runs later.
  * Radii stay inside the stable part of the tapered field, not near its cutoff. */
@@ -34,9 +44,13 @@ function seedCircularVelocity(body:Body,center:Vec2,sources:Body[]):void {
  * actual positions/velocities (including player disturbances), but release the
  * path constraint. Old trajectories will naturally change under real forces. */
 export function migrateLegacyChunkGravity(body:Body):void {
-  if(!body.chunk||!['star','planet'].includes(body.kind)||body.receivesGravity!==false)return;
-  body.receivesGravity=true;body.gravityResponse=1;
-  delete body.orbit;delete body.orbitTime;
+  if(!body.chunk||(body.kind!=='star'&&body.kind!=='planet'))return;
+  if(body.receivesGravity===false) {
+    body.receivesGravity=true;body.gravityResponse=1;
+    delete body.orbit;delete body.orbitTime;
+  }
+  // Also upgrade the previous near-imperceptible node coupling in saved chunks.
+  body.affectedByFields=true;body.response=nodeResponse(body.kind,body.radius);
 }
 /** Chunk-local templates; no dependence on load order, camera, or current ship position.
  * All hazards start inside a 440-unit boundary margin; adjacent chunks cannot overlap.
@@ -51,20 +65,20 @@ export function generateChunk(seed:number,key:SectorKey):ChunkContent {
     for(let i=0;i<3;i++) {
       const phase=i*Math.PI*2/3;
       add(createBody({id:`${id}/star${i}`,kind:'star',radius:48,position:{x:center.x+180*Math.cos(phase),y:center.y+180*Math.sin(phase)},
-        receivesGravity:true,gravityResponse:1,response:0.001,gravityStrength:1_000_000,gravityRadius:750,gravitySoftening:95,
+        affectedByFields:true,receivesGravity:true,gravityResponse:1,response:nodeResponse('star',48),gravityStrength:1_000_000,gravityRadius:750,gravitySoftening:95,
         stabilization:{halfLife:1},appearance:{name:`三日系统 ${i+1}`,color:['#ffcb80','#a8d9ff','#f99787'][i]}}));
     }
     bodies.forEach(body=>seedCircularVelocity(body,center,bodies));
   } else if(id!=='0,0'&&feature!=='nebula'&&random()<0.68) {
     const radius=45+random()*30;
-    add(createBody({id:`${id}/sun`,kind:'star',radius,position:{...center},receivesGravity:true,gravityResponse:1,response:0.0005,
+    add(createBody({id:`${id}/sun`,kind:'star',radius,position:{...center},affectedByFields:true,receivesGravity:true,gravityResponse:1,response:nodeResponse('star',radius),
       gravityStrength:1_200_000,gravityRadius:720,gravitySoftening:100,stabilization:{halfLife:1},
       appearance:{name:'恒星',color:['#ffc88b','#e9b0a7','#b8dfff'][Math.floor(random()*3)]}}));
     const phaseOffset=random()*0.3;
     for(let i=0;i<2;i++) {
       const phase=i*Math.PI+phaseOffset,r=18+random()*22;
       add(createBody({id:`${id}/planet${i}`,kind:'planet',radius:r,position:{x:center.x+300*Math.cos(phase),y:center.y+300*Math.sin(phase)},
-        receivesGravity:true,gravityResponse:1,response:0.02*(25/r)**3,gravityStrength:90000,gravityRadius:400,gravitySoftening:45,
+        affectedByFields:true,receivesGravity:true,gravityResponse:1,response:nodeResponse('planet',r),gravityStrength:90000,gravityRadius:400,gravitySoftening:45,
         stabilization:{halfLife:1.1},appearance:{name:'游星',color:['#7dc2ba','#d6a0cb','#8fa9db','#c4ab81'][Math.floor(random()*4)]}}));
     }
     bodies.filter(body=>body.kind==='planet').forEach(body=>seedCircularVelocity(body,center,bodies));

@@ -1,5 +1,6 @@
 import { describe,it,expect } from 'vitest';
-import { generateChunk,landmarks } from '../src/world/generator';
+import { generateChunk,landmarks,migrateLegacyChunkGravity } from '../src/world/generator';
+import { firstLevel } from '../src/levels/first';
 import { integrate } from '../src/physics/world';
 import { integrateContacts } from '../src/physics/contact-world';
 import { fieldAcceleration } from '../src/physics/fields';
@@ -18,6 +19,46 @@ function ordinary() {
   throw Error('Missing seeded planetary system');
 }
 describe('endless local mutual gravity',()=>{
+  it.each([0,1])('P%s field changes generated star, planet and asteroid motion in its own direction',index=>{
+    const templates=[ordinary().find(b=>b.kind==='star')!,ordinary().find(b=>b.kind==='planet')!,
+      generateChunk(seed,landmarks(seed).triple).bodies[0],
+      Array.from({length:20},(_,x)=>generateChunk(seed,{x,y:1}).bodies).flat().find(b=>b.kind==='asteroid')!];
+    for(const template of templates) {
+      const body=structuredClone(template);body.velocity={x:0,y:0};
+      const initial={...body.position},player=structuredClone(firstLevel.players[index]);player.active=true;
+      player.position={x:body.position.x+80,y:body.position.y};
+      expect(body.affectedByFields).toBe(true);
+      // A free asteroid can cross the attractor or leave a fixed repulsor's range
+      // after several seconds; measure its initial response before that happens.
+      for(let n=0;n<(body.kind==='asteroid'?60:300);n++)integrate([body],[player],1/60);
+      const direction=index?-1:1;
+      expect((body.position.x-initial.x)*direction).toBeGreaterThan(3);
+      expect(body.stabilizationState!.idleTime).toBe(0);
+      if(body.kind==='star')expect(Math.abs(body.position.x-initial.x)).toBeLessThan(35);
+    }
+  });
+  it('both node fields add on the same generated planet without changing natural gravity response',()=>{
+    const template=ordinary().find(b=>b.kind==='planet')!,forces=[[],[0],[1],[0,1]].map(indices=>{
+      const b=structuredClone(template);b.velocity={x:0,y:0};
+      const players=indices.map(i=>{const p=structuredClone(firstLevel.players[i]);p.active=true;p.position={x:b.position.x+(i?-80:80),y:b.position.y};return p;});
+      integrate([b],players,1e-5);expect(b.gravityResponse).toBe(1);return b.velocity.x;
+    });
+    expect(forces[0]).toBe(0);expect(forces[1]).toBeGreaterThan(0);expect(forces[2]).toBeGreaterThan(0);
+    expect(forces[3]).toBeCloseTo(forces[1]+forces[2],9);
+  });
+  it('a node perturbs a complete moving triple system while all natural fields remain enabled',()=>{
+    const bodies=generateChunk(seed,landmarks(seed).triple).bodies,baseline=structuredClone(bodies);
+    const p=structuredClone(firstLevel.players[0]);p.active=true;p.position={x:bodies[0].position.x+80,y:bodies[0].position.y};
+    for(let i=0;i<300;i++){integrate(bodies,[p],1/60);integrate(baseline,[],1/60);}
+    expect(length(sub(bodies[0].position,baseline[0].position))).toBeGreaterThan(1);
+    expect(bodies.every(b=>b.receivesGravity&&b.gravityResponse===1)).toBe(true);
+  });
+  it('updates weak saved node response without altering stored movement',()=>{
+    const b=ordinary().find(b=>b.kind==='star')!,before=structuredClone(b);
+    b.response=0.0005;b.affectedByFields=false;migrateLegacyChunkGravity(b);
+    expect(b.response).toBeGreaterThanOrEqual(0.004);expect(b.affectedByFields).toBe(true);
+    expect(b.position).toEqual(before.position);expect(b.velocity).toEqual(before.velocity);
+  });
   it('enables environmental gravity independently of node coupling for every generated physical body',()=>{
     for(let x=-10;x<=10;x++)for(const b of generateChunk(seed,{x,y:1}).bodies) {
       expect(b.receivesGravity).toBe(true);expect(b.gravityResponse??b.response).toBe(1);expect(b.orbit).toBeUndefined();
