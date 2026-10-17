@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>THE LAST ARK — Spacetime Lab</title></head>
+<body><main>
+<header><a href="/">THE LAST ARK</a><span>VISUAL EXPERIMENT 01</span><h1>操纵空间。<small>SPACETIME LAB</small></h1><p>让星光偏折，让黑暗留下褶皱。</p></header>
+<section class="lab"><div class="stage"><canvas id="vfx-canvas" tabindex="0" aria-label="引力视觉实验，WASD与方向键移动，F与Enter切换力场"></canvas><div class="caption"><span id="field-state"></span><span>纯二维 / 仅视觉形变</span></div></div>
+<aside><div class="section-title">实验控制 <span>01 — 02</span></div>
+<p class="blue">P1 吸引 · WASD / F</p><p class="gold">P2 排斥 · 方向键 / Enter</p><p class="hint">点击画面后操作；按一下开启，再按一下关闭。Space 暂停，R 重置。</p>
+<div class="buttons"><button id="blue-toggle">蓝场开关</button><button id="gold-toggle">金场开关</button></div>
+<label class="switch"><input id="fx-enabled" type="checkbox" checked> 高级视觉 / A-B 比较</label>
+<label>质量 <select id="quality"><option value="medium">Medium · 64 点预算</option><option value="high" selected>High · 96 点预算</option><option value="low">Low · 基础星空</option></select></label>
+<div id="parameters"></div><details><summary>独立通道</summary><label><input id="star-warp" type="checkbox" checked>星光偏折</label><label><input id="luminance" type="checkbox" checked>明暗织物</label><label><input id="interaction" type="checkbox" checked>交互扰动（同时影响两通道）</label></details>
+<div class="buttons"><button id="pause">暂停</button><button id="reset">重置节点</button><button id="overlap">重叠摆位</button><button id="fullscreen">全屏画面</button></div>
+<p class="hint">全屏：V 切换特效，B 记录性能，Esc 退出。− / + 缩放，0 复位。</p>
+<button id="benchmark">记录 10 秒性能</button><output id="performance" aria-live="off">等待采样…</output><p id="benchmark-result"></p>
+</aside></section><footer>实验场独立于主游戏。参数只影响画面，节点仍使用原有惯性控制。<a href="/">返回游戏 ↗</a></footer>
+</main><script type="module" src="/src/vfx-demo/main.ts"></script></body></html>
