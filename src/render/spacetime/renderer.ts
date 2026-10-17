@@ -7,12 +7,15 @@ import { BUDGET,enabled } from './config';
 import type { WarpConfig } from './config';
 import { sampleDisturbance } from './model';
 import type { Sample, VisualState } from './model';
+import type { ArtConfig } from './art';
+import { createBackground,backgroundKey,drawBackground } from './background';
+import type { BackgroundCache } from './background';
 
 type Surface=HTMLCanvasElement|OffscreenCanvas;
 interface Cell {x:number;y:number}
 interface Grid {spacing:number;cells:Cell[];samples:Float32Array;neighbors:Int16Array}
 interface Cache {dark:Surface;light:Surface;blue:Surface;gold:Surface}
-export interface DemoRenderer {stars:Float32Array;cache?:Cache;grid:Grid;previous?:Grid;geometryKey:string;blend:number;time:number;scale:number;revision:number;sample:Sample;stats:{samples:number;cells:number;vertices:number;cacheEntries:number}}
+export interface DemoRenderer {stars:Float32Array;background?:BackgroundCache;cache?:Cache;grid:Grid;previous?:Grid;geometryKey:string;blend:number;time:number;scale:number;revision:number;sample:Sample;stats:{samples:number;cells:number;vertices:number;cacheEntries:number}}
 function makeGrid(spacing:number,cells:Cell[]):Grid {
   const indices=new Map(cells.map((cell,i)=>[cell.x+','+cell.y,i])),neighbors=new Int16Array(cells.length);
   for(let i=0;i<cells.length;i++)neighbors[i]=indices.get((cells[i].x+spacing)+','+cells[i].y)??-1;
@@ -107,16 +110,20 @@ function drawGrid(ctx:CanvasRenderingContext2D,r:DemoRenderer,grid:Grid,alpha:nu
 }
 /** All coordinates are CSS pixels; caller applies DPR once. Physics and camera
  * are read only. fx=off exits every advanced draw/cache/sample path. */
-export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:readonly Player[],camera:Camera,state:VisualState,c:WarpConfig):void {
+export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:readonly Player[],camera:Camera,state:VisualState,c:WarpConfig,art?:ArtConfig):void {
   r.stats.samples=0;r.stats.cells=0;r.stats.vertices=0;
-  const fx=enabled(c);
+  const fx=enabled(c),cinematic=art&&art.background!=='baseline'&&c.quality!=='off';
   if(fx&&(c.luminance||c.starWarp))updateGrid(r,state,c,camera);
   const scale=r.scale;
   ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle=SPACE.background;ctx.fillRect(0,0,camera.width,camera.height);
+  if(cinematic){
+    if(!r.background||r.background.key!==backgroundKey(art))r.background=createBackground(art,r.background?.stars);
+    const stats=drawBackground(ctx,r.background,camera,state,c,art,r.sample);r.stats.samples+=stats.samples;r.stats.vertices+=stats.vertices;
+  }
   // Distant star sheet: fixed angular density, modest camera parallax. Sample the
   // current projected WORLD plane, never the sheet's parallax coordinates.
   const ox=camera.position.x*0.16,oy=camera.position.y*0.16,padding=42;
-  for(let bucket=0;bucket<3;bucket++) {
+  if(!cinematic)for(let bucket=0;bucket<3;bucket++) {
     ctx.fillStyle=SPACE.stars[bucket];ctx.beginPath();
     for(let ty=Math.floor((oy-padding)/900);ty<=Math.floor((oy+camera.height+padding)/900);ty++)for(let tx=Math.floor((ox-padding)/900);tx<=Math.floor((ox+camera.width+padding)/900);tx++) {
       for(let i=0;i<r.stars.length;i+=4)if(r.stars[i+2]===bucket) {
@@ -128,7 +135,7 @@ export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:rea
     }
     ctx.fill();
   }
-  if(fx&&c.luminance) {
+  if(!cinematic&&fx&&c.luminance) {
     if(r.previous)drawGrid(ctx,r,r.previous,1-r.blend,state,c,camera,scale);
     drawGrid(ctx,r,r.grid,r.blend,state,c,camera,scale);ctx.globalAlpha=1;
   }
@@ -140,5 +147,5 @@ export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:rea
     ctx.fillStyle=i?SPACE.gold:SPACE.blue;ctx.beginPath();ctx.arc(screen.x,screen.y,radius,0,Math.PI*2);ctx.fill();
     ctx.fillStyle=SPACE.text;ctx.font='11px monospace';ctx.textAlign='center';ctx.fillText(i?'P2 / ENTER':'P1 / F',screen.x,screen.y+radius+23);
   }
-  r.stats.cacheEntries=r.cache?4:0;ctx.restore();
+  r.stats.cacheEntries=(r.cache?4:0)+(r.background?2:0);ctx.restore();
 }

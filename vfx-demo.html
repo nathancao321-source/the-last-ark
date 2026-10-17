@@ -7,7 +7,9 @@
 <p class="blue">P1 吸引 · WASD / F</p><p class="gold">P2 排斥 · 方向键 / Enter</p><p class="hint">点击画面后操作；按一下开启，再按一下关闭。Space 暂停，R 重置。</p>
 <div class="buttons"><button id="blue-toggle">蓝场开关</button><button id="gold-toggle">金场开关</button></div>
 <label class="switch"><input id="fx-enabled" type="checkbox" checked> 高级视觉 / A-B 比较</label>
-<label>质量 <select id="quality"><option value="medium">Medium · 64 点预算</option><option value="high" selected>High · 96 点预算</option><option value="low">Low · 基础星空</option></select></label>
+<label>质量 <select id="quality"><option value="medium">Medium · 简化形变</option><option value="high" selected>High · 完整形变</option><option value="low">Low · 静态缓存</option></select></label>
+<label>背景 <select id="background"><option value="dense">P5 · 细丝深空</option><option value="sparse">P2 · 稀疏深空</option><option value="baseline">旧版技术基线</option></select></label>
+<details><summary>美术参数</summary><div id="art-parameters"></div></details>
 <div id="parameters"></div><details><summary>独立通道</summary><label><input id="star-warp" type="checkbox" checked>星光偏折</label><label><input id="luminance" type="checkbox" checked>明暗织物</label><label><input id="interaction" type="checkbox" checked>交互扰动（同时影响两通道）</label></details>
 <div class="buttons"><button id="pause">暂停</button><button id="reset">重置节点</button><button id="overlap">重叠摆位</button><button id="fullscreen">全屏画面</button></div>
 <p class="hint">全屏：V 切换特效，B 记录性能，Esc 退出。− / + 缩放，0 复位。</p>

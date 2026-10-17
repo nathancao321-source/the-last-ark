@@ -10,14 +10,16 @@ import { createVisualState,updateVisuals } from '../render/spacetime/model';
 import { createDemoRenderer,drawDemo } from '../render/spacetime/renderer';
 import { parseWarp,RANGES,setParameter } from '../render/spacetime/config';
 import type { NumericParameter,Quality } from '../render/spacetime/config';
+import { DEFAULT_ART,ART_LIMITS,setArt } from '../render/spacetime/art';
+import type { ArtParameter,ArtConfig } from '../render/spacetime/art';
 const canvas=document.querySelector<HTMLCanvasElement>('#vfx-canvas')!,ctx=canvas.getContext('2d')!;
-const config=parseWarp(location.search),clock=new FixedClock(),camera=createCamera({x:0,y:0});
+const config=parseWarp(location.search),art={...DEFAULT_ART},clock=new FixedClock(),camera=createCamera({x:0,y:0});
 let players=structuredClone(firstLevel.players),revision=0,phase:Phase='running';
 function place(overlap=false):void {players=structuredClone(firstLevel.players);players[0].position={x:overlap?-65:-165,y:0};players[1].position={x:overlap?65:165,y:0};}
 place();let visuals=createVisualState(players),renderer=createDemoRenderer();
 const el=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 function pause():void {phase=phase==='running'?'paused':'running';clock.reset();el('pause').textContent=phase==='running'?'暂停':'继续';}
-function reset(overlap=false):void {place(overlap);revision++;visuals=createVisualState(players,revision);renderer=createDemoRenderer();clock.reset();keyboard.clear();phase='running';el('pause').textContent='暂停';followGroup(camera,players,0,true);}
+function reset(overlap=false):void {place(overlap);revision++;visuals=createVisualState(players,revision);renderer={...createDemoRenderer(),background:renderer.background};clock.reset();keyboard.clear();phase='running';el('pause').textContent='暂停';followGroup(camera,players,0,true);}
 const keyboard=new Keyboard(action=>{
   if(action==='toggle')pause();
   if(action==='restart'||action==='reset')reset();
@@ -35,7 +37,13 @@ click('fullscreen',()=>{void canvas.requestFullscreen().catch(()=>{el('benchmark
 click('blue-toggle',()=>{keyboard.keyDown('KeyF');keyboard.keyUp('KeyF');});click('gold-toggle',()=>{keyboard.keyDown('Enter');keyboard.keyUp('Enter');});
 const fx=el<HTMLInputElement>('fx-enabled'),quality=el<HTMLSelectElement>('quality');fx.checked=config.quality!=='off';quality.value=config.quality==='off'?'high':config.quality;
 fx.addEventListener('change',()=>{config.quality=fx.checked?quality.value as Quality:'off';});
-quality.addEventListener('change',()=>{config.quality=fx.checked?quality.value as Quality:'off';renderer=createDemoRenderer();});
+quality.addEventListener('change',()=>{config.quality=fx.checked?quality.value as Quality:'off';});
+el<HTMLSelectElement>('background').addEventListener('change',e=>{art.background=(e.target as HTMLSelectElement).value as ArtConfig['background'];});
+const artNames:Record<ArtParameter,string>={nebula:'星云密度',stars:'星点密度',exposure:'背景曝光',nodeEnergy:'节点能量'};
+for(const key of Object.keys(ART_LIMITS) as ArtParameter[]){const label=document.createElement('label'),input=document.createElement('input'),output=document.createElement('output');label.textContent=artNames[key];input.type='range';input.min=String(ART_LIMITS[key][0]);input.max=String(ART_LIMITS[key][1]);input.step=String(ART_LIMITS[key][2]);input.value=String(art[key]);input.setAttribute('aria-label',artNames[key]);output.value=input.value;
+  // Texture controls commit on release: never regenerate a megapixel texture
+  // for every pointer event while dragging a slider.
+  input.addEventListener('change',()=>{setArt(art,key,Number(input.value));output.value=String(art[key]);});label.append(output,input);el('art-parameters').append(label);}
 for(const [id,key] of [['star-warp','starWarp'],['luminance','luminance'],['interaction','interaction']] as const)el<HTMLInputElement>(id).addEventListener('change',e=>{config[key]=(e.target as HTMLInputElement).checked;});
 const names:Record<NumericParameter,string>={maxDisplacement:'星光最大位移 / px',folds:'明暗褶皱强度',propagation:'波动传播速度 / u·s⁻¹',decay:'波动衰减时间 / s',idle:'稳态微弱动画'};
 for(const key of Object.keys(RANGES) as NumericParameter[]) {
@@ -68,11 +76,11 @@ function frame(now:number):void {
   const dt=Math.min(0.1,Math.max(0,(now-last)/1000)),interval=now-last;last=now;
   if(phase==='running')clock.advance(dt,()=>{const intents=keyboard.read();for(let i=0;i<2;i++)applyPlayerIntent(players[i],intents.players[i],FIXED_DT);updateVisuals(visuals,players,phase,revision,FIXED_DT,config);});
   followGroup(camera,players,phase==='running'?dt:0);
-  calls=0;const start=performance.now();drawDemo(ctx,renderer,players,camera,visuals,config);const cpu=performance.now()-start;
+  calls=0;const start=performance.now();drawDemo(ctx,renderer,players,camera,visuals,config,art);const cpu=performance.now()-start;
   const row={dt:interval,cpu,calls,samples:renderer.stats.samples,cells:renderer.stats.cells,events:visuals.events.filter(e=>e.alive).length};
   recent.push(row);if(recent.length>240)recent.shift();
   if(recording){bench.push(row);benchTime+=interval;if(benchTime>=10000){recording=false;el('benchmark-result').textContent=`${config.quality} / ${canvas.width}×${canvas.height} backing px\n`+summary(bench);}}
-  if(now-uiTime>500){uiTime=now;el('performance').textContent=summary(recent)+`\n采样 ${renderer.stats.samples} · 缓存 ${renderer.stats.cacheEntries}/4\nP1 (${players[0].position.x.toFixed(0)},${players[0].position.y.toFixed(0)}) v=${Math.hypot(players[0].velocity.x,players[0].velocity.y).toFixed(1)}\nP2 (${players[1].position.x.toFixed(0)},${players[1].position.y.toFixed(0)}) v=${Math.hypot(players[1].velocity.x,players[1].velocity.y).toFixed(1)}`;el('field-state').textContent=`P1 ${players[0].active?'ON':'OFF'} / P2 ${players[1].active?'ON':'OFF'} · ${phase==='running'?'LIVE':'PAUSED'} · ${config.quality.toUpperCase()}`;}
+  if(now-uiTime>500){uiTime=now;el('performance').textContent=summary(recent)+`\n采样 ${renderer.stats.samples} · 缓存 ${renderer.stats.cacheEntries} · 纹理 ${renderer.background?.generationMs===-1?'生成中':Math.round(renderer.background?.generationMs??0)+'ms（后台）'}\nP1 (${players[0].position.x.toFixed(0)},${players[0].position.y.toFixed(0)}) v=${Math.hypot(players[0].velocity.x,players[0].velocity.y).toFixed(1)}\nP2 (${players[1].position.x.toFixed(0)},${players[1].position.y.toFixed(0)}) v=${Math.hypot(players[1].velocity.x,players[1].velocity.y).toFixed(1)}`;el('field-state').textContent=`P1 ${players[0].active?'ON':'OFF'} / P2 ${players[1].active?'ON':'OFF'} · ${phase==='running'?'LIVE':'PAUSED'} · ${config.quality.toUpperCase()}`;}
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
