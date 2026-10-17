@@ -14,11 +14,12 @@ import {predictTrajectory} from '../src/game/trajectory';
 import {createCamera,followGroup,setZoom,resizeCamera} from '../src/camera/camera';
 import {visibleEntities} from '../src/render/visibility';
 import {collisionFixture} from '../src/debug/collision-fixtures';
+import {scenes} from '../src/scenes/registry';
 
 function body(id:string,kind:Body['kind']='asteroid',x=0,y=0,radius=10):Body {
   return createBody({id,kind,position:{x,y},radius,emitsGravity:false,receivesGravity:false,affectedByFields:false});
 }
-const tick=(bodies:Body[],dt=1/60)=>integrateContacts(bodies,[],dt,new Map([['station',48]]));
+const tick=(bodies:Body[],dt=1/60)=>integrateContacts(bodies,[],dt);
 const energy=(bodies:Body[])=>bodies.reduce((sum,b)=>sum+collisionMass(b)*length(b.velocity)**2/2,0);
 function fixture(extra:Body[],speed=100):Level {
   const level=structuredClone(firstLevel);delete level.port;delete level.mission;
@@ -26,7 +27,7 @@ function fixture(extra:Body[],speed=100):Level {
   level.bodies=[ship,...extra];return level;
 }
 function dockLevel(speed:number):Level {
-  const level=fixture([body('station','station',30,0,8)],speed);
+  const level=fixture([body('station','wormhole',30,0,8)],speed);
   level.mission={objectives:[{id:'dock',label:'dock',condition:{type:'near_entity',entityId:'ark',targetId:'station',maxSpeed:48,fullContainment:true}}],triggers:[]};
   return level;
 }
@@ -71,9 +72,9 @@ describe('circle detection and impulse resolution',()=>{
       resolveContact(a,b,{x:1,y:0},1);expect(b.position.x).toBe(19);expect(b.velocity.x).toBe(0);expect(inverseMass(b)).toBe(0);
     }
   });
-  it('ignores stale static velocity and uses the station restitution setting',()=>{
-    const ship=body('ark','ship'),station=body('station','station',20);ship.velocity.x=100;station.velocity.x=999;station.contact={restitution:.2};
-    resolveContact(ship,station,{x:1,y:0},0,true);expect(ship.velocity.x).toBeCloseTo(-20);expect(station.velocity.x).toBe(999);
+  it('ignores stale static velocity and uses configured restitution',()=>{
+    const a=body('a'),b=body('b','asteroid',20);a.velocity.x=100;b.motion='static';b.velocity.x=999;b.contact={restitution:.2};
+    resolveContact(a,b,{x:1,y:0},0);expect(a.velocity.x).toBeCloseTo(-20);expect(b.velocity.x).toBe(999);
   });
   it('processes a second collision in the remaining fraction of the same step',()=>{
     const a=body('a','asteroid',0,0,.3),b=body('b','asteroid',1,0,.3),c=body('c','asteroid',2,0,.3);
@@ -139,27 +140,37 @@ describe('type policies, mission integration and continuous contacts',()=>{
     for(let i=0;i<4;i++)stepGame(g,NO_CONTROLS);expect(g.phase).toBe('running');
     stepGame(g,NO_CONTROLS);expect(g.phase).toBe('failed');expect(g.bodies[0].position.x).toBeCloseTo(19);
   });
-  it('accepts slow dock entry and rejects a high speed contact without a capture latch',()=>{
+  it('accepts slow wormhole entry and allows a fast ship through without an impulse',()=>{
     const slow=createGame(dockLevel(30));togglePause(slow);for(let i=0;i<60&&slow.phase==='running';i++)stepGame(slow,NO_CONTROLS);
     expect(slow.phase).toBe('completed');expect(length(slow.bodies[0].velocity)).toBe(30);
     const fast=createGame(dockLevel(240));togglePause(fast);for(let i=0;i<10;i++)stepGame(fast,NO_CONTROLS);
-    expect(fast.phase).toBe('running');expect(fast.bodies[0].position.x).toBeLessThan(21);expect(fast.bodies[0].velocity.x).toBeCloseTo(-84);expect(fast.message).toContain('TOO FAST');
+    expect(fast.phase).toBe('running');expect(fast.bodies[0].position.x).toBeCloseTo(40);expect(fast.bodies[0].velocity.x).toBe(240);expect(fast.message).toContain('TOO FAST');expect(fast.collisionEvents).toEqual([]);
   });
-  it('counts both legs of rebound travel without counting depenetration as flight',()=>{
-    const ship=body('ark','ship',0,0,1),station=body('station','station',4,0,1);ship.velocity.x=240;
-    const result=tick([ship,station]);expect(result.shipDistance).toBeCloseTo(2+.35*2,5);expect(ship.position.x).toBeCloseTo(2-.35*2,4);
+  it('counts actual flight to a fatal contact instead of the unobstructed full step',()=>{
+    const ship=body('ark','ship',0,0,1),rock=body('rock','asteroid',4,0,1);ship.velocity.x=240;
+    const result=tick([ship,rock]);expect(result.shipDistance).toBeCloseTo(2);expect(ship.position.x).toBeCloseTo(2);expect(result.failure).toBeDefined();
   });
-  it.each(['collision-bounce','collision-ccd','collision-dock','collision-dock-slow'])('runs the browser fixture %s through the normal game loop',section=>{
+  it.each(['collision-bounce','collision-ccd','collision-transfer','collision-transfer-slow'])('runs the browser fixture %s through the normal game loop',section=>{
     const g=createGame(collisionFixture(firstLevel,section)!);togglePause(g);
     for(let i=0;i<180&&g.phase==='running';i++)stepGame(g,NO_CONTROLS);
-    expect(g.phase).toBe(section==='collision-ccd'?'failed':section==='collision-dock-slow'?'completed':'running');
+    expect(g.phase).toBe(section==='collision-ccd'?'failed':section==='collision-transfer-slow'?'completed':'running');
     if(section==='collision-bounce')expect(g.bodies[1].velocity.x).toBeCloseTo(-45);
-    if(section==='collision-dock')expect(g.bodies[0].velocity.x).toBeCloseTo(-84);
+    if(section==='collision-transfer'){expect(g.bodies[0].velocity.x).toBe(240);expect(g.bodies[0].position.x).toBeGreaterThan(818);}
   });
-  it('shares the mission threshold and prerequisites instead of accidentally docking after impact',()=>{
+  it('enforces transfer speed and prerequisites as mission conditions without blocking flight',()=>{
     const level=dockLevel(30);level.mission!.objectives[0].condition={type:'near_entity',entityId:'ark',targetId:'station',maxSpeed:20,fullContainment:true};
-    const g=createGame(level);togglePause(g);for(let i=0;i<80;i++)stepGame(g,NO_CONTROLS);expect(g.phase).toBe('running');expect(g.bodies[0].velocity.x).toBeLessThan(0);
-    const blocked=dockLevel(30);blocked.mission!.objectives[0].requires=['permission'];const h=createGame(blocked);togglePause(h);for(let i=0;i<80;i++)stepGame(h,NO_CONTROLS);expect(h.phase).toBe('running');expect(h.bodies[0].position.x).toBeLessThan(21);
+    const g=createGame(level);togglePause(g);for(let i=0;i<80;i++)stepGame(g,NO_CONTROLS);expect(g.phase).toBe('running');expect(g.bodies[0].velocity.x).toBe(30);
+    const blocked=dockLevel(30);blocked.mission!.objectives[0].requires=['permission'];const h=createGame(blocked);togglePause(h);for(let i=0;i<80;i++)stepGame(h,NO_CONTROLS);expect(h.phase).toBe('running');expect(h.bodies[0].position.x).toBe(40);
+  });
+  it.each(['station','wormhole'] as const)('treats %s as trigger-only for all ordinary bodies, even legacy hazard configs',kind=>{
+    for(const movingKind of ['ship','asteroid','planet'] as const){
+      const mover=body('moving',movingKind,0,0,1),gate=body('gate',kind,2,0,1);gate.collision='hazard';mover.velocity.x=240;
+      const result=tick([mover,gate]);expect(result.events).toEqual([]);expect(result.bodies).toHaveLength(2);expect(mover.position.x).toBe(4);expect(mover.velocity.x).toBe(240);
+    }
+  });
+  it('uses wormholes for every configured chapter and prototype goal',()=>{
+    for(const scene of Object.values(scenes))expect(scene.level?.bodies.some(b=>b.kind==='station')??false).toBe(false);
+    expect(firstLevel.bodies.find(b=>b.id==='station')?.kind).toBe('wormhole');
   });
   it('keeps wormholes as swept transition triggers with no ordinary impulse',()=>{
     const level=fixture([body('gate','wormhole',2,0,.25)],240);level.mission={objectives:[],triggers:[{id:'gate',condition:{type:'near_entity',entityId:'ark',targetId:'gate'},actions:[{type:'transition',scene:'tutorial_part_2'}]}]};

@@ -23,5 +23,5 @@ export function applyCollisionEvent(contact:DetectedContact):CollisionOutcome {
     delete keep.orbit;delete keep.orbitTime;delete keep.displacementLimit;delete keep.stabilizationState;
     return {removed:[drop.id],notice:'大型天体碰撞 · 已合并，原轨道基线解除'};
   }
-  return {removed:[],notice:policy==='dock-bounce'?'TOO FAST TO DOCK · 撞上港区外缘，请减速后重新靠近':undefined};
+  return {removed:[]};
 }

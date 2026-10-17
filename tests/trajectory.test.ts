@@ -41,14 +41,14 @@ describe('real simulated trajectory', () => {
     expect(prediction.seconds).toBeCloseTo(steps * FIXED_DT);
   });
   it.each(['ready', 'paused'] as const)('predicts low-speed arrival from %s without advancing that state', phase => {
-    const g = createGame(firstLevel); g.phase = phase; g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'station');
+    const g = createGame(firstLevel); g.phase = phase; g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'wormhole');
     g.bodies[0].position = { x: 900, y: 340 }; g.bodies[0].velocity = { x: 40, y: 0 };
     const prediction = predictTrajectory(g);
     expect(prediction.outcome).toBe('completed'); expect(prediction.seconds).toBeLessThan(1);
     expect(g.phase).toBe(phase); expect(g.elapsed).toBe(0);
   });
   it('bounds the forecast horizon and omits stale forecasts after game over', () => {
-    const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'station'); g.bodies[0].velocity = { x: 0, y: 0 };
+    const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'wormhole'); g.bodies[0].velocity = { x: 0, y: 0 };
     const prediction = predictTrajectory(g, 1000);
     expect(prediction.seconds).toBe(PREDICTION_SECONDS); expect(prediction.points.length).toBe(121);
     g.phase = 'failed'; expect(predictTrajectory(g).points).toEqual([]);

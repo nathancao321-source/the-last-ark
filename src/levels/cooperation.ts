@@ -12,8 +12,8 @@ export const cooperationLevel: Level = {
     createBody({id:'rock-a',kind:'asteroid',radius:23,position:{x:450,y:340},velocity:{x:0,y:2},stabilization:{halfLife:1}}),
     createBody({id:'rock-b',kind:'asteroid',radius:26,position:{x:620,y:330},velocity:{x:-2,y:3},stabilization:{halfLife:1.1}}),
     createBody({id:'rock-c',kind:'asteroid',radius:21,position:{x:780,y:350},velocity:{x:1,y:-2},stabilization:{halfLife:0.9}}),
-    createBody({id:'station',kind:'station',radius:70,position:{x:1100,y:340}}),
+    createBody({id:'station',kind:'wormhole',radius:70,position:{x:1100,y:340}}),
   ],
-  mission: {objectives:[{id:'dock',label:'清理移动陨石，低速进入空间港（≤ 48）',target:{entityId:'station'},
+  mission: {objectives:[{id:'dock',label:'清理移动陨石，低速进入虫洞（≤ 48）',target:{entityId:'station'},
     condition:{type:'near_entity',entityId:'ark',targetId:'station',fullContainment:true,maxSpeed:48}}],triggers:[]},
 };

@@ -12,7 +12,7 @@ import { Keyboard } from '../src/input/keyboard';
 
 function fixture() {
   const g=createGame(firstLevel);
-  g.bodies=g.bodies.filter(b=>b.kind==='ship'||b.kind==='station');
+  g.bodies=g.bodies.filter(b=>b.kind==='ship'||b.kind==='wormhole');
   g.bodies[0].position={x:0,y:0}; g.bodies[0].velocity={x:0,y:0};
   g.level.mission={objectives:[],triggers:[],completeOnObjectives:false};
   return g;

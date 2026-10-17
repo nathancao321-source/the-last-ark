@@ -45,18 +45,18 @@ describe('The Moving World',()=>{
   it('has no new mechanics or fake moving artwork and fails without intervention',()=>{
     const game=createGame(movingWorld), planet=game.bodies.find(b=>b.kind==='planet')!;
     expect(planet).toMatchObject({response:0.18,affectedByFields:true,radius:65,stabilization:{halfLife:1.2}});
-    expect(game.bodies.map(b=>b.kind)).toEqual(['ship','planet','station']);
+    expect(game.bodies.map(b=>b.kind)).toEqual(['ship','planet','wormhole']);
     togglePause(game);togglePause(game);for(let i=0;i<1200&&game.phase==='running';i++)stepGame(game,NO_CONTROLS);
     expect(game.phase).toBe('failed');
   });
-  it('gives TOO FAST feedback, rejects a fast contact, and accepts a later slow return',()=>{
+  it('gives TOO FAST feedback, allows unimpeded passage, and accepts a later slow return',()=>{
     const level=structuredClone(movingWorld);delete level.tutorial;
     level.bodies=level.bodies.filter(b=>b.kind!=='planet');
     level.bodies[0].position={x:965,y:340};level.bodies[0].velocity={x:65,y:0};
     const game=createGame(level);togglePause(game);stepGame(game,NO_CONTROLS);
-    expect(game.message).toContain('TOO FAST TO DOCK');expect(game.phase).toBe('running');
+    expect(game.message).toContain('TOO FAST TO TRANSFER');expect(game.phase).toBe('running');
     for(let i=0;i<100;i++)stepGame(game,NO_CONTROLS);
-    expect(game.bodies[0].position.x).toBeLessThan(894);expect(game.bodies[0].velocity.x).toBeCloseTo(-22.75);
+    expect(game.bodies[0].position.x).toBeGreaterThan(1060);expect(game.bodies[0].velocity.x).toBe(65);
     // A separate low-speed return fixture tests the same station, without a capture latch.
     game.bodies[0].position={x:1030,y:340};game.bodies[0].velocity={x:-30,y:0};
     for(let i=0;i<30 && game.phase==='running';i++)stepGame(game,NO_CONTROLS);

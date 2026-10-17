@@ -47,7 +47,7 @@ export interface NodeCapture {
   destination: Vec2;
 }
 export interface Body extends Entity {
-  contact?: { mass?: number; restitution?: number; largeBody?: 'destroy'|'merge'|'fail'; dockingSpeed?: number };
+  contact?: { mass?: number; restitution?: number; largeBody?: 'destroy'|'merge'|'fail' };
   /** Procedural home chunk, independent of current drifting position. */
   chunk?: { x: number; y: number };
   /** A returning cached body overlapping the ship waits harmlessly until separated. */

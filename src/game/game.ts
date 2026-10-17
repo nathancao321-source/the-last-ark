@@ -2,7 +2,7 @@ import type { Controls, GameState, Level } from './types';
 import { finite } from '../physics/vector';
 import { stepNode } from '../physics/node-gravity';
 import { integrateContacts } from '../physics/contact-world';
-import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback, dockingSpeeds } from './mission';
+import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback } from './mission';
 import { contains } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 import { updateStellar } from './stellar';
@@ -16,7 +16,7 @@ export function saveCheckpoint(game: GameState, id: string): void {
 export function createGame(level: Level): GameState {
   const config = structuredClone(level);
   if (!config.mission && config.port) config.mission = {
-    objectives: [{ id: 'dock', label: '低速进入空间港（≤ ' + config.port.maxEntrySpeed + '）',
+    objectives: [{ id: 'dock', label: '低速进入虫洞（≤ ' + config.port.maxEntrySpeed + '）',
       target: { position: config.port.position }, condition: { type: 'speed_in_region', entityId: config.bodies.find(b => b.kind === 'ship')!.id,
         region: { shape: 'circle', center: config.port.position, radius: config.port.radius }, maxSpeed: config.port.maxEntrySpeed, fullContainment: true } }], triggers: [],
   };
@@ -74,7 +74,7 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   }
   const invalid = () => game.bodies.some(b => !finite(b.position) || !finite(b.velocity)) || game.players.some(p => !finite(p.position) || !finite(p.velocity));
   if (invalid()) { lose(game, '模拟数值异常'); return; }
-  const contacts=integrateContacts(game.bodies,game.players,dt,dockingSpeeds(game),game.level.stabilizationEnabled!==false);
+  const contacts=integrateContacts(game.bodies,game.players,dt,game.level.stabilizationEnabled!==false);
   game.bodies=contacts.bodies;game.collisionEvents=contacts.events;
   game.collisionBudgetExhausted=contacts.budgetExhausted;
   if(contacts.notice)game.collisionNotice={message:contacts.notice,until:game.elapsed+1.5};

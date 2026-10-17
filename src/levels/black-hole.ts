@@ -52,7 +52,7 @@ export const galacticRest: Level = {
   mapBounds:{minX:-600,maxX:800,minY:-500,maxY:500},
   players:structuredClone(firstLevel.players).map((p,i)=>({...p,position:i?{x:-100,y:140}:{x:100,y:-140}})) as Level['players'],
   bodies:[createBody({id:'ark',kind:'ship',radius:8,position:{x:0,y:0}}),
-    createBody({id:'arrival-beacon',kind:'station',radius:65,position:{x:300,y:0},appearance:{name:'银河边缘信标 · 前往章节选择进入无限探索',color:'#94e9dc'}})],
+    createBody({id:'arrival-beacon',kind:'wormhole',radius:65,position:{x:300,y:0},appearance:{name:'银河边缘信标 · 前往章节选择进入无限探索',color:'#94e9dc'}})],
   mission:{objectives:[],triggers:[],completeOnObjectives:false},
 };
 

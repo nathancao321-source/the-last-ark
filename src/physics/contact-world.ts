@@ -20,7 +20,7 @@ export function collisionSubsteps(bodies:Body[],dt:number):number {
 /** Gravity stays in the existing Verlet integrator. For each short chord, resolve
  * contacts in earliest-time order, advance all paths to contact, then recompute
  * remaining motion after impulses. This catches secondary collisions in the same step. */
-export function integrateContacts(bodies:Body[],players:Player[],dt:number,docks:ReadonlyMap<string,number>,stabilization=true):ContactStep {
+export function integrateContacts(bodies:Body[],players:Player[],dt:number,stabilization=true):ContactStep {
   const result:ContactStep={bodies,events:[],substeps:collisionSubsteps(bodies,dt),budgetExhausted:false,shipDistance:0};
   if(!Number.isFinite(dt)||dt<=0)return result;
   const h=dt/result.substeps;
@@ -39,7 +39,7 @@ export function integrateContacts(bodies:Body[],players:Player[],dt:number,docks
       }
     };
     for(let iteration=0;iteration<32;iteration++) {
-      const contact=firstContact(result.bodies,ends,docks,ignored);
+      const contact=firstContact(result.bodies,ends,ignored);
       if(!contact){advance(1);done=true;break;}
       const {a,b,time,policy}=contact;
       advance(time);
@@ -49,11 +49,11 @@ export function integrateContacts(bodies:Body[],players:Player[],dt:number,docks
       if(event.failure){result.failure=event.failure;return result;}
       if(event.notice)result.notice=event.notice;
       result.bodies=result.bodies.filter(body=>!event.removed.includes(body.id));
-      if(policy==='bounce'||policy==='dock-bounce') {
-        resolveContact(a,b,contact.normal,contact.penetration,policy==='dock-bounce');
+      if(policy==='bounce') {
+        resolveContact(a,b,contact.normal,contact.penetration);
         if(inverseMass(a)+inverseMass(b)===0)ignored.add([a.id,b.id].sort().join('|'));
       }
-      if(policy==='bounce'||policy==='dock-bounce'||policy==='merge')for(const body of [a,b]) {
+      if(policy==='bounce'||policy==='merge')for(const body of [a,b]) {
         if(result.bodies.includes(body)&&inverseMass(body)>0)ends.set(body.id,{x:body.position.x+body.velocity.x*remaining,y:body.position.y+body.velocity.y*remaining});
       }
     }

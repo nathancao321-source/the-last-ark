@@ -66,7 +66,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     } else if (body.kind === 'station' || body.kind === 'wormhole') {
       ctx.lineWidth = 3 / camera.zoom; circle(ctx, body.position.x, body.position.y, body.radius, '#64d98b', false);
       ctx.fillStyle = '#9de3b3'; ctx.font = '15px system-ui'; ctx.textAlign = 'center';
-      ctx.fillText(body.appearance?.name??(body.kind === 'station' ? '空间港 · 低速抵达' : '虫洞'), body.position.x, body.position.y + body.radius + 26);
+      ctx.fillText(body.appearance?.name??'虫洞', body.position.x, body.position.y + body.radius + 26);
     } else {
       circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'),!body.spawnPending);
       if(body.appearance?.ring){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}
@@ -146,7 +146,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     }
   }
   ctx.fillStyle = '#92a0b3'; ctx.font = '12px system-ui';
-  const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全入港', transition: '场景出口' }[trajectory.outcome];
+  const outcome = { horizon: '预览终点', failed: '危险终点', completed: '安全跃迁', transition: '场景出口' }[trajectory.outcome];
   ctx.fillText('预测 ' + trajectory.seconds.toFixed(1) + ' s · ' + outcome + ' · 缩放 ' + camera.zoom.toFixed(2) + (target ? ' · 目标距离 ' + length(sub(target,ship.position)).toFixed(0) : ''),16,46);
   ctx.fillText('P1 ' + (game.players[0].active ? '开' : '关') + ' / P2 ' + (game.players[1].active ? '开' : '关') + ' · 检查点 ' + (game.checkpoint?.id ?? '无'),16,height-16);
   if(game.universe){ctx.fillStyle='#c3b2e0';ctx.fillText(explorationText(game).split('\n')[0],16,90,width-32);ctx.fillText('H / J 召回 P1 / P2 · K 保存 · L 恢复 · M 星图与发现线索',16,110,width-32);}

@@ -10,14 +10,13 @@ export function inverseMass(b:Body):number {
 }
 /** Frictionless impulse plus mass-weighted separation. Never inject an impulse
  * for separating contacts; restitution is clamped and speed remains bounded. */
-export function resolveContact(a:Body,b:Body,normal:Vec2,penetration:number,docking=false):void {
+export function resolveContact(a:Body,b:Body,normal:Vec2,penetration:number):void {
   const ia=inverseMass(a),ib=inverseMass(b),sum=ia+ib;if(sum===0)return;
   const av=capabilities(a).motion==='static'?{x:0,y:0}:a.velocity;
   const bv=capabilities(b).motion==='static'?{x:0,y:0}:b.velocity;
   const relative=(bv.x-av.x)*normal.x+(bv.y-av.y)*normal.y;
   if(relative<0) {
-    const station=a.kind==='station'?a:b;
-    const e=Math.min(1,Math.max(0,docking?(station.contact?.restitution??0.35):Math.min(a.contact?.restitution??0.45,b.contact?.restitution??0.45)));
+    const e=Math.min(1,Math.max(0,Math.min(a.contact?.restitution??0.45,b.contact?.restitution??0.45)));
     const impulse=-(1+e)*relative/sum;
     if(ia>0)a.velocity=limit({x:a.velocity.x-impulse*ia*normal.x,y:a.velocity.y-impulse*ia*normal.y},speedLimit(a));
     if(ib>0)b.velocity=limit({x:b.velocity.x+impulse*ib*normal.x,y:b.velocity.y+impulse*ib*normal.y},speedLimit(b));

@@ -23,16 +23,6 @@ export interface Mission { objectives: Objective[]; triggers: Trigger[]; complet
 export interface MissionState { completedObjectives: string[]; firedTriggers: string[]; hint?: string }
 export const emptyMissionState = (): MissionState => ({ completedObjectives: [], firedTriggers: [] });
 export const findEntity = (game: GameState, id: string): Entity | undefined => game.bodies.find(b => b.id === id) ?? game.players.find(p => p.id === id);
-/** One docking speed contract shared by the solid-contact policy and objectives. */
-export function dockingSpeeds(game:GameState):Map<string,number> {
-  const result=new Map<string,number>();
-  for(const objective of game.level.mission?.objectives??[]) {
-    const c=objective.condition;
-    if(c.type==='near_entity'&&game.bodies.some(b=>b.id===c.targetId&&b.kind==='station'))
-      result.set(c.targetId,(objective.requires??[]).every(id=>game.mission.completedObjectives.includes(id))?(c.maxSpeed??48):-1);
-  }
-  return result;
-}
 
 function inside(region: Region, position: Vec2, radius: number): boolean {
   if (region.shape === 'circle') return length(sub(position, region.center)) + radius <= region.radius;
@@ -107,7 +97,7 @@ export function objectivePosition(game: GameState): Vec2 | undefined {
   return 'position' in target ? target.position : findEntity(game, target.entityId)?.position;
 }
 
-/** Stations reject fast solid contacts; wormholes remain non-solid transfer goals. */
+/** Transfer goals only report speed; never alter velocity or block passage. */
 export function dockingFeedback(game: GameState, previous: Map<string, Vec2>): string | undefined {
   for (const objective of game.level.mission?.objectives ?? []) {
     const condition = objective.condition;
@@ -116,8 +106,6 @@ export function dockingFeedback(game: GameState, previous: Map<string, Vec2>): s
     const target = game.bodies.find(b => b.id === condition.targetId);
     if (!body || !target || !['station','wormhole'].includes(target.kind) || length(body.velocity) <= condition.maxSpeed) continue;
     if (sweptOverlap(previous.get(body.id) ?? body.position, body.position, previous.get(target.id) ?? target.position, target.position, target.radius + body.radius))
-      return target.kind === 'station'
-        ? `TOO FAST TO DOCK · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再入港`
-        : `TOO FAST TO TRANSFER · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再进入`;
+      return `TOO FAST TO TRANSFER · 速度 ${length(body.velocity).toFixed(1)}，请减速至 ≤ ${condition.maxSpeed} 后再进入`;
   }
 }

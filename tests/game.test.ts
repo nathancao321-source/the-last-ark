@@ -50,11 +50,11 @@ describe('game lifecycle and rules', () => {
   });
   it('wins only with full containment and speed at or below threshold', () => {
     for (const speed of [0, 47.9, 48, 48.1, 90]) {
-      const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'station');
+      const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'wormhole');
       g.bodies[0].position = { ...g.level.port!.position }; g.bodies[0].velocity = { x: speed, y: 0 };
       togglePause(g); stepGame(g, NO_CONTROLS); expect(g.phase).toBe(speed <= 48 ? 'completed' : 'running');
     }
-    const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'station');
+    const g = createGame(firstLevel); g.bodies = g.bodies.filter(b => b.kind === 'ship' || b.kind === 'wormhole');
     g.bodies[0].position = { x: 1035, y: 340 }; g.bodies[0].velocity = { x: 0, y: 0 };
     togglePause(g); stepGame(g, NO_CONTROLS); expect(g.phase).toBe('running');
   });
