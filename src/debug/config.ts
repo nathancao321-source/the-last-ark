@@ -4,6 +4,7 @@ import { solarSections } from '../levels/solar-system';
 import { blackHoleSections } from '../levels/black-hole';
 import { landmarks } from '../world/generator';
 import { SECTOR_SIZE } from '../world/sectors';
+import { collisionFixture } from './collision-fixtures';
 /** Called ONLY in Vite development mode. Values become level config, so forecasts
  * and checkpoints use exactly the same settings. No runtime physics monkey patching.
  */
@@ -12,6 +13,8 @@ export function developmentRegistry(base: SceneRegistry, search: string): SceneR
   if (params.get('dev') !== '1') return result;
   result.coop_test = {id:'coop_test',name:'开发合作测试',status:'available',level:structuredClone(cooperationLevel)};
   const section=params.get('section');
+  const contactFixture=section?collisionFixture(cooperationLevel,section):undefined;
+  if(contactFixture)result.coop_test.level=contactFixture;
   if(section && Object.hasOwn(solarSections,section) && result.solar_system.level) {
     const preset=solarSections[section as keyof typeof solarSections],level=result.solar_system.level;
     level.bodies.find(b=>b.kind==='ship')!.position={...preset.position};

@@ -10,7 +10,7 @@ import { positionPlayer } from './helpers';
 
 describe('playable first level, using only player movement and fields', () => {
   it.each([410, 420, 430])('can plan and verify a winning braking trajectory after launch cutoff x=%s', launchX => {
-    const g = createGame(firstLevel); positionPlayer(g, 1, { x: 1050, y: 420 }); togglePause(g);
+    const g = createGame(firstLevel); positionPlayer(g, 1, { x: 950, y: 450 }); togglePause(g);
     while (g.bodies[0].position.x < launchX && g.phase === 'running') stepGame(g, fieldControls([true, false]));
     while (g.bodies[0].position.x < 650 && g.phase === 'running') stepGame(g, NO_CONTROLS);
     expect(g.phase).toBe('running'); pause(g); positionPlayer(g, 0, { x: 690, y: 320 });
@@ -28,10 +28,10 @@ describe('playable first level, using only player movement and fields', () => {
     for (let i = 0; i < 720 && g.phase === 'running'; i++) stepGame(g, fieldControls([false, true]));
     expect(g.phase).toBe('completed'); expect(g.bodies[0].position).toEqual(forecast.points.at(-1));
   });
-  for (const launchX of [410, 420, 430]) for (const turnX of [640, 650, 660]) for (const aimY of [380, 390, 400]) {
+  for (const launchX of [410, 420, 430]) for (const turnX of [640, 650, 660]) for (const aimY of [370, 380, 390]) {
     it(`wins with launch cutoff x=${launchX}, turn x=${turnX}, tangent y=${aimY}`, () => {
       const g = createGame(firstLevel);
-      positionPlayer(g, 1, { x: 1050, y: 420 });
+      positionPlayer(g, 1, { x: 950, y: 450 });
       togglePause(g);
       let stage = 0; let p1Steps = 0; let p2Steps = 0;
       for (let i = 0; i < 1800 && g.phase === 'running'; i++) {
@@ -44,7 +44,11 @@ describe('playable first level, using only player movement and fields', () => {
           togglePause(g); stage = 2;
         }
         const projectedY = ship.position.y + (g.level.port!.position.x - ship.position.x) * ship.velocity.y / ship.velocity.x;
-        if (stage === 2 && projectedY >= aimY) stage = 3;
+        if (stage === 2 && projectedY >= aimY && i % 6 === 0) {
+          pause(g); stepGame(g, fieldControls([false,true]));
+          if (predictTrajectory(g).outcome === 'completed') stage = 3;
+          togglePause(g);
+        }
         const fields: [boolean, boolean] = [stage === 0 || stage === 2, stage === 3];
         if (fields[0]) p1Steps++; if (fields[1]) p2Steps++;
         stepGame(g, fieldControls(fields));

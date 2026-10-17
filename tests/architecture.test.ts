@@ -27,7 +27,7 @@ describe('entity capabilities and local world simulation',()=>{
     const g=createGame(firstLevel); g.bodies=g.bodies.filter(b=>b.kind==='ship');
     const ship=g.bodies[0]; const initial={...ship.velocity};
     g.bodies.push(createBody({id:'background',kind:'star',radius:1000,position:{...ship.position},layer:'background',velocity:{x:100,y:0}}));
-    for(const kind of ['station','wormhole'] as const) g.bodies.push(createBody({id:kind,kind,radius:60,position:{...ship.position}}));
+    for(const kind of ['station','wormhole'] as const) g.bodies.push(createBody({id:kind,kind,radius:60,position:{...ship.position},collision:'none'}));
     togglePause(g); stepGame(g,NO_CONTROLS);
     expect(g.phase).toBe('running'); expect(ship.velocity).toEqual(initial);
     expect(g.bodies[1].position).toEqual(firstLevel.bodies[0].position);

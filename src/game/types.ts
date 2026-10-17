@@ -47,6 +47,7 @@ export interface NodeCapture {
   destination: Vec2;
 }
 export interface Body extends Entity {
+  contact?: { mass?: number; restitution?: number; largeBody?: 'destroy'|'merge'|'fail'; dockingSpeed?: number };
   /** Procedural home chunk, independent of current drifting position. */
   chunk?: { x: number; y: number };
   /** A returning cached body overlapping the ship waits harmlessly until separated. */
@@ -116,6 +117,9 @@ export interface Level {
 }
 export type Phase = 'ready' | 'running' | 'paused' | 'completed' | 'failed';
 export interface GameState {
+  collisionBudgetExhausted?: boolean;
+  collisionEvents?: { type:string; a:string; b:string }[];
+  collisionNotice?: { message:string; until:number };
   level: Level; bodies: Body[]; players: [Player, Player]; phase: Phase; elapsed: number; message: string;
   mission: MissionState;
   distance: number;

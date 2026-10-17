@@ -13,8 +13,8 @@ import { chapterChoices } from '../src/render/scene-ui';
 import { scenes } from '../src/scenes/registry';
 
 /** Only normal directional intents, fields and teaching acknowledgements. */
-function pilotSecondPart(g: GameState, launchX=420, aimY=390) {
-  positionPlayer(g,1,{x:1050,y:420});
+function pilotSecondPart(g: GameState, launchX=420, aimY=380) {
+  positionPlayer(g,1,{x:950,y:450});
   togglePause(g); togglePause(g);
   const fly = (input: Controls) => {
     stepGame(g,input);
@@ -26,13 +26,17 @@ function pilotSecondPart(g: GameState, launchX=420, aimY=390) {
     if(stage===0 && ship.position.x>=launchX)stage=1;
     if(stage===1 && ship.position.x>=650){pause(g);positionPlayer(g,0,{x:690,y:320});togglePause(g);stage=2;}
     const projected=ship.position.y+(970-ship.position.x)*ship.velocity.y/ship.velocity.x;
-    if(stage===2 && projected>=aimY)stage=3;
+    if(stage===2 && projected>=aimY && i%6===0){
+      pause(g);stepGame(g,fieldControls([false,true]));
+      if(predictTrajectory(g).outcome==='completed')stage=3;
+      togglePause(g);
+    }
     fly(fieldControls([stage===0||stage===2,stage===3]));
   }
 }
 
 describe('The Moving World',()=>{
-  for(const launch of [410,420,430])for(const aim of [380,390,400])it(`physically docks after launch ${launch}, tangent ${aim}`,()=>{
+  for(const launch of [410,420,430])for(const aim of [370,380,390])it(`physically docks after launch ${launch}, tangent ${aim}`,()=>{
     const game=createGame(movingWorld); pilotSecondPart(game,launch,aim);
     expect(game.phase).toBe('completed');expect(Math.hypot(game.bodies[0].velocity.x,game.bodies[0].velocity.y)).toBeLessThanOrEqual(48);
     expect(game.tutorial!.visited).toContain('caution');expect(game.tutorial!.visited).toContain('dock');
@@ -45,14 +49,14 @@ describe('The Moving World',()=>{
     togglePause(game);togglePause(game);for(let i=0;i<1200&&game.phase==='running';i++)stepGame(game,NO_CONTROLS);
     expect(game.phase).toBe('failed');
   });
-  it('gives TOO FAST feedback, lets the ship fly out freely, and accepts a later slow return',()=>{
+  it('gives TOO FAST feedback, rejects a fast contact, and accepts a later slow return',()=>{
     const level=structuredClone(movingWorld);delete level.tutorial;
     level.bodies=level.bodies.filter(b=>b.kind!=='planet');
     level.bodies[0].position={x:965,y:340};level.bodies[0].velocity={x:65,y:0};
     const game=createGame(level);togglePause(game);stepGame(game,NO_CONTROLS);
     expect(game.message).toContain('TOO FAST TO DOCK');expect(game.phase).toBe('running');
     for(let i=0;i<100;i++)stepGame(game,NO_CONTROLS);
-    expect(game.bodies[0].position.x).toBeGreaterThan(1060);expect(game.bodies[0].velocity.x).toBe(65);
+    expect(game.bodies[0].position.x).toBeLessThan(894);expect(game.bodies[0].velocity.x).toBeCloseTo(-22.75);
     // A separate low-speed return fixture tests the same station, without a capture latch.
     game.bodies[0].position={x:1030,y:340};game.bodies[0].velocity={x:-30,y:0};
     for(let i=0;i<30 && game.phase==='running';i++)stepGame(game,NO_CONTROLS);

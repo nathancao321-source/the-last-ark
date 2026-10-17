@@ -96,7 +96,7 @@ describe('deterministic bounded universe',()=>{
 describe('floating origin, exploration UI contracts and discovery',()=>{
   it('reaches both named discoveries from launch using only ordinary two-player intents',()=>{
     const game=createGame(endlessLevel),known=landmarks(seed),tx=known.triple.x*SECTOR_SIZE+300,nx=known.nebula.x*SECTOR_SIZE+400;
-    const route=[{x:tx,y:0},{x:tx,y:1024},{x:tx,y:0},{x:nx,y:0},{x:nx,y:known.nebula.y*SECTOR_SIZE+1024}];
+    const route=[{x:tx,y:0},{x:tx,y:1024},{x:tx,y:0},{x:nx-300,y:0},{x:nx-300,y:known.nebula.y*SECTOR_SIZE+1024},{x:nx,y:known.nebula.y*SECTOR_SIZE+1024}];
     let stage=0;const usage=[0,0];togglePause(game);
     for(let i=0;i<42000&&game.phase==='running';i++) {
       const ship=game.bodies[0],origin=game.universe!.origin;
@@ -109,7 +109,7 @@ describe('floating origin, exploration UI contracts and discovery',()=>{
       stepGame(game,createControls(intents[0],intents[1]));
       if(game.universe!.discoveries.some(d=>d.kind==='nebula'))break;
     }
-    expect(game.phase,game.message).toBe('running');expect(game.universe!.discoveries).toContainEqual({key:known.triple,kind:'triple'});
+    expect(game.phase,game.message+JSON.stringify({stage,position:game.bodies[0].position,origin:game.universe!.origin,events:game.collisionEvents})).toBe('running');expect(game.universe!.discoveries).toContainEqual({key:known.triple,kind:'triple'});
     expect(game.universe!.discoveries).toContainEqual({key:known.nebula,kind:'nebula'});expect(usage.every(n=>n>0)).toBe(true);expect(game.health!.current).toBe(100);
   },30000);
   it('preserves screen/world transforms, orbital offsets, velocities and chunk identity at huge coordinates',()=>{

@@ -23,6 +23,16 @@ export interface Mission { objectives: Objective[]; triggers: Trigger[]; complet
 export interface MissionState { completedObjectives: string[]; firedTriggers: string[]; hint?: string }
 export const emptyMissionState = (): MissionState => ({ completedObjectives: [], firedTriggers: [] });
 export const findEntity = (game: GameState, id: string): Entity | undefined => game.bodies.find(b => b.id === id) ?? game.players.find(p => p.id === id);
+/** One docking speed contract shared by the solid-contact policy and objectives. */
+export function dockingSpeeds(game:GameState):Map<string,number> {
+  const result=new Map<string,number>();
+  for(const objective of game.level.mission?.objectives??[]) {
+    const c=objective.condition;
+    if(c.type==='near_entity'&&game.bodies.some(b=>b.id===c.targetId&&b.kind==='station'))
+      result.set(c.targetId,(objective.requires??[]).every(id=>game.mission.completedObjectives.includes(id))?(c.maxSpeed??48):-1);
+  }
+  return result;
+}
 
 function inside(region: Region, position: Vec2, radius: number): boolean {
   if (region.shape === 'circle') return length(sub(position, region.center)) + radius <= region.radius;
@@ -97,7 +107,7 @@ export function objectivePosition(game: GameState): Vec2 | undefined {
   return 'position' in target ? target.position : findEntity(game, target.entityId)?.position;
 }
 
-/** Stations and speed-limited transfer gates are non-solid goals, never traps. */
+/** Stations reject fast solid contacts; wormholes remain non-solid transfer goals. */
 export function dockingFeedback(game: GameState, previous: Map<string, Vec2>): string | undefined {
   for (const objective of game.level.mission?.objectives ?? []) {
     const condition = objective.condition;

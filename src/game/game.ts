@@ -1,12 +1,9 @@
 import type { Controls, GameState, Level } from './types';
-import { finite, length, sub } from '../physics/vector';
+import { finite } from '../physics/vector';
 import { stepNode } from '../physics/node-gravity';
-import { integrate } from '../physics/world';
-import { sweptOverlap } from '../physics/collision';
-import { capabilities } from './entities';
-import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback } from './mission';
-import { SpatialIndex } from '../world/spatial-index';
-import { contains, sweptBounds } from '../world/geometry';
+import { integrateContacts } from '../physics/contact-world';
+import { emptyMissionState, evaluateMission, currentObjective, dockingFeedback, dockingSpeeds } from './mission';
+import { contains } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 import { updateStellar } from './stellar';
 import { updateDamageZones } from './damage-zones';
@@ -77,23 +74,18 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   }
   const invalid = () => game.bodies.some(b => !finite(b.position) || !finite(b.velocity)) || game.players.some(p => !finite(p.position) || !finite(p.velocity));
   if (invalid()) { lose(game, '模拟数值异常'); return; }
-  integrate(game.bodies, game.players, dt, game.level.stabilizationEnabled !== false); game.elapsed += dt;
+  const contacts=integrateContacts(game.bodies,game.players,dt,dockingSpeeds(game),game.level.stabilizationEnabled!==false);
+  game.bodies=contacts.bodies;game.collisionEvents=contacts.events;
+  game.collisionBudgetExhausted=contacts.budgetExhausted;
+  if(contacts.notice)game.collisionNotice={message:contacts.notice,until:game.elapsed+1.5};
+  game.elapsed += dt;
   if (invalid()) { lose(game, '模拟数值异常'); return; }
   const ship = game.bodies.find(b => b.kind === 'ship');
   if (!ship) { lose(game, '关卡缺少方舟'); return; }
-  game.distance += length(sub(ship.position, previous.get(ship.id)!));
+  game.distance += contacts.shipDistance;
+  if(contacts.failure){lose(game,contacts.failure);return;}
   const stellarFailure=updateStellar(game,previous,dt);
   if(stellarFailure){lose(game,stellarFailure);return;}
-  const hazards = new SpatialIndex<typeof ship>();
-  const dangerRadius = (b: typeof ship) => capabilities(b).collision === 'capture' ? b.captureRadius ?? b.radius : b.radius;
-  for (const body of game.bodies) if (body !== ship && capabilities(body).collision !== 'none') {
-    hazards.insert(body, sweptBounds(previous.get(body.id)!, body.position, dangerRadius(body)));
-  }
-  const hits = (body: typeof ship, captureOnly = false) => hazards.query(sweptBounds(previous.get(body.id)!, body.position, body.radius)).find(other =>
-    other !== body && (!captureOnly || capabilities(other).collision === 'capture') &&
-    sweptOverlap(previous.get(body.id)!, body.position, previous.get(other.id)!, other.position, body.radius + dangerRadius(other)));
-  const collision = hits(ship);
-  if (collision) { lose(game, capabilities(collision).collision === 'capture' ? collision.captureMessage ?? '飞船被吞噬' : '飞船撞击危险天体'); return; }
   // Capture is checked first: entering an event horizon can never become a
   // surviving fly-through or a goal transition, even within a single fast step.
   const damageFailure = updateDamageZones(game, dt);
@@ -102,10 +94,8 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   if (bounds && (!contains(bounds, {x:ship.position.x-ship.radius,y:ship.position.y-ship.radius}) || !contains(bounds, {x:ship.position.x+ship.radius,y:ship.position.y+ship.radius}))) {
     lose(game, '飞船离开任务边界'); return;
   }
-  // Offscreen bodies remain simulated. Only configured capture hazards remove dynamic bodies.
-  game.bodies = game.bodies.filter(b => b === ship || capabilities(b).motion !== 'dynamic' || !hits(b, true));
   const checkpoint = evaluateMission(game, previous);
   const lessonCheckpoint = updateTutorial(game, previous, dt, true);
-  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 从头开始；Shift+R 恢复检查点' : game.hazardMessage ?? dockingFeedback(game, previous) ?? game.mission.hint ?? currentObjective(game)?.label ?? game.universe?.notice ?? '护航中';
+  game.message = (game.phase as GameState['phase']) === 'completed' ? '安全抵达！· R 从头开始；Shift+R 恢复检查点' : game.hazardMessage ?? dockingFeedback(game, previous) ?? (game.collisionNotice&&game.collisionNotice.until>=game.elapsed?game.collisionNotice.message:undefined) ?? game.mission.hint ?? currentObjective(game)?.label ?? game.universe?.notice ?? '护航中';
   if (checkpoint || lessonCheckpoint) saveCheckpoint(game, checkpoint ?? lessonCheckpoint!);
 }

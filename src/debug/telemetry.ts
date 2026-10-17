@@ -18,5 +18,7 @@ export function movementTelemetry(game: GameState): string {
     +sources.filter(s=>length(s.acceleration)>0.001).map(s=>`${s.body.appearance?.name??s.body.id} ${length(s.acceleration).toFixed(3)}`).join(' / ')
     +'\n稳定机制='+(game.level.stabilizationEnabled===false?'关闭（纯惯性对照）':'开启')+' '+game.bodies.filter(b=>b.stabilization).map(b=>b.id+': 半衰期 '+b.stabilization!.halfLife+'s 扰动速度 '+length(b.stabilizationState?.playerVelocity ?? {x:0,y:0}).toFixed(2)).join(' | ')
     +(game.health?'\n船体='+game.health.current.toFixed(1)+'/'+game.health.max+' 物理天体='+game.bodies.length+' 碎石波次='+(game.encounters??[]).join(','):'')
-    +game.bodies.filter(b=>b.stellar).map(b=>'\n'+(b.appearance?.name??b.id)+' '+(b.stellarState?.status??'star')+' ('+b.position.x.toFixed(1)+','+b.position.y.toFixed(1)+') 蓝驻留='+(b.stellarState?.blueSeconds??0).toFixed(2)+' 金驻留='+(b.stellarState?.goldSeconds??0).toFixed(2)).join('');
+    +game.bodies.filter(b=>b.stellar).map(b=>'\n'+(b.appearance?.name??b.id)+' '+(b.stellarState?.status??'star')+' ('+b.position.x.toFixed(1)+','+b.position.y.toFixed(1)+') 蓝驻留='+(b.stellarState?.blueSeconds??0).toFixed(2)+' 金驻留='+(b.stellarState?.goldSeconds??0).toFixed(2)).join('')
+    +(game.level.id.startsWith('collision-')?'\n'+game.bodies.map(b=>`${b.id} p=(${b.position.x.toFixed(2)},${b.position.y.toFixed(2)}) v=(${b.velocity.x.toFixed(2)},${b.velocity.y.toFixed(2)})`).join(' | '):'')
+    +(game.collisionBudgetExhausted?'\n接触求解达到预算：保守保留接触位置，下一物理步继续':'');
 }
