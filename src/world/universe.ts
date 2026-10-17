@@ -1,7 +1,6 @@
 import type { Body, GameState } from '../game/types';
 import type { Vec2 } from '../physics/vector';
 import { length, sub } from '../physics/vector';
-import { sampleOrbit } from '../physics/orbits';
 import { planSectors, SECTOR_SIZE, sectorAt, type SectorKey } from './sectors';
 import { chunkId, generateChunk, landmarks, type DiscoveryKind } from './generator';
 
@@ -65,7 +64,6 @@ export function streamUniverse(game:GameState,force=false):void {
       u.cache=u.cache.filter(c=>chunkId(c.key)!==chunkId(key));
       const offset=chunkOffset(key,u.origin);
       for(const b of bodies) {
-        if(!cached&&b.orbit){const initial=sampleOrbit(b.orbit,game.elapsed);b.position=initial.position;b.velocity=initial.velocity;b.orbitTime=game.elapsed;}
         translateBody(b,offset);
         // Reloading a displaced cached body must not create a lethal object on top of the ship.
         // Keep its saved position; defer physics until safely separated, never move the ship.

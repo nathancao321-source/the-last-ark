@@ -146,8 +146,9 @@ describe('floating origin, exploration UI contracts and discovery',()=>{
     if(kind==='nebula')expect(game.level.decorations!.some(d=>d.color==='#9f61c31c')).toBe(true);
     else {
       const stars=game.bodies.filter(b=>b.chunk&&chunkId(b.chunk)===chunkId(key)&&b.kind==='star');expect(stars).toHaveLength(3);
+      const center={x:stars.reduce((sum,b)=>sum+b.position.x,0)/3,y:stars.reduce((sum,b)=>sum+b.position.y,0)/3};
       const before=stars.map(b=>({...b.position}));for(let i=0;i<3600;i++)integrate(stars,[],1/60);
-      stars.forEach((b,i)=>{expect(length(sub(before[i],b.position))).toBeGreaterThan(100);expect(Number.isFinite(b.position.x)).toBe(true);expect(length(sub(b.position,b.orbit!.center))).toBeCloseTo(280,5);});
+      stars.forEach((b,i)=>{expect(length(sub(before[i],b.position))).toBeGreaterThan(10);expect(Number.isFinite(b.position.x)).toBe(true);expect(b.orbit).toBeUndefined();expect(Math.abs(length(sub(b.position,center))-180)).toBeLessThan(1);});
       const offset=chunkOffset(key,game.universe!.origin);const ship=game.bodies[0];ship.position={x:offset.x+1024,y:offset.y+1600};ship.velocity={x:0,y:0};integrate([ship,...stars],[],1/60);expect(length(ship.velocity)).toBeGreaterThan(0);
     }
   });

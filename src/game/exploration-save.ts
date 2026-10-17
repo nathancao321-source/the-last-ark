@@ -2,6 +2,7 @@ import type { Body, GameState } from './types';
 import type { ProgressStorage } from './progress';
 import { createGame, saveCheckpoint } from './game';
 import { endlessLevel } from '../levels/endless';
+import { migrateLegacyChunkGravity } from '../world/generator';
 import { MAX_CACHED_CHUNKS, MAX_DISCOVERIES, MAX_LOADED_CHUNKS, MAX_UNIVERSE_BODIES, streamUniverse, type UniverseState } from '../world/universe';
 const KEY='the-last-ark.exploration.v1';
 const MAX_SAVE_BYTES=2_000_000;
@@ -39,6 +40,8 @@ export function loadExploration(storage:ProgressStorage):GameState|undefined {
     if(u.loaded.some(k=>d.bodies.filter((b:Body)=>b.chunk?.x===k.x&&b.chunk?.y===k.y).length>6))return;
     if(!Array.isArray(d.players)||d.players.length!==2||!d.players.every((p:{position:unknown;velocity:unknown})=>p&&point(p.position)&&point(p.velocity)))return;
     if(!d.health||!finite(d.health.current)||d.health.current<=0||d.health.current>100)return;
+    d.bodies.forEach(migrateLegacyChunkGravity);
+    u.cache.forEach(c=>c.bodies.forEach(migrateLegacyChunkGravity));
     const game=createGame({...endlessLevel,seed:u.seed});
     game.universe=u;game.bodies=d.bodies;game.elapsed=d.elapsed;game.distance=d.distance;game.health={current:d.health.current,max:100};
     game.players.forEach((p,i)=>{p.position={...d.players[i].position};p.velocity={...d.players[i].velocity};p.active=false;});
