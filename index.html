@@ -3,21 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05080e" />
+    <meta name="description" content="最后的方舟 — 一段由两个人共同引航的星际旅程。" />
     <title>THE LAST ARK · 最后的方舟</title>
   </head>
-  <body>
+  <body data-screen="cover">
+    <canvas id="cosmos" aria-hidden="true"></canvas>
+    <div class="screen-vignette" aria-hidden="true"></div>
     <main>
-      <header><h1>THE LAST ARK <small>最后的方舟</small></h1><span>双人同屏 / 键盘 · 鼠标 · Xbox</span></header>
-      <nav class="scene-nav" aria-label="当前章节"><strong id="scene-name"></strong><div><button id="star-map" type="button" hidden>全局星图 · M</button> <button id="next-chapter" type="button" hidden>继续 · SOLAR EXODUS</button> <button id="back-menu" type="button" hidden>关卡选择 · Esc</button></div></nav>
-      <details id="device-settings"><summary>操作方式 · 键盘 / 鼠标 / Xbox</summary><div class="device-grid"><label>P1 蓝色节点 <select id="p1-device" aria-label="P1 操作方式"></select><small id="p1-device-status"></small></label><label>P2 金色节点 <select id="p2-device" aria-label="P2 操作方式"></select><small id="p2-device-status"></small></label></div></details>
-      <section id="level-menu" aria-label="关卡选择"><h2>选择关卡</h2><p class="hint">第一次来？从 First Contact 开始。也可以返回原试玩练习。</p><div id="level-cards"></div></section>
-      <div id="exploration-tools" hidden><label>宇宙 Seed <input id="universe-seed" type="number" min="0" max="4294967295" step="1" value="20261017" style="width:130px"></label> <button id="new-universe" type="button">开始新探索</button> <button id="save-universe" type="button">保存探索 · K</button> <button id="load-universe" type="button">恢复探索 · L</button> <span id="exploration-notice" role="status"></span></div>
-      <section id="lesson" hidden aria-label="当前教学提示"><div id="lesson-progress" class="sr-only"></div><p id="lesson-text" class="sr-only" role="status" aria-live="polite"></p><button id="skip-lesson" type="button" hidden>跳过当前提示（调试）</button></section>
-      <p id="telemetry" role="status" aria-live="off"></p>
-      <canvas id="game" width="1100" height="620" tabindex="0" aria-label="双人引力护航游戏。操作方式可为两人独立选择，Space 或手柄 Menu 确认提示及暂停，R 重试。"></canvas>
-      <div id="controls" class="controls"><span><b class="blue">P1 吸引</b> <span id="p1-controls">WASD 移动 · F 开 / 关</span></span><span><b class="gold">P2 排斥</b> <span id="p2-controls">方向键移动 · Enter 开 / 关</span></span><span>Space / 手柄 Menu 确认提示或暂停 · R 满血重开 / Shift+R 检查点 · Esc 关卡选择 · − / + 缩放，0 复位</span></div>
-      <details id="help" class="hint"><summary>操作与物理说明</summary><p>控制节点会加速移动，松键后柔和制动；技能可在移动中使用。虚线演算未来最多 12 秒，假定释放移动、保持技能开关，并持续飞行（不模拟教学讲解暂停）。红色表示危险，绿色表示抵达目标。暂停也可规划。</p></details>
+      <header class="masthead">
+        <button id="brand-home" class="brand" aria-label="返回封面"><span class="ark-mark" aria-hidden="true">Λ</span><span>THE LAST ARK<small>最后的方舟</small></span></button>
+        <div class="header-right"><span class="connection"><i></i> 双人合作 · 同屏共航</span><button id="open-settings" class="icon-button" aria-label="操作设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></svg></button></div>
+      </header>
+
+      <section id="cover" aria-labelledby="cover-title">
+        <div class="cover-coordinate eyebrow">THE HUMAN ODYSSEY <span>／</span> 人类最后的远航</div>
+        <div class="cover-content">
+          <div class="cover-kicker"><span></span> A COOPERATIVE SPACE ODYSSEY <span></span></div>
+          <h1 id="cover-title">THE LAST ARK</h1>
+          <p class="cover-chinese">最 后 的 方 舟</p>
+          <p class="cover-description">当最后一束光离开故乡<br>我们，成为彼此的引力。</p>
+          <button id="begin-journey" class="primary-button"><span id="begin-label">启程</span><span aria-hidden="true">↗</span></button>
+          <button id="open-chapters" class="text-button">航行目录 <span aria-hidden="true">→</span></button>
+          <p id="cover-hint" class="microcopy">首次航行将从新手教程开始</p>
+        </div>
+        <div class="cover-bottom"><span class="tiny-label">TWO OBSERVERS. ONE LAST HOPE.</span><span class="cover-line"></span><span class="tiny-label">始于地球，驶向未知。</span></div>
+      </section>
+
+      <section id="level-menu" hidden aria-labelledby="menu-title">
+        <div class="menu-world-copy">
+          <p class="eyebrow"><span class="live-dot"></span> MISSION CONTROL <span>／</span> 航行控制中心</p>
+          <h2 id="menu-title">离开故乡，<br><span>去往群星。</span></h2>
+          <p class="world-description">一艘方舟。两道引力。<br>在寂静的宇宙里，为人类寻找下一处家园。</p>
+          <div class="earth-caption"><span class="caption-line"></span><div><strong>地球 · 我们的起点</strong><span>EARTH / SOL SYSTEM</span></div></div>
+          <div class="mission-manifest"><div><span>飞船</span><strong>ARK — 01</strong></div><div><span>领航者</span><strong><i class="blue-dot"></i> P1 <i class="gold-dot"></i> P2</strong></div><div><span>任务</span><strong>寻找新家园</strong></div></div>
+        </div>
+        <div class="chapter-panel">
+          <div class="panel-heading"><div><p class="eyebrow">YOUR JOURNEY</p><h3>航行目录</h3></div><span id="journey-count" class="journey-count">00 <span>/ 03</span></span></div>
+          <div class="journey-progress" aria-hidden="true"><span id="journey-progress-fill"></span></div>
+          <div class="mode-tabs" role="group" aria-label="游玩模式"><button id="campaign-tab" class="active" aria-pressed="true">故事航线</button><button id="replay-tab" aria-pressed="false" disabled>自由回溯 <span aria-hidden="true">⌑</span></button></div>
+          <p id="journey-description" class="panel-description">从第一次引力接触开始，逐章驶向深空。</p>
+          <div id="level-cards"></div>
+          <div id="replay-cards" hidden></div>
+          <div id="menu-notice" class="menu-notice" role="status"><span aria-hidden="true">◇</span><span id="unlock-note">完成前一章节，解锁下一段航程。</span></div>
+          <div class="panel-footer"><span id="save-status"><i></i> 进度自动保存在此浏览器</span><button id="menu-cover" class="text-button">返回封面 ↗</button></div>
+        </div>
+      </section>
+
+      <section id="game-shell" hidden aria-label="游戏">
+        <nav class="scene-nav" aria-label="当前章节"><div><span class="eyebrow">IN FLIGHT / 航行中</span><strong id="scene-name"></strong></div><div class="scene-actions"><button id="pause-game" type="button">开始 / 暂停 · Space</button><button id="star-map" type="button" hidden>全局星图 · M</button><button id="next-chapter" type="button" hidden>继续航程</button><button id="back-menu" type="button" hidden>航行目录 · Esc</button></div></nav>
+        <div id="exploration-tools" hidden><label>宇宙 Seed <input id="universe-seed" type="number" min="0" max="4294967295" step="1" value="20261017"></label><button id="new-universe" type="button">开始新探索</button><button id="save-universe" type="button">保存探索 · K</button><button id="load-universe" type="button">恢复探索 · L</button><span id="exploration-notice" role="status"></span></div>
+        <section id="lesson" hidden aria-label="当前教学提示"><div id="lesson-progress" class="sr-only"></div><p id="lesson-text" class="sr-only" role="status" aria-live="polite"></p><button id="skip-lesson" type="button" hidden>跳过当前提示（调试）</button></section>
+        <p id="telemetry" role="status" aria-live="off"></p>
+        <div class="game-frame"><canvas id="game" width="1100" height="620" tabindex="0" aria-label="双人引力护航游戏。操作方式可为两人独立选择，Space 或手柄 Menu 确认提示及暂停，R 重试。"></canvas></div>
+        <div id="controls" class="controls"><span><b class="blue">P1 吸引</b><span id="p1-controls">WASD 移动 · F 开 / 关</span></span><span><b class="gold">P2 排斥</b><span id="p2-controls">方向键移动 · Enter 开 / 关</span></span><span>Space / Menu 确认或暂停 · R 重开 · Shift+R 检查点<br>Esc 目录 · − / + 缩放 · 0 复位</span></div>
+        <details id="help" class="hint"><summary>操作与物理说明</summary><p>控制节点会加速移动，松键后柔和制动；技能可在移动中使用。虚线演算未来最多 12 秒，假定释放移动、保持技能开关，并持续飞行（不模拟教学讲解暂停）。红色表示危险，绿色表示抵达目标。暂停也可规划。</p></details>
+      </section>
+      <footer class="site-footer"><span>THE LAST ARK <span class="footer-separator">/</span> 最后的方舟</span><span>引力相连 · 向光而行</span><span>键盘 / 鼠标 / Xbox</span></footer>
     </main>
+
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <div class="dialog-heading"><div><p class="eyebrow">FLIGHT CONFIGURATION</p><h2 id="settings-title">准备好，一起启程。</h2></div><button id="close-settings" class="icon-button" aria-label="关闭操作设置">✕</button></div>
+      <p class="settings-intro">两位观察者各控制一个引力节点，共同护送方舟。<br>先选择操作设备；所有关卡都可以暂停规划。</p>
+      <details id="device-settings" open><summary>操作设备 · 键盘 / 鼠标 / Xbox</summary><div class="device-grid"><label><span class="blue">P1 · 吸引节点</span><select id="p1-device" aria-label="P1 操作方式"></select><small id="p1-device-status"></small></label><label><span class="gold">P2 · 排斥节点</span><select id="p2-device" aria-label="P2 操作方式"></select><small id="p2-device-status"></small></label></div></details>
+      <div class="key-guide"><p><kbd>Space</kbd><span>确认教学提示 / 开始 / 暂停</span></p><p><kbd>R</kbd><span>重新开始当前关卡</span></p><p><kbd>Shift + R</kbd><span>返回本关检查点</span></p><p><kbd>Esc</kbd><span>返回航行目录</span></p><p><kbd>M</kbd><span>打开全局星图</span></p></div>
+      <p class="settings-footnote">推荐使用电脑游玩。支持双键盘、鼠标 + 键盘及标准 Xbox 手柄。<br>首次航行需完成教程；三章主线完成后开放自由回溯与无限探索。</p>
+      <button id="settings-done" class="primary-button">准备就绪 <span aria-hidden="true">↗</span></button>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

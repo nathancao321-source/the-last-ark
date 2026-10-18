@@ -137,8 +137,8 @@ describe('teaching safety and real physical effects', () => {
     scenes.step(NO_CONTROLS); scenes.toggle(); expect(scenes.arrival).toEqual(arrival);
   });
 
-  it('offers both tutorial parts and allows an independent first-part replay', () => {
-    const choices = chapterChoices(registry);
+  it('offers both tutorial parts for replay after the campaign is complete', () => {
+    const choices = chapterChoices(registry, {level0Complete:true, level1Complete:true, level2Complete:true});
     expect(choices.filter(c => c.playable).map(c => c.id)).toEqual(['tutorial_part_1','prototype','tutorial_part_2','solar_system','black_hole','endless']);
     expect(choices.find(c => c.id === 'tutorial_part_2')!.playable).toBe(true);
     const scenes = new SceneController(); scenes.enter('tutorial_part_2'); expect(scenes.game!.level.id).toBe('moving-world');

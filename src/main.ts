@@ -24,6 +24,9 @@ import { movementTelemetry } from './debug/telemetry';
 import { recallNode, explorationText } from './world/universe';
 import { SECTOR_SIZE } from './world/sectors';
 import { loadExploration, storeExploration } from './game/exploration-save';
+import { isSceneUnlocked } from './scenes/campaign';
+import { mountCosmos } from './render/cosmos';
+const cosmos = mountCosmos(document.querySelector<HTMLCanvasElement>('#cosmos')!);
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
 const ctx = canvas.getContext('2d');
 if (!ctx) throw new Error('此浏览器不支持 Canvas 2D。');
@@ -54,7 +57,14 @@ function toggleMap():void {
   mapOpen=!mapOpen;clock.reset();canvas.focus();
   mouse.setSuspended(mapOpen);
 }
-const toggle = () => { if(mapOpen)toggleMap();else if (!overlay.dismiss()) scenes.toggle(); };
+const toggle = () => {
+  if (ui.settingsOpen()) return;
+  if (scenes.scene === 'title') { ui.activate(); return; }
+  if(mapOpen)toggleMap();else if (!overlay.dismiss()) scenes.toggle();
+};
+const pauseButton = document.querySelector<HTMLButtonElement>('#pause-game')!;
+const toggleFromButton = () => { toggle(); canvas.focus(); };
+pauseButton.addEventListener('click',toggleFromButton);
 mapButton.addEventListener('click',toggleMap);
 const explorationTools=document.querySelector<HTMLElement>('#exploration-tools')!;
 const explorationNotice=document.querySelector<HTMLElement>('#exploration-notice')!;
@@ -65,11 +75,13 @@ function saveExplorationUI():void {
   canvas.focus();
 }
 function loadExplorationUI():void {
+  if (!debug && !isSceneUnlocked('endless', scenes.progress)) return;
   const restored=loadExploration(progressStorage);
   if(restored){scenes.scene='endless';scenes.game=restored;scenes.revision++;explorationNotice.textContent='已恢复 · Space 继续';canvas.focus();}
   else explorationNotice.textContent='没有可用探索存档，或存档损坏';
 }
 const newUniverse=()=>{
+  if (!debug && !isSceneUnlocked('endless', scenes.progress)) return;
   const seed=Number(document.querySelector<HTMLInputElement>('#universe-seed')!.value);
   if(!Number.isInteger(seed)||seed<0||seed>4294967295){explorationNotice.textContent='请输入 0–4294967295 的整数 Seed';return;}
   scenes.registry.endless.level!.seed=seed;scenes.enter('endless');explorationNotice.textContent='新探索已准备，旧存档保留至下一次保存';canvas.focus();
@@ -77,13 +89,14 @@ const newUniverse=()=>{
 const saveButton=document.querySelector<HTMLButtonElement>('#save-universe')!,loadButton=document.querySelector<HTMLButtonElement>('#load-universe')!,newButton=document.querySelector<HTMLButtonElement>('#new-universe')!;
 saveButton.addEventListener('click',saveExplorationUI);loadButton.addEventListener('click',loadExplorationUI);newButton.addEventListener('click',newUniverse);
 const keyboard = new Keyboard(action => {
+  if (ui.settingsOpen()) return;
   if((action==='recall-p1'||action==='recall-p2')&&scenes.game?.universe){const index=action==='recall-p1'?0:1;if(recallNode(scenes.game,index))inputs.resetPlayer(index);}
   if(action==='save')saveExplorationUI();
   if(action==='load')loadExplorationUI();
   if (action === 'toggle') toggle();
   if (action === 'map') toggleMap();
   if (action === 'reset' || action === 'restart') scenes.retry(action === 'restart');
-  if (action === 'title') {if(mapOpen)toggleMap();else scenes.enter('title');}
+  if (action === 'title') {if(mapOpen)toggleMap();else ui.goBack();}
   if (action === 'blur') { inputs.releaseMovement(); if (scenes.game) pause(scenes.game); }
   if (action === 'zoom-in') setZoom(camera, (camera.preferredZoom??0.8) * 1.2);
   if (action === 'zoom-out') setZoom(camera, (camera.preferredZoom??0.8) / 1.2);
@@ -97,9 +110,13 @@ const pads: [XboxInput,XboxInput] = [0,1].map(index=>new XboxInput(index,()=>nav
 const devices = mountDeviceUI(inputs,keyboard,mouse,pads);
 const detachMouse = mouse.attach(canvas,camera);
 const detach = keyboard.attach(window);
-const ui = mountSceneUI(scenes, id => { scenes.enter(id); syncScene(); canvas.focus(); }, () => {
+const ui = mountSceneUI(scenes, id => { if (debug ? scenes.enter(id) : scenes.enterPlayable(id)) { syncScene(); if (scenes.game) canvas.focus(); } }, () => {
   if (debug && scenes.game) { skipTeachingStep(scenes.game); lastPredictionTime = -Infinity; canvas.focus(); }
-}, debug, devices.text);
+}, debug, devices.text, () => {
+  inputs.releaseMovement(); keyboard.clear();
+  if (scenes.game) pause(scenes.game);
+  clock.reset();
+});
 let dpr = 1;
 function resize(): void {
   const rect = canvas.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -129,7 +146,7 @@ function frame(now: number): void {
   if (!mapOpen && overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
   clock.advance(seconds, () => {
     const origin=scenes.game?.universe?{...scenes.game.universe.origin}:undefined;
-    const intent=inputs.read();if(!mapOpen)scenes.step(intent);
+    const intent=inputs.read();if(!mapOpen && !ui.settingsOpen())scenes.step(intent);
     const next=scenes.game?.universe?.origin;
     if(origin&&next&&(origin.x!==next.x||origin.y!==next.y)) {
       camera.position.x-=(next.x-origin.x)*SECTOR_SIZE;camera.position.y-=(next.y-origin.y)*SECTOR_SIZE;
@@ -140,9 +157,13 @@ function frame(now: number): void {
   const game = scenes.game;
   ui.update();
   devices.update();
-  explorationTools.hidden=!!game&&!game.universe;saveButton.disabled=!game?.universe;
+  explorationTools.hidden=!game?.universe;saveButton.disabled=!game?.universe;
   mapButton.hidden=!game;mapButton.textContent=mapOpen?'关闭星图 · M':'全局星图 · M';
-  if (JSON.stringify(scenes.progress) !== savedCompletion) { storeProgress(progressStorage,scenes.progress); savedCompletion=JSON.stringify(scenes.progress); }
+  if (JSON.stringify(scenes.progress) !== savedCompletion) {
+    const saved = storeProgress(progressStorage,scenes.progress);
+    document.querySelector<HTMLElement>('#save-status')!.textContent = saved ? '● 进度已保存在此浏览器' : '存储不可用 · 进度仅在本次游玩保留';
+    savedCompletion=JSON.stringify(scenes.progress);
+  }
   ctx!.setTransform(dpr,0,0,dpr,0,0);
   if (game) {
     const nextKey = game.phase + ':' + game.players.map(p => p.active).join(',');
@@ -174,4 +195,4 @@ function frame(now: number): void {
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
-if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
+if (import.meta.hot) import.meta.hot.dispose(() => { inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); cosmos.dispose(); pauseButton.removeEventListener('click',toggleFromButton);mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
