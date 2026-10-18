@@ -101,8 +101,8 @@ function triangle(ctx:CanvasRenderingContext2D,image:HTMLCanvasElement,a:Vertex,
   ctx.closePath();ctx.clip();ctx.transform(m0,m1,m2,m3,a.x-m0*a.u-m2*a.v,a.y-m1*a.u-m3*a.v);ctx.drawImage(image,0,0);ctx.restore();
 }
 /** Shared D/B model deforms the actual cached nebula sheet, not an overlaid disc. */
-export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,sample:Sample):{samples:number;vertices:number;cells:number} {
-  const offset=state.worldOrigin??{x:0,y:0};prepareView(b,c,offset);let samples=0,vertices=0,cells=0;
+export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,sample:Sample,prepared=false,skipStars=false):{samples:number;vertices:number;cells:number} {
+  const offset=state.worldOrigin??{x:0,y:0};if(!prepared)prepareView(b,c,offset);let samples=0,vertices=0,cells=0;
   const advanced=warp.quality!=='low',active=advanced&&(state.sources.some(s=>s.weight>1e-5)||!!state.portals?.length||!!state.hazardWave||(warp.interaction&&state.events.some(e=>e.alive)));
   ctx.drawImage(b.view,0,0,c.width,c.height);
   if(active&&(warp.starWarp||warp.luminance)) {
@@ -131,6 +131,7 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
     }
   }
 
+  if(skipStars)return {samples,vertices,cells};
   const density=a.stars*(a.background==='dense'?1:.21),localBounds=viewBounds(c),bounds={minX:localBounds.minX+offset.x,maxX:localBounds.maxX+offset.x,minY:localBounds.minY+offset.y,maxY:localBounds.maxY+offset.y},padding=42/c.zoom;
   // At extreme zoom-out thin fixed world sites, never rescale their positions.
   // At ordinary demo zoom this is 1. Bounds stay finite even at tiny camera zoom.

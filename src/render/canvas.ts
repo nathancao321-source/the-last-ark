@@ -21,6 +21,7 @@ import {drawPortalArt} from './portal-art';
 import {drawBlackHoleArt,drawAccretionDebug} from './black-hole-art';
 import {drawCelestialEvents} from './celestial-events';
 import { drawHazards, drawHazardImpact, drawHazardColliders } from './hazards';
+import {createEndlessBackground,drawEndlessBackground,suspendEndlessBackground} from './endless-background';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -54,13 +55,15 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   const ship = game.bodies.find(b => b.kind === 'ship')!;
   const target = objectivePosition(game);
   const cinematic=Boolean(options.enhanced&&options.visuals&&options.renderer&&options.art&&options.warp&&options.warp.quality!=='off');
+  if(!cinematic&&options.renderer?.endless)suspendEndlessBackground(options.renderer.endless);
   ctx.clearRect(0, 0, width, height);
-  if(cinematic)drawSpaceBackdrop(ctx,options.renderer!,camera,options.visuals!,options.warp!,options.art!);
+  if(cinematic&&game.universe){const r=options.renderer!;drawEndlessBackground(ctx,r.endless??=createEndlessBackground(),game,camera,options.visuals!,options.warp!,options.art!,r.sample);}
+  else if(cinematic)drawSpaceBackdrop(ctx,options.renderer!,camera,options.visuals!,options.warp!,options.art!);
   else {ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, width, height);}
   if(cinematic)drawCinematicNodes(ctx,options.renderer!,game.players,camera,options.visuals!,options.warp!,options.art!);
   ctx.save(); ctx.translate(width / 2, height / 2); ctx.scale(camera.zoom, camera.zoom); ctx.translate(-camera.position.x, -camera.position.y);
   ctx.lineWidth = 1 / camera.zoom;
-  for(const dot of game.level.decorations??[])if(isVisible(camera,dot.position,dot.radius))circle(ctx,dot.position.x,dot.position.y,dot.radius,dot.color);
+  if(!cinematic||!game.universe)for(const dot of game.level.decorations??[])if(isVisible(camera,dot.position,dot.radius))circle(ctx,dot.position.x,dot.position.y,dot.radius,dot.color);
   for(const body of game.bodies) if(body.damageZone) {
     if(body.gravityRadius && isVisible(camera,body.position,body.gravityRadius)) {
       ctx.save();ctx.setLineDash([10/camera.zoom,12/camera.zoom]);

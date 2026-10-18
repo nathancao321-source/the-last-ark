@@ -11,12 +11,13 @@ import type { ArtConfig } from './art';
 import { createBackground,backgroundKey,drawBackground } from './background';
 import type { BackgroundCache } from './background';
 import { getNodeAtlas,drawNode } from './nodes';
+import type {EndlessBackground} from '../endless-background';
 
 type Surface=HTMLCanvasElement|OffscreenCanvas;
 interface Cell {x:number;y:number}
 interface Grid {spacing:number;cells:Cell[];samples:Float32Array;neighbors:Int16Array}
 interface Cache {dark:Surface;light:Surface;blue:Surface;gold:Surface}
-export interface DemoRenderer {stars:Float32Array;background?:BackgroundCache;cache?:Cache;grid:Grid;previous?:Grid;geometryKey:string;blend:number;time:number;scale:number;revision:number;sample:Sample;stats:{samples:number;cells:number;vertices:number;cacheEntries:number}}
+export interface DemoRenderer {stars:Float32Array;background?:BackgroundCache;endless?:EndlessBackground;cache?:Cache;grid:Grid;previous?:Grid;geometryKey:string;blend:number;time:number;scale:number;revision:number;sample:Sample;stats:{samples:number;cells:number;vertices:number;cacheEntries:number}}
 function makeGrid(spacing:number,cells:Cell[]):Grid {
   const indices=new Map(cells.map((cell,i)=>[cell.x+','+cell.y,i])),neighbors=new Int16Array(cells.length);
   for(let i=0;i<cells.length;i++)neighbors[i]=indices.get((cells[i].x+spacing)+','+cells[i].y)??-1;
