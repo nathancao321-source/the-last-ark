@@ -60,30 +60,30 @@ const AURORA=[
   {x:.79,y:.62,r:.32,c:'164,76,198',a:.062,p:4.4,s:.44,rot:-.16},
   {x:.31,y:.36,r:.24,c:'88,126,224',a:.048,p:5.2,s:.6,rot:.3},
 ];
-function drawAurora(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean):void {
+function drawAurora(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean,boost=1):void {
   const t=still?0:now*.000034,size=Math.max(w,h);
   c.save();c.globalCompositeOperation='screen';
   for(const b of AURORA) {
-    const x=(b.x+Math.sin(t*b.s+b.p)*.05)*w,y=(b.y+Math.cos(t*b.s*.8+b.p)*.042)*h,r=size*b.r;
+    const x=(b.x+Math.sin(t*b.s+b.p)*.05*boost)*w,y=(b.y+Math.cos(t*b.s*.8+b.p)*.042*boost)*h,r=size*b.r*boost;
     c.save();c.translate(x,y);c.rotate(b.rot+Math.sin(t*.6+b.p)*.1);c.scale(1.5,.64);
     const g=c.createRadialGradient(0,0,0,0,0,r);
-    g.addColorStop(0,`rgba(${b.c},${b.a})`);g.addColorStop(.48,`rgba(${b.c},${b.a*.44})`);g.addColorStop(1,`rgba(${b.c},0)`);
+    g.addColorStop(0,`rgba(${b.c},${Math.min(.3,b.a*boost)})`);g.addColorStop(.48,`rgba(${b.c},${Math.min(.15,b.a*.44*boost)})`);g.addColorStop(1,`rgba(${b.c},0)`);
     c.fillStyle=g;c.beginPath();c.arc(0,0,r,0,TAU);c.fill();c.restore();
   }
   for(let i=0;i<3;i++) {
     const y0=h*(.24+i*.26),ph=t*(.55+i*.15)+i*2.2;
     c.beginPath();c.moveTo(-w*.08,y0+Math.sin(ph)*h*.025);
     c.bezierCurveTo(w*.27,y0+Math.sin(ph+1.1)*h*.075,w*.62,y0+Math.cos(ph*.8)*h*.07,w*1.08,y0+Math.sin(ph+2.2)*h*.025);
-    c.lineWidth=h*(.075+i*.028);c.strokeStyle=i===0?'rgba(122,74,208,.03)':'rgba(74,108,214,.025)';c.stroke();
-    c.lineWidth=1;c.strokeStyle='rgba(176,154,244,.04)';c.stroke();
+    c.lineWidth=h*(.075+i*.028)*boost;c.strokeStyle=i===0?`rgba(132,78,224,${.032*boost})`:`rgba(74,108,214,${.027*boost})`;c.stroke();
+    c.lineWidth=1;c.strokeStyle=`rgba(186,164,250,${.05*boost})`;c.stroke();
   }
   c.restore();
 }
-function drawLiveStars(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean,drift:number):void {
+function drawLiveStars(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean,drift:number,boost=1):void {
   const t=now*.001;
   c.save();
   for(const s of LIVE_STARS) {
-    const travel=still?0:t*(3+s.d*5),sway=still?0:Math.sin(t*(.055+s.d*.035)+s.p)*7;
+    const travel=still?0:t*(3+s.d*5)*boost,sway=still?0:Math.sin(t*(.055+s.d*.035)+s.p)*7*boost;
     const x=((s.x*w+drift*s.d*.8+travel+sway)%w+w)%w;
     const y=((s.y*h+(still?0:Math.cos(t*(.045+s.d*.03)+s.p*1.7)*6))%h+h)%h;
     const wave=.5+.5*Math.sin(t*(1.1+s.s*.9)+s.p);
@@ -100,33 +100,34 @@ function drawLiveStars(c:CanvasRenderingContext2D,w:number,h:number,now:number,s
   }
   c.restore();
 }
-function drawMeteors(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean):void {
+function drawMeteors(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean,boost=1):void {
   if(still)return;
   c.save();c.globalCompositeOperation='screen';
   for(const m of METEORS) {
-    const local=((now/1000+m.delay)%m.period+m.period)%m.period;
+    const local=((now/1000*boost+m.delay)%m.period+m.period)%m.period;
     if(local>m.duration)continue;
     const p=local/m.duration,fade=Math.sin(p*Math.PI);
     if(fade<=0)continue;
     const headX=(m.x+m.dx*p)*w,headY=(m.y+m.dy*p)*h;
     const travel=Math.hypot(m.dx*w,m.dy*h),ux=m.dx*w/travel,uy=m.dy*h/travel;
-    const length=Math.max(90,w*.075)*(.55+fade*.45),tailX=headX-ux*length,tailY=headY-uy*length;
+    const length=Math.max(90,w*.075)*(.55+fade*.45)*(.85+boost*.2),tailX=headX-ux*length,tailY=headY-uy*length;
     const trail=c.createLinearGradient(tailX,tailY,headX,headY);
     trail.addColorStop(0,'rgba(160,190,255,0)');
     trail.addColorStop(.55,`rgba(198,214,255,${.3*fade})`);
     trail.addColorStop(1,`rgba(255,248,232,${.95*fade})`);
-    c.strokeStyle=trail;c.lineWidth=1.8;c.beginPath();c.moveTo(tailX,tailY);c.lineTo(headX,headY);c.stroke();
+    c.strokeStyle=trail;c.lineWidth=1.8*Math.min(1.5,boost);c.beginPath();c.moveTo(tailX,tailY);c.lineTo(headX,headY);c.stroke();
     c.fillStyle=`rgba(255,251,242,${.95*fade})`;c.beginPath();c.arc(headX,headY,1.4,0,TAU);c.fill();
-    glow(c,headX,headY,18,`rgba(255,232,200,${.32*fade})`);
+    glow(c,headX,headY,18*boost,`rgba(255,232,200,${.32*fade})`);
   }
   c.restore();
 }
-function drawEclipse(c:CanvasRenderingContext2D,x:number,y:number,r:number):void {
+function drawEclipse(c:CanvasRenderingContext2D,x:number,y:number,r:number,now:number):void {
+  const pulse=.88+.12*Math.sin(now*.0009);
   c.save();c.globalCompositeOperation='screen';
-  glow(c,x,y,r*5.2,'rgba(125,78,190,.1)');glow(c,x,y,r*2.3,'rgba(255,164,112,.075)');
-  c.beginPath();c.arc(x,y,r*1.035,0,TAU);c.strokeStyle='rgba(255,214,172,.34)';c.lineWidth=1.1;c.stroke();
-  c.beginPath();c.arc(x,y,r*1.08,Math.PI*1.03,Math.PI*1.97);c.strokeStyle='rgba(172,126,224,.16)';c.lineWidth=3;c.stroke();
-  c.restore();
+  glow(c,x,y,r*5.6*pulse,'rgba(125,78,190,.12)');glow(c,x,y,r*2.5,`rgba(255,164,112,${.09*pulse})`);
+  c.beginPath();c.arc(x,y,r*1.035,0,TAU);c.strokeStyle=`rgba(255,214,172,${.34*pulse})`;c.lineWidth=1.2;c.stroke();
+  c.beginPath();c.arc(x,y,r*1.08,Math.PI*1.03,Math.PI*1.97);c.strokeStyle=`rgba(172,126,224,${.2*pulse})`;c.lineWidth=3.4;c.stroke();
+  c.beginPath();c.arc(x,y,r*1.22,Math.PI*.98+Math.sin(now*.00025)*.12,Math.PI*2.02+Math.sin(now*.00025)*.12);c.strokeStyle='rgba(128,96,206,.1)';c.lineWidth=1;c.setLineDash([2,7]);c.stroke();c.restore();
   c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle='#020308';c.fill();
 }
 // Simplified internal geographic atlas; no remote textures or network dependency.
@@ -190,14 +191,24 @@ export function mountCosmos(canvas: HTMLCanvasElement): { dispose(): void } {
     const screen=document.body.dataset.screen??'cover', changed=screen!==lastScreen;
     if(!changed && (document.hidden || screen==='game' || (motion.matches && last!==-Infinity) || now-last<50))return;
     last=now;lastScreen=screen;
-    const c=ctx!;c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle='#03060c';c.fillRect(0,0,width,height);
-    const drift=motion.matches?0:Math.sin(now*.000082)*20+Math.cos(now*.000039)*9;
-    const rise=motion.matches?0:Math.cos(now*.000057)*11;
+    const c=ctx!;c.setTransform(dpr,0,0,dpr,0,0);c.globalCompositeOperation='source-over';c.globalAlpha=1;c.fillStyle='#03060c';c.fillRect(0,0,width,height);
+    const onCover=screen==='cover',boost=onCover?1.45:1;
+    const drift=motion.matches?0:(Math.sin(now*.000082)*20+Math.cos(now*.000039)*9)*boost;
+    const rise=motion.matches?0:Math.cos(now*.000057)*11*boost;
     const ratio=Math.max(width/1920,height/1080),sw=1920*ratio+110,sh=1080*ratio+80;
     c.drawImage(stars,(width-sw)/2+drift,(height-sh)/2+rise,sw,sh);
-    drawAurora(c,width,height,now,motion.matches);
-    drawLiveStars(c,width,height,now,motion.matches,drift);
-    drawMeteors(c,width,height,now,motion.matches);
+    drawAurora(c,width,height,now,motion.matches,onCover?1.32:1);
+    if(onCover) {
+      const pulse=.5+.5*Math.sin(now*.00042);
+      c.save();c.globalCompositeOperation='screen';
+      const bloom=c.createRadialGradient(width*.5,height*.46,0,width*.5,height*.46,Math.min(width,height)*.74);
+      bloom.addColorStop(0,`rgba(98,60,160,${.05+pulse*.035})`);
+      bloom.addColorStop(.5,`rgba(56,88,166,${.026+pulse*.018})`);
+      bloom.addColorStop(1,'rgba(10,16,40,0)');
+      c.fillStyle=bloom;c.fillRect(0,0,width,height);c.restore();
+    }
+    drawLiveStars(c,width,height,now,motion.matches,drift,boost);
+    drawMeteors(c,width,height,now,motion.matches,onCover?2.1:1);
     if(screen==='menu') {
       const mobile=width<=800,r=mobile?98:Math.min(width*.19,height*.245),x=mobile?width*.70:width*.255,y=mobile?415:Math.max(468,height*.69);
       glow(c,x-r*.3,y-r*.18,r*1.22,'rgba(38,89,144,.16)');
@@ -216,7 +227,7 @@ export function mountCosmos(canvas: HTMLCanvasElement): { dispose(): void } {
     } else {
       const r=width*.73,x=width*.52,y=height+r*.82;
       const eclipseR=Math.max(16,Math.min(width,height)*(width<=800 ? .04 : .052));
-      drawEclipse(c,width*.795,height*.225,eclipseR);
+      drawEclipse(c,width*.795,height*.225,eclipseR,now);
       glow(c,width*.52,height*1.08,width*.53,'rgba(44,83,134,.13)');
       c.save();c.globalAlpha=.52;c.drawImage(earth,x-r,y-r,r*2,r*2);c.restore();
       c.save();c.globalCompositeOperation='screen';c.beginPath();c.arc(x,y,r*.999,Math.PI*1.1,Math.PI*1.9);c.strokeStyle='rgba(123,170,235,.13)';c.lineWidth=1.4;c.stroke();c.restore();
