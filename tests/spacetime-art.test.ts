@@ -1,7 +1,7 @@
 import { describe,it,expect } from 'vitest';
 import { DEFAULT_ART,setArt } from '../src/render/spacetime/art';
 import { noise,nebulaDensity,worldFabric } from '../src/render/spacetime/noise';
-import { generateNebula,generateStars } from '../src/render/spacetime/texture';
+import { generateNebula,generateStars,seamlessTexture } from '../src/render/spacetime/texture';
 import { drawBackground,worldCells } from '../src/render/spacetime/background';
 import { createCamera,worldToScreen } from '../src/camera/camera';
 import { firstLevel } from '../src/levels/first';
@@ -132,5 +132,30 @@ describe('one world material, composed fields',()=>{
       expect(state.sources[0].history[0]).toBe(players[0].position.x);
     }
     updateVisuals(state,players,'running',0,1/60,DEFAULT_WARP,false);expect(state.time).toBeGreaterThan(0);
+  });
+});
+
+describe('seamless material and feather order',()=>{
+  it('preserves constant material at every seam instead of fading it to black',()=>{
+    const raw=new Uint8ClampedArray(64*64*4).fill(123);expect(seamlessTexture(raw,64)).toEqual(raw);
+  });
+  it('joins mismatched edges continuously in both axes and leaves the interior unchanged',()=>{
+    const size=128,raw=new Uint8ClampedArray(size*size*4);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4;raw[i]=x;raw[i+1]=y;raw[i+2]=80;raw[i+3]=255;}
+    const out=seamlessTexture(raw,size);
+    for(let i=0;i<size;i++){
+      expect(Math.abs(out[i*size*4]-out[(i*size+size-1)*4])).toBeLessThanOrEqual(2);
+      expect(Math.abs(out[i*4+1]-out[((size-1)*size+i)*4+1])).toBeLessThanOrEqual(2);
+    }
+    expect(out.slice((64*size+64)*4,(64*size+64)*4+4)).toEqual(raw.slice((64*size+64)*4,(64*size+64)*4+4));
+  });
+  it('finishes opaque mesh draws before feathering any illumination',()=>{
+    const log:string[]=[],view={} as HTMLCanvasElement,shadeA={} as HTMLCanvasElement,shadeB={} as HTMLCanvasElement;
+    const ctx=new Proxy({} as CanvasRenderingContext2D,{get:(_t,k)=>(...args:unknown[])=>{if(k==='drawImage')log.push(args[0]===view?'mesh':'shade');},set:()=>true});
+    const camera=createCamera({x:0,y:0},800,600),players=structuredClone(firstLevel.players);players[0].position={x:0,y:0};players[1].position={x:220,y:0};
+    const state=createVisualState(players);state.sources.forEach(s=>s.weight=1);
+    const b={texture:{} as HTMLCanvasElement,view:Object.assign(view,{width:800,height:600}),shades:[shadeA,shadeB] as [HTMLCanvasElement,HTMLCanvasElement],key:'',viewKey:'800,600,0,0,0.8',stars:new Float32Array(),generationMs:0};
+    drawBackground(ctx,b,camera,state,DEFAULT_WARP,DEFAULT_ART,{dx:0,dy:0,luminance:0});
+    expect(log).toContain('shade');expect(log.lastIndexOf('mesh')).toBeLessThan(log.indexOf('shade'));
   });
 });

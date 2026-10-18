@@ -95,6 +95,7 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
       const p=worldToScreen(c,{x:wx,y:wy}),s=sampleDisturbance(sample,wx,wy,state,warp,c.zoom,224);samples++;
       return {x:p.x+s.dx,y:p.y+s.dy,u:p.x/c.width*b.view.width,v:p.y/c.height*b.view.height,b:s.luminance};
     };
+    const illumination:{x:number;y:number;size:number;value:number}[]=[];
     for(const cell of worldCells(state,warp)) {
       const origin=worldToScreen(c,cell),size=cell.spacing*c.zoom;
       if(origin.x+size< -42||origin.y+size< -42||origin.x>c.width+42||origin.y>c.height+42)continue;
@@ -102,19 +103,19 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
       const p=vertex(cell.x,cell.y),q=vertex(cell.x+cell.spacing,cell.y),r=vertex(cell.x,cell.y+cell.spacing),s=vertex(cell.x+cell.spacing,cell.y+cell.spacing);
       triangle(ctx,b.view,p,q,r);triangle(ctx,b.view,q,s,r);
       const v=(p.b+q.b+r.b+s.b)/4;
-      if(Math.abs(v)>.001){
-        // Feathered world-cell illumination. Flat quad fills expose rectangular
-        // boundaries during a pan; overlapping cached kernels reconstruct B
-        // continuously while the same D sample warps the actual nebula texture.
-        b.shades??=[shade('#000000'),shade('#ffffff')];
-        // Soft-light modulates the existing material; it cannot paint a colored
-        // nebula over empty space. Both fields have already composed one B.
-        ctx.globalCompositeOperation='soft-light';
-        ctx.globalAlpha=Math.abs(v)*.9;
-        ctx.drawImage(b.shades[v<0?0:1],origin.x-size*.5,origin.y-size*.5,size*2,size*2);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+      if(Math.abs(v)>.001)illumination.push({x:origin.x,y:origin.y,size,value:v});
+    }
+    // Complete ALL opaque mesh triangles before applying feathered light.
+    // Otherwise the next cell erases its neighbor's feather at a hard boundary.
+    if(illumination.length){
+      b.shades??=[shade('#000000'),shade('#ffffff')];ctx.globalCompositeOperation='soft-light';
+      for(const light of illumination){ctx.globalAlpha=Math.abs(light.value)*.9;
+        ctx.drawImage(b.shades[light.value<0?0:1],light.x-light.size*.5,light.y-light.size*.5,light.size*2,light.size*2);
       }
+      ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
     }
   }
+
   const density=a.stars*(a.background==='dense'?1:.21),bounds=viewBounds(c),padding=42/c.zoom;
   // At extreme zoom-out thin fixed world sites, never rescale their positions.
   // At ordinary demo zoom this is 1. Bounds stay finite even at tiny camera zoom.
