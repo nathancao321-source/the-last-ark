@@ -9,7 +9,8 @@
 <label class="switch"><input id="fx-enabled" type="checkbox" checked> 高级视觉 / A-B 比较</label>
 <label>质量 <select id="quality"><option value="medium">Medium · 简化形变</option><option value="high" selected>High · 完整形变</option><option value="low">Low · 静态缓存</option></select></label>
 <label>背景 <select id="background"><option value="dense">P5 · 细丝深空</option><option value="sparse">P2 · 稀疏深空</option><option value="baseline">旧版技术基线</option></select></label>
-<details><summary>美术参数</summary><div id="art-parameters"></div></details>
+<details><summary>美术参数</summary><div id="art-parameters"></div><label><input id="near-particles" type="checkbox" checked>节点近场粒子</label></details>
+<details><summary>坐标验证</summary><label><input id="freeze-time" type="checkbox">冻结程序化动画（仍可移动节点）</label><label><input id="anchor-debug" type="checkbox">显示核心 / 场锚点</label><label>镜头测试 X<input id="camera-test-x" aria-label="镜头测试 X" type="range" min="-400" max="400" step="20" value="0"></label><label>镜头测试 Y<input id="camera-test-y" aria-label="镜头测试 Y" type="range" min="-300" max="300" step="20" value="0"></label><p class="hint">仅叠加观察偏移，原摄像机跟随仍运行。暂停后也可平移；− / + 缩放。重置节点会归零偏移。</p><output id="anchor-report"></output></details>
 <div id="parameters"></div><details><summary>独立通道</summary><label><input id="star-warp" type="checkbox" checked>星光偏折</label><label><input id="luminance" type="checkbox" checked>明暗织物</label><label><input id="interaction" type="checkbox" checked>交互扰动（同时影响两通道）</label></details>
 <div class="buttons"><button id="pause">暂停</button><button id="reset">重置节点</button><button id="overlap">重叠摆位</button><button id="fullscreen">全屏画面</button></div>
 <p class="hint">全屏：V 切换特效，B 记录性能，Esc 退出。− / + 缩放，0 复位。</p>

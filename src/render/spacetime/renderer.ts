@@ -1,5 +1,5 @@
 import type { Camera } from '../../camera/camera';
-import { worldToScreen,screenToWorld } from '../../camera/camera';
+import { worldToScreen,screenToWorld,viewBounds } from '../../camera/camera';
 import type { Player } from '../../game/types';
 import { seededRandom } from '../../world/sectors';
 import { SPACE } from '../palette';
@@ -10,6 +10,7 @@ import type { Sample, VisualState } from './model';
 import type { ArtConfig } from './art';
 import { createBackground,backgroundKey,drawBackground } from './background';
 import type { BackgroundCache } from './background';
+import { getNodeAtlas,drawNode } from './nodes';
 
 type Surface=HTMLCanvasElement|OffscreenCanvas;
 interface Cell {x:number;y:number}
@@ -118,19 +119,21 @@ export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:rea
   ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle=SPACE.background;ctx.fillRect(0,0,camera.width,camera.height);
   if(cinematic){
     if(!r.background||r.background.key!==backgroundKey(art))r.background=createBackground(art,r.background?.stars);
-    const stats=drawBackground(ctx,r.background,camera,state,c,art,r.sample);r.stats.samples+=stats.samples;r.stats.vertices+=stats.vertices;
+    const stats=drawBackground(ctx,r.background,camera,state,c,art,r.sample);r.stats.samples+=stats.samples;r.stats.vertices+=stats.vertices;r.stats.cells+=stats.cells;
   }
-  // Distant star sheet: fixed angular density, modest camera parallax. Sample the
-  // current projected WORLD plane, never the sheet's parallax coordinates.
-  const ox=camera.position.x*0.16,oy=camera.position.y*0.16,padding=42;
+  // A/B shares the same world plane. Camera motion never changes a star's
+  // source coordinate, including in the inexpensive technical baseline.
+  const bounds=viewBounds(camera),padding=42/camera.zoom;
+  const stride=2**Math.max(0,Math.ceil(Math.log2(Math.max(camera.width,camera.height)/camera.zoom/900/4)));
   if(!cinematic)for(let bucket=0;bucket<3;bucket++) {
     ctx.fillStyle=SPACE.stars[bucket];ctx.beginPath();
-    for(let ty=Math.floor((oy-padding)/900);ty<=Math.floor((oy+camera.height+padding)/900);ty++)for(let tx=Math.floor((ox-padding)/900);tx<=Math.floor((ox+camera.width+padding)/900);tx++) {
+    for(let ty=Math.floor((bounds.minY-padding)/900/stride)*stride;ty<=Math.floor((bounds.maxY+padding)/900);ty+=stride)for(let tx=Math.floor((bounds.minX-padding)/900/stride)*stride;tx<=Math.floor((bounds.maxX+padding)/900);tx+=stride) {
       for(let i=0;i<r.stars.length;i+=4)if(r.stars[i+2]===bucket) {
-        let x=r.stars[i]+tx*900-ox,y=r.stars[i+1]+ty*900-oy;
-        if(x< -padding||y< -padding||x>camera.width+padding||y>camera.height+padding)continue;
-        if(fx&&c.starWarp){const s=sampleDisturbance(r.sample,(x-camera.width/2)/camera.zoom+camera.position.x,(y-camera.height/2)/camera.zoom+camera.position.y,state,c,camera.zoom,scale);x+=s.dx;y+=s.dy;r.stats.samples++;}
-        const size=r.stars[i+3];ctx.rect(x,y,size,size);r.stats.vertices++;
+        const wx=r.stars[i]+tx*900,wy=r.stars[i+1]+ty*900,screen=worldToScreen(camera,{x:wx,y:wy});
+        let x=screen.x,y=screen.y;
+        if(x< -42||y< -42||x>camera.width+42||y>camera.height+42)continue;
+        if(fx&&c.starWarp){const s=sampleDisturbance(r.sample,wx,wy,state,c,camera.zoom,scale);x+=s.dx;y+=s.dy;r.stats.samples++;}
+        const size=Math.max(.3,r.stars[i+3]*camera.zoom);ctx.rect(x,y,size,size);r.stats.vertices++;
       }
     }
     ctx.fill();
@@ -141,11 +144,13 @@ export function drawDemo(ctx:CanvasRenderingContext2D,r:DemoRenderer,players:rea
   }
   for(let i=0;i<players.length;i++) {
     const p=players[i],screen=worldToScreen(camera,p.position),radius=p.radius*camera.zoom;
+    if(cinematic)drawNode(ctx,getNodeAtlas(),p,state.sources[i],state,camera,art,c.quality,i);
+    else {
     if(fx){const cache=ensureCache(r);ctx.globalCompositeOperation='lighter';ctx.globalAlpha=0.15+0.4*state.sources[i].weight;
       ctx.drawImage(i?cache.gold:cache.blue,screen.x-radius*5.5,screen.y-radius*5.5,radius*11,radius*11);
       ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';}
-    ctx.fillStyle=i?SPACE.gold:SPACE.blue;ctx.beginPath();ctx.arc(screen.x,screen.y,radius,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=i?SPACE.gold:SPACE.blue;ctx.beginPath();ctx.arc(screen.x,screen.y,radius,0,Math.PI*2);ctx.fill();}
     ctx.fillStyle=SPACE.text;ctx.font='11px monospace';ctx.textAlign='center';ctx.fillText(i?'P2 / ENTER':'P1 / F',screen.x,screen.y+radius+23);
   }
-  r.stats.cacheEntries=(r.cache?4:0)+(r.background?2:0);ctx.restore();
+  r.stats.cacheEntries=(r.cache?4:0)+(r.background?2+(r.background.shades?2:0):0)+(cinematic?1:0);ctx.restore();
 }

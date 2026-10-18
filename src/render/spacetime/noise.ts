@@ -26,3 +26,14 @@ export function nebulaDensity(x:number,y:number):{filament:number;cloud:number;d
   const knots=.35+fbm(wx*15,wy*15,3,19)*1.4;
   return {filament:(ridge*.78+branch*.22)*(.15+cloud*2.7)*knots,cloud,dust};
 }
+
+/** One periodic WORLD fabric shared by the baked background and both fields.
+ * It never reads a camera, node, identity seed or animation clock. */
+export function worldFabric(x:number,y:number):number {
+  const sample=(size:number,seed:number)=>{
+    const gx=x/(2400/size),gy=y/(2400/size),ix=Math.floor(gx),iy=Math.floor(gy),a=fade(gx-ix),b=fade(gy-iy);
+    const h=(i:number,j:number)=>hash((i%size+size)%size,(j%size+size)%size,seed);
+    return (h(ix,iy)*(1-a)+h(ix+1,iy)*a)*(1-b)+(h(ix,iy+1)*(1-a)+h(ix+1,iy+1)*a)*b;
+  };
+  return (sample(12,419)*.7+sample(24,719)*.3)*2-1;
+}

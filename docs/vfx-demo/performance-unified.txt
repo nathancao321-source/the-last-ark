@@ -1,0 +1,21 @@
+2026-10-18 production preview; DPR 1; 10 seconds each; both fields on, stationary; CPU is not GPU timing.
+
+high / dense / 1920×1081 backing px
+165.0 FPS · 1650 帧
+帧间隔 p50 / p95 6.10 / 6.20 ms
+绘制 CPU p50 / p95 2.20 / 2.60 ms
+提交上限 61 · 网格 16 · 事件 0/4
+
+medium / dense / 1920×1081 backing px
+164.7 FPS · 1647 帧
+帧间隔 p50 / p95 6.10 / 6.20 ms
+绘制 CPU p50 / p95 2.10 / 2.40 ms
+提交上限 45 · 网格 8 · 事件 0/4
+
+low / dense / 1920×1081 backing px
+164.9 FPS · 1649 帧
+帧间隔 p50 / p95 6.10 / 6.20 ms
+绘制 CPU p50 / p95 1.80 / 2.00 ms
+提交上限 13 · 网格 0 · 事件 0/4
+
+Moving high-quality additional run: 1382x746, 165.0 FPS, CPU p95 2.30 ms, max 75 submissions, max 4 events.
