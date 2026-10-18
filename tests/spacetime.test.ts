@@ -4,7 +4,7 @@ import { createGame,stepGame } from '../src/game/game';
 import { NO_CONTROLS } from '../src/input/intent';
 import { createCamera } from '../src/camera/camera';
 import { fieldAcceleration } from '../src/physics/fields';
-import { createVisualState,updateVisuals,sampleDisturbance,lookupForce } from '../src/render/spacetime/model';
+import { createVisualState,syncVisualPositions,updateVisuals,sampleDisturbance,lookupForce } from '../src/render/spacetime/model';
 import { createDemoRenderer,drawDemo } from '../src/render/spacetime/renderer';
 import { DEFAULT_WARP,parseWarp,setParameter } from '../src/render/spacetime/config';
 import type { WarpConfig } from '../src/render/spacetime/config';
@@ -23,6 +23,10 @@ function recorder() {
 }
 function cachedRenderer() {const r=createDemoRenderer(),s={} as HTMLCanvasElement;r.cache={dark:s,light:s,blue:s,gold:s};return r;}
 describe('read-only spacetime visual model',()=>{
+  it('mirrors paused node transforms without advancing or mutating the players',()=>{
+    const {players,state}=fixture();players[0].position={x:91,y:-37};players[0].field={...players[0].field,radius:321};const before=structuredClone(players);
+    syncVisualPositions(state,players,0);expect(state.sources[0].position).toEqual({x:91,y:-37});expect(state.sources[0].field.radius).toBe(321);expect(state.time).toBe(0);expect(players).toEqual(before);
+  });
   it('samples the existing physical field with a bounded interpolation error',()=>{
     const {state}=fixture();for(const s of state.sources)for(let i=1;i<600;i++) {
       const d=s.field.radius*i/600,exact=Math.hypot(...Object.values(fieldAcceleration({x:s.position.x+d,y:s.position.y},s.position,s.field)));

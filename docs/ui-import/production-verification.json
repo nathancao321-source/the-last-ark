@@ -1,0 +1,20 @@
+{
+  "cover": {
+    "screen": "cover",
+    "title": "THE LAST ARK · 最后的方舟",
+    "audio": "http://127.0.0.1:5176/assets/BGM-BcQtPsod.mp3",
+    "ready": 4,
+    "canvases": 2
+  },
+  "game": {
+    "screen": "game",
+    "scene": "tutorial_part_1",
+    "debugPanels": 0
+  },
+  "fullscreen": {
+    "active": true,
+    "height": 818,
+    "screen": 1000
+  },
+  "errors": []
+}

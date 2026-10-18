@@ -1,0 +1,98 @@
+{
+  "solarOffColdDiff": 0,
+  "solarOffWarmDiff": 0,
+  "holeOffColdDiff": 0,
+  "holeOffWarmDiff": 0,
+  "jetPixelChecks": [
+    {
+      "zoom": 0.25,
+      "sign": -1,
+      "pixel": [
+        184,
+        224,
+        253,
+        255
+      ],
+      "visible": true
+    },
+    {
+      "zoom": 0.25,
+      "sign": 1,
+      "pixel": [
+        199,
+        233,
+        253,
+        255
+      ],
+      "visible": true
+    },
+    {
+      "zoom": 0.85,
+      "sign": -1,
+      "pixel": [
+        201,
+        232,
+        253,
+        255
+      ],
+      "visible": true
+    },
+    {
+      "zoom": 0.85,
+      "sign": 1,
+      "pixel": [
+        201,
+        232,
+        253,
+        255
+      ],
+      "visible": true
+    },
+    {
+      "zoom": 2,
+      "sign": -1,
+      "pixel": [
+        192,
+        225,
+        252,
+        255
+      ],
+      "visible": true
+    },
+    {
+      "zoom": 2,
+      "sign": 1,
+      "pixel": [
+        192,
+        225,
+        252,
+        255
+      ],
+      "visible": true
+    }
+  ],
+  "portalRoute": {
+    "visibleRoutePixels": 200
+  },
+  "materials": [
+    {
+      "kind": "sun",
+      "ready": true,
+      "ms": 78.5,
+      "bytes": 1048576
+    },
+    {
+      "kind": "corona",
+      "ready": true,
+      "ms": 37,
+      "bytes": 1048576
+    },
+    {
+      "kind": "portal",
+      "ready": true,
+      "ms": 46.69999998807907,
+      "bytes": 1048576
+    }
+  ],
+  "errors": []
+}

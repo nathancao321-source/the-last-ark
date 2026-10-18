@@ -1,12 +1,14 @@
-export interface CampaignProgress { level0Complete: boolean; level1Complete?: boolean; level2Complete?: boolean }
+export interface CampaignProgress { level0Complete: boolean; level1Complete?: boolean; level2Complete?: boolean; tutorialPart1Complete?: boolean }
 export interface ProgressStorage { getItem(key: string): string | null; setItem(key: string, value: string): void }
 const KEY = 'the-last-ark.progress.v1';
 export function loadProgress(storage: ProgressStorage): CampaignProgress {
   try { const data = JSON.parse(storage.getItem(KEY) ?? '{}'); return { level0Complete: data?.version === 1 && data.level0Complete === true,
-    level1Complete:data?.version===1&&data.level1Complete===true,level2Complete:data?.version===1&&data.level2Complete===true }; }
+    level1Complete:data?.version===1&&data.level1Complete===true,level2Complete:data?.version===1&&data.level2Complete===true,
+    tutorialPart1Complete:data?.version===1&&(data.tutorialPart1Complete===true||data.level0Complete===true) }; }
   catch { return { level0Complete: false }; }
 }
-export function storeProgress(storage: ProgressStorage, progress: CampaignProgress): void {
+export function storeProgress(storage: ProgressStorage, progress: CampaignProgress): boolean {
   try { storage.setItem(KEY, JSON.stringify({ version: 1, level0Complete: progress.level0Complete,
-    level1Complete:progress.level1Complete===true,level2Complete:progress.level2Complete===true })); } catch { /* Play remains possible when storage is disabled. */ }
+    level1Complete:progress.level1Complete===true,level2Complete:progress.level2Complete===true,
+    tutorialPart1Complete:progress.tutorialPart1Complete===true })); return true; } catch { return false; }
 }

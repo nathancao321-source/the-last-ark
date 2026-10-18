@@ -10,6 +10,17 @@ import { visibleEntities } from './visibility';
 import { efficiency } from '../game/scoring';
 import { drawGammaJet, drawCapturedNode } from './node-effects';
 import { explorationText } from '../world/universe';
+import type { VisualState } from './spacetime/model';
+import type { DemoRenderer } from './spacetime/renderer';
+import { drawCinematicNodes, drawSpaceBackdrop } from './spacetime/renderer';
+import type { ArtConfig } from './spacetime/art';
+import type { WarpConfig } from './spacetime/config';
+import { CELESTIAL } from './palette';
+import {drawStellarArt} from './stellar-art';
+import {drawPortalArt} from './portal-art';
+import {drawBlackHoleArt,drawAccretionDebug} from './black-hole-art';
+import {drawCelestialEvents} from './celestial-events';
+import { drawHazards, drawHazardImpact, drawHazardColliders } from './hazards';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -21,11 +32,32 @@ export function telemetry(game: GameState): string {
 function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, fill = true): void {
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.strokeStyle = color; fill ? ctx.fill() : ctx.stroke();
 }
-export function render(ctx: CanvasRenderingContext2D, game: GameState, trajectory: Trajectory, camera: Camera): void {
+function hashText(text: string): number { let h=2166136261; for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619); return (h>>>0)/4294967296; }
+function drawPlanet(ctx: CanvasRenderingContext2D,body: GameState['bodies'][number],time:number):void {
+  const {x,y}=body.position,r=body.radius,id=body.id;
+  const palette=id==='earth'?CELESTIAL.earth:id==='mars'?CELESTIAL.mars:id==='jupiter'?CELESTIAL.jupiter:id==='saturn'?CELESTIAL.saturn:id==='uranus'?CELESTIAL.uranus:id==='neptune'?CELESTIAL.neptune:[CELESTIAL.planet[0],body.appearance?.color??CELESTIAL.planet[1],CELESTIAL.planet[2]];
+  if(body.appearance?.ring){ctx.save();ctx.globalAlpha=.72;ctx.strokeStyle=CELESTIAL.ring;ctx.lineWidth=Math.max(2,r*.13);ctx.beginPath();ctx.ellipse(x,y,r*1.9,r*.62,-.18,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.38;ctx.strokeStyle=CELESTIAL.ringHighlight;ctx.lineWidth=Math.max(1,r*.035);for(let i=0;i<4;i++){ctx.beginPath();ctx.ellipse(x,y,r*(1.35+i*.16),r*(.41+i*.05),-.18,0,Math.PI*2);ctx.stroke();}ctx.restore();}
+  const g=ctx.createRadialGradient(x-r*.35,y-r*.4,r*.04,x,y,r*1.1);g.addColorStop(0, palette[0]);g.addColorStop(.52,palette[1]);g.addColorStop(1,palette[2]);ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.globalAlpha=.24;ctx.strokeStyle=palette[0];ctx.lineWidth=Math.max(1,r*.08);
+  const bands=id==='jupiter'?7:id==='saturn'?5:3;for(let i=0;i<bands;i++){const yy=y-r*.7+i*r*1.4/(bands-1);ctx.beginPath();ctx.moveTo(x-r,yy+Math.sin(time*.08+i)*r*.04);ctx.bezierCurveTo(x-r*.3,yy-r*.08,x+r*.25,yy+r*.08,x+r,yy);ctx.stroke();}
+  if(id==='earth'){ctx.fillStyle='#f2fbff88';for(let i=0;i<4;i++){ctx.beginPath();ctx.ellipse(x-r*.35+i*r*.25,y-r*.15+i*r*.18,r*.3,r*.06,i,0,Math.PI*2);ctx.fill();}}
+  if(id==='jupiter'){ctx.fillStyle='#b8614e99';ctx.beginPath();ctx.ellipse(x+r*.34,y+r*.18,r*.2,r*.1,-.2,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+  if(body.appearance?.ring){ctx.save();ctx.globalAlpha=.8;ctx.strokeStyle=CELESTIAL.ring;ctx.lineWidth=Math.max(2,r*.1);ctx.beginPath();ctx.ellipse(x,y,r*1.9,r*.62,-.18,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();}
+}
+function drawAsteroid(ctx:CanvasRenderingContext2D,body:GameState['bodies'][number]):void {
+  const {x,y}=body.position,r=body.radius,seed=hashText(body.id);ctx.save();ctx.translate(x,y);ctx.rotate(seed*Math.PI*2);ctx.beginPath();for(let i=0;i<9;i++){const a=i*Math.PI*2/9,rr=r*(.78+.2*((i*17+Math.floor(seed*100))%7)/6);if(i===0)ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);else ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();const g=ctx.createRadialGradient(-r*.3,-r*.4,0,0,0,r);g.addColorStop(0,CELESTIAL.rockLight);g.addColorStop(.5,CELESTIAL.rockMid);g.addColorStop(1,CELESTIAL.rockDark);ctx.fillStyle=g;ctx.fill();ctx.globalAlpha=.35;ctx.fillStyle='#202630';for(let i=0;i<4;i++){ctx.beginPath();ctx.arc((seed*7+i*3)%r-r/2,(seed*11+i*5)%r-r/2,Math.max(1,r*.08),0,Math.PI*2);ctx.fill();}ctx.restore();
+}
+export interface RenderVisualOptions { visuals?: VisualState; renderer?: DemoRenderer; art?: ArtConfig; warp?: WarpConfig; enhanced?: boolean; debugColliders?:boolean; debugAccretion?:boolean; }
+export function render(ctx: CanvasRenderingContext2D, game: GameState, trajectory: Trajectory, camera: Camera, options: RenderVisualOptions = {}): void {
   const { width, height } = camera;
   const ship = game.bodies.find(b => b.kind === 'ship')!;
   const target = objectivePosition(game);
-  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, width, height);
+  const cinematic=Boolean(options.enhanced&&options.visuals&&options.renderer&&options.art&&options.warp&&options.warp.quality!=='off');
+  ctx.clearRect(0, 0, width, height);
+  if(cinematic)drawSpaceBackdrop(ctx,options.renderer!,camera,options.visuals!,options.warp!,options.art!);
+  else {ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, width, height);}
+  if(cinematic)drawCinematicNodes(ctx,options.renderer!,game.players,camera,options.visuals!,options.warp!,options.art!);
   ctx.save(); ctx.translate(width / 2, height / 2); ctx.scale(camera.zoom, camera.zoom); ctx.translate(-camera.position.x, -camera.position.y);
   ctx.lineWidth = 1 / camera.zoom;
   for(const dot of game.level.decorations??[])if(isVisible(camera,dot.position,dot.radius))circle(ctx,dot.position.x,dot.position.y,dot.radius,dot.color);
@@ -44,8 +76,27 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     circle(ctx,body.position.x,body.position.y,body.stellar.burnRadius,'#ff9b3d80',false);
   }
   for (const [i, player] of game.players.entries()) if (player.active && isVisible(camera, player.position, player.field.radius)) {
-    circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff12' : '#e9bd4812');
-    circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff70' : '#e9bd4870', false);
+    // The cinematic pass expresses the field through the shared star warp and
+    // luminance material. Keep only a low-contrast footprint so the field
+    // radius remains legible without turning the scene into a textbook ring.
+    if(cinematic)circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff08' : '#e9bd4808');
+    else {
+      circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff12' : '#e9bd4812');
+      circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff70' : '#e9bd4870', false);
+    }
+  }
+  // Celestial material belongs below navigation, the ship and damaging beams.
+  // In particular, the bent accretion image must never hide a firing jet root.
+  if(cinematic){
+    drawCelestialEvents(ctx,options.visuals!,game.elapsed);
+    for(const body of game.bodies)if(body.layer!=='hidden'&&!body.spawnPending&&isVisible(camera,body.position,body.radius*(body.kind==='black_hole'?5:2.2))){
+      if(body.kind==='wormhole')drawPortalArt(ctx,body,game.elapsed,options.warp!.quality,Math.max(0,1-Math.hypot(ship.position.x-body.position.x,ship.position.y-body.position.y)/(body.radius*4)));
+      if(body.kind==='star')drawStellarArt(ctx,body,game.elapsed,camera,options.warp!.quality);
+      if(body.kind==='black_hole')drawBlackHoleArt(ctx,body,game.elapsed,options.warp!.quality);
+    }
+    drawHazards(ctx,game,camera,true,options.warp!.quality);
+    // The event horizon remains black even where the beam's round cap overlaps it.
+    for(const body of game.bodies)if(body.kind==='black_hole'&&body.layer!=='hidden')circle(ctx,body.position.x,body.position.y,body.captureRadius??body.radius,'#000000');
   }
   if (trajectory.points.length > 1) {
     const color = trajectory.outcome === 'failed' ? '#ed9b9b' : trajectory.outcome === 'completed' || trajectory.outcome === 'transition' ? '#64d98b' : '#b5c8e0';
@@ -56,25 +107,30 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     const end = trajectory.points.at(-1)!;
     if (isVisible(camera, end, 4)) circle(ctx, end.x, end.y, 4, color, false);
   }
-  for(const body of game.bodies)if(body.nodeInfluence&&isVisible(camera,body.position,body.nodeInfluence.ejectionDistance))drawGammaJet(ctx,body,game.elapsed,camera.zoom);
-  for (const body of visibleEntities(camera, game.bodies)) {
+  if(!cinematic)drawHazards(ctx,game,camera,false,options.warp?.quality);
+  for(const body of game.bodies)if(body.nodeInfluence&&body.id!==game.level.blackHoleJets?.sourceId&&isVisible(camera,body.position,body.nodeInfluence.ejectionDistance))drawGammaJet(ctx,body,game.elapsed,camera.zoom);
+  for (const body of (cinematic?game.bodies.filter(b=>b.layer!=='hidden'&&isVisible(camera,b.position,b.radius*(b.kind==='black_hole'?5:b.kind==='star'?2.2:b.kind==='wormhole'?1.5:1))):visibleEntities(camera,game.bodies))) {
     if (body.kind === 'ship') {
       ctx.save(); ctx.translate(body.position.x, body.position.y); ctx.rotate(Math.atan2(body.velocity.y, body.velocity.x));
       const iconScale=Math.max(1,0.8/camera.zoom);ctx.scale(iconScale,iconScale);
       ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fillStyle = game.hazardMessage && game.health && game.health.current<game.health.max ? '#ff9a9a' : '#fff'; ctx.fill(); ctx.restore();
       ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`${12/camera.zoom}px system-ui`;ctx.fillText('方舟',body.position.x,body.position.y-16/camera.zoom);
     } else if (body.kind === 'station' || body.kind === 'wormhole') {
-      ctx.lineWidth = 3 / camera.zoom; circle(ctx, body.position.x, body.position.y, body.radius, '#64d98b', false);
+      if(!cinematic||body.kind==='station'){ctx.lineWidth = 3 / camera.zoom; circle(ctx, body.position.x, body.position.y, body.radius, '#64d98b', false);}
       ctx.fillStyle = '#9de3b3'; ctx.font = '15px system-ui'; ctx.textAlign = 'center';
       ctx.fillText(body.appearance?.name??'虫洞', body.position.x, body.position.y + body.radius + 26);
     } else {
-      circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'),!body.spawnPending);
-      if(body.appearance?.ring){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}
+      if(cinematic&&(body.kind==='star'||body.kind==='black_hole')&&!body.spawnPending){/* Material was drawn below hazards/navigation. */}
+      else if(cinematic&&body.kind==='planet'&&!body.spawnPending)drawPlanet(ctx,body,game.elapsed);
+      else if(cinematic&&body.kind==='asteroid'&&!body.spawnPending)drawAsteroid(ctx,body);
+      else circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'),!body.spawnPending);
+      if(body.appearance?.ring&&!cinematic){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}
       if (body.kind === 'black_hole') {
+        if(!cinematic) {
         ctx.save();ctx.strokeStyle='#d6b28c';ctx.lineWidth=5/camera.zoom;ctx.beginPath();
         ctx.ellipse(body.position.x,body.position.y,body.radius*1.6,body.radius*0.65,-0.3,0,Math.PI*2);ctx.stroke();
         circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#03040a');
-        circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#dba3bf',false);ctx.restore();
+        circle(ctx, body.position.x, body.position.y, body.captureRadius ?? body.radius, '#dba3bf',false);ctx.restore();}
       }
     }
     if(body.appearance&&body.kind!=='wormhole'&&body.kind!=='station'&&(camera.zoom>=0.14||body.kind==='star')) {
@@ -89,15 +145,18 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
       continue;
     }
     const markerRadius=Math.max(player.radius,6/camera.zoom);
-    circle(ctx, player.position.x, player.position.y, markerRadius, i === 0 ? '#409eff' : '#e9bd48');
+    if(!cinematic)circle(ctx, player.position.x, player.position.y, markerRadius, i === 0 ? '#409eff' : '#e9bd48');
     ctx.fillStyle = '#e5eaf4'; ctx.font = `${12/camera.zoom}px system-ui`; ctx.textAlign = 'center';
     ctx.fillText((i === 0 ? 'P1 吸引' : 'P2 排斥') + (player.active ? ' 开' : ' 关'), player.position.x, player.position.y + (i===0?-markerRadius-9/camera.zoom:markerRadius+17/camera.zoom));
     if (camera.zoom>=0.2 && (game.phase === 'paused' || game.phase === 'ready')) {
       ctx.font = `${12/camera.zoom}px system-ui`; ctx.fillText('(' + player.position.x.toFixed(0) + ', ' + player.position.y.toFixed(0) + ')', player.position.x, player.position.y + markerRadius+(i===0?18:34)/camera.zoom);
     }
   }
+  if(import.meta.env.DEV&&options.debugColliders)drawHazardColliders(ctx,game,camera);
+  if(import.meta.env.DEV&&cinematic&&options.debugAccretion)for(const body of game.bodies)if(body.kind==='black_hole'&&body.layer!=='hidden')drawAccretionDebug(ctx,body,camera);
   ctx.restore();
   // Navigation and HUD are screen-space, never fed back into simulation.
+  drawHazardImpact(ctx,game,camera);
   const marker = (position: {x:number;y:number}, label: string, color: string, margin = 30, labelOffset = 20) => {
     const edge = edgeMarker(camera, position, ship.position, margin); if (!edge) return;
     ctx.save(); ctx.translate(edge.position.x, edge.position.y); ctx.rotate(edge.angle);

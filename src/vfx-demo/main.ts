@@ -10,12 +10,12 @@ import { createVisualState,updateVisuals } from '../render/spacetime/model';
 import { createDemoRenderer,drawDemo } from '../render/spacetime/renderer';
 import { parseWarp,RANGES,setParameter } from '../render/spacetime/config';
 import type { NumericParameter,Quality } from '../render/spacetime/config';
-import { DEFAULT_ART,ART_LIMITS,setArt } from '../render/spacetime/art';
+import { CINEMATIC_ART,ART_LIMITS,setArt } from '../render/spacetime/art';
 import type { ArtParameter,ArtConfig } from '../render/spacetime/art';
 import { peekNodeAtlas } from '../render/spacetime/nodes';
 import { drawAnchors } from '../render/spacetime/anchors';
 const canvas=document.querySelector<HTMLCanvasElement>('#vfx-canvas')!,ctx=canvas.getContext('2d')!;
-const config=parseWarp(location.search),art={...DEFAULT_ART},clock=new FixedClock(),camera=createCamera({x:0,y:0});
+const config=parseWarp(location.search),art={...CINEMATIC_ART},clock=new FixedClock(),camera=createCamera({x:0,y:0});
 let players=structuredClone(firstLevel.players),revision=0,phase:Phase='running';
 const cameraOffset={x:0,y:0};let debugAnchors=false,freezeTime=false;
 function place(overlap=false):void {players=structuredClone(firstLevel.players);players[0].position={x:overlap?-65:-165,y:0};players[1].position={x:overlap?65:165,y:0};}

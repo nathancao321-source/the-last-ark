@@ -79,6 +79,27 @@ function updateGrid(r:DemoRenderer,state:VisualState,c:WarpConfig,camera:Camera)
   else if(!r.previous)r.grid=next;
   // During a crossfade freeze both spatial grids, not the shared visual model.
 }
+
+/** Draw the shared world material used by the main game. The helper is kept
+ * separate from drawDemo so the standalone tuning page can keep its own
+ * controls while the game supplies the real GameState snapshot. */
+export function drawSpaceBackdrop(ctx:CanvasRenderingContext2D,r:DemoRenderer,camera:Camera,state:VisualState,c:WarpConfig,art:ArtConfig):void {
+  ctx.save();
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle=SPACE.background;ctx.fillRect(0,0,camera.width,camera.height);
+  if(c.quality!=='off'&&art.background!=='baseline') {
+    if(!r.background||r.background.key!==backgroundKey(art))r.background=createBackground(art,r.background?.stars);
+    drawBackground(ctx,r.background,camera,state,c,art,r.sample);
+  }
+  ctx.restore();
+}
+
+/** Main-game node projection. It deliberately receives the same player and
+ * visual state objects as the physics bridge and never writes either one. */
+export function drawCinematicNodes(ctx:CanvasRenderingContext2D,_r:DemoRenderer,players:readonly Player[],camera:Camera,state:VisualState,c:WarpConfig,art:ArtConfig):void {
+  if(c.quality==='off')return;
+  const atlas=getNodeAtlas();
+  for(let i=0;i<players.length&&i<state.sources.length;i++)if(!players[i].capture)drawNode(ctx,atlas,players[i],state.sources[i],state,camera,art,c.quality,i);
+}
 function drawGrid(ctx:CanvasRenderingContext2D,r:DemoRenderer,grid:Grid,alpha:number,state:VisualState,c:WarpConfig,camera:Camera,scale:number):void {
   const cache=ensureCache(r),half=grid.spacing*camera.zoom;
   const points=grid.samples;

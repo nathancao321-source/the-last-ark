@@ -34,7 +34,9 @@ export function drawCapturedNode(ctx: CanvasRenderingContext2D, player: Player, 
       ctx.fillRect(x,y,3/zoom,(4+8*(1-t))/zoom);
     }
   } else if(state.phase==='jet') {
-    for(let n=0;n<10;n++)ctx.fillRect(player.position.x+Math.sin(n*7)*8/zoom,player.position.y+n*6/zoom,3/zoom,7/zoom);
+    // Captured player transport is not the hazardous gamma beam. Keep its
+    // identity-colored reconstruction flecks local to the actual player.
+    for(let n=0;n<6;n++)ctx.fillRect(player.position.x+Math.sin(n*7)*5/zoom,player.position.y+Math.cos(n*7)*5/zoom,2/zoom,2/zoom);
   } else {
     const t=Math.min(1,state.elapsed/config.reformSeconds);
     for(let n=0;n<12;n++) {
@@ -44,7 +46,7 @@ export function drawCapturedNode(ctx: CanvasRenderingContext2D, player: Player, 
     ctx.globalAlpha=t;ctx.beginPath();ctx.arc(player.position.x,player.position.y,Math.max(player.radius,6/zoom)*t,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
   }
   ctx.textAlign='center';ctx.font=`${13/zoom}px system-ui`;
-  const label=state.phase==='captured'?`已撕碎 · 下次喷流 ${Math.max(0,state.releaseAt-game.elapsed).toFixed(1)}s`:state.phase==='jet'?'伽马喷流':'重组中';
+  const label=state.phase==='captured'?`已撕碎 · 节点释放 ${Math.max(0,state.releaseAt-game.elapsed).toFixed(1)}s`:state.phase==='jet'?'节点回收（非伤害束流）':'重组中';
   ctx.fillText(`P${i+1} ${label}`,player.position.x,player.position.y+(i?38:-28)/zoom);
   ctx.restore();
 }

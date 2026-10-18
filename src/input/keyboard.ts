@@ -50,10 +50,14 @@ export class Keyboard {
   }
   source(index: PlayerIndex): PlayerInputSource { return this.channels[index]; }
   read(): Controls { return { players: [this.readPlayer(0), this.readPlayer(1)] }; }
-  attach(target: Window): () => void {
+  attach(target: Window, isSuspended = () => false): () => void {
     const isControl = (event: KeyboardEvent) => event.target instanceof Element && !!event.target.closest('button, input, select, textarea, summary');
-    const down = (event: KeyboardEvent) => { if (!isControl(event) && this.keyDown(event.code, event.repeat, event.shiftKey)) event.preventDefault(); };
-    const up = (event: KeyboardEvent) => { const handled = this.keyUp(event.code); if (handled && !isControl(event)) event.preventDefault(); };
+    const down = (event: KeyboardEvent) => {
+      // Let modal dialogs own their keyboard events, including native Escape.
+      if (isSuspended()) { this.releaseKeys(); return; }
+      if (!isControl(event) && this.keyDown(event.code, event.repeat, event.shiftKey)) event.preventDefault();
+    };
+    const up = (event: KeyboardEvent) => { const handled = this.keyUp(event.code); if (handled && !isSuspended() && !isControl(event)) event.preventDefault(); };
     const blur = () => { this.releaseKeys(); this.onAction('blur'); };
     const visibility = () => { if (target.document.hidden) blur(); };
     target.addEventListener('keydown', down); target.addEventListener('keyup', up); target.addEventListener('blur', blur); target.document.addEventListener('visibilitychange', visibility);

@@ -1,0 +1,180 @@
+{
+  "report": [
+    {
+      "mode": "stationary",
+      "energy": 0.5,
+      "maxAdjacentRelative": 0.014011165210633782,
+      "brightnessRange": 0.014028971158243395,
+      "fps": 60.10518407481784
+    },
+    {
+      "mode": "stationary",
+      "energy": 1,
+      "maxAdjacentRelative": 0.010685449926245719,
+      "brightnessRange": 0.011946937124160999,
+      "fps": 58.16066884580154
+    },
+    {
+      "mode": "stationary",
+      "energy": 1.2,
+      "maxAdjacentRelative": 0.01669545420931977,
+      "brightnessRange": 0.01669611447405952,
+      "fps": 61.562139282928285
+    },
+    {
+      "mode": "stationary",
+      "energy": 1.8,
+      "maxAdjacentRelative": 0.013688298160747694,
+      "brightnessRange": 0.01370490281011338,
+      "fps": 60.093896713615024
+    },
+    {
+      "mode": "stationary",
+      "energy": 2,
+      "maxAdjacentRelative": 0.014744904179736425,
+      "brightnessRange": 0.014758363193871556,
+      "fps": 60.98723079993715
+    },
+    {
+      "mode": "moving",
+      "energy": 0.5,
+      "maxAdjacentRelative": 0.0029537171784154077,
+      "brightnessRange": 0.007816273872281763,
+      "fps": 60.04878964091214
+    },
+    {
+      "mode": "moving",
+      "energy": 1,
+      "maxAdjacentRelative": 0.007071796457469993,
+      "brightnessRange": 0.010289478914668212,
+      "fps": 60.127771512448014
+    },
+    {
+      "mode": "moving",
+      "energy": 1.2,
+      "maxAdjacentRelative": 0.00581564617409896,
+      "brightnessRange": 0.008178606732994942,
+      "fps": 60.20696142991533
+    },
+    {
+      "mode": "moving",
+      "energy": 1.8,
+      "maxAdjacentRelative": 0.0045371884417566765,
+      "brightnessRange": 0.006671281551082056,
+      "fps": 58.11841627378571
+    },
+    {
+      "mode": "moving",
+      "energy": 2,
+      "maxAdjacentRelative": 0.004254382381013611,
+      "brightnessRange": 0.008510575530887084,
+      "fps": 62.29316721966633
+    },
+    {
+      "mode": "on",
+      "energy": 0.5,
+      "maxAdjacentRelative": 0.00779625489421339,
+      "brightnessRange": 0.007857514076790922,
+      "fps": 60.331825040419346
+    },
+    {
+      "mode": "on",
+      "energy": 1,
+      "maxAdjacentRelative": 0.005397019679323529,
+      "brightnessRange": 0.00969027314892103,
+      "fps": 60.116475670267434
+    },
+    {
+      "mode": "on",
+      "energy": 1.2,
+      "maxAdjacentRelative": 0.004236909295929526,
+      "brightnessRange": 0.008203973530152576,
+      "fps": 60.0375234521576
+    },
+    {
+      "mode": "on",
+      "energy": 1.8,
+      "maxAdjacentRelative": 0.004058918154814636,
+      "brightnessRange": 0.00723425685018467,
+      "fps": 60.20696142991533
+    },
+    {
+      "mode": "on",
+      "energy": 2,
+      "maxAdjacentRelative": 0.0037949715543288045,
+      "brightnessRange": 0.007621469206121264,
+      "fps": 60.218291308685956
+    },
+    {
+      "mode": "off",
+      "energy": 0.5,
+      "maxAdjacentRelative": 0.014011165210633782,
+      "brightnessRange": 0.014028971158243395,
+      "fps": 58.04462180175595
+    },
+    {
+      "mode": "off",
+      "energy": 1,
+      "maxAdjacentRelative": 0.010685449926245719,
+      "brightnessRange": 0.011946937124160999,
+      "fps": 62.62230919765166
+    },
+    {
+      "mode": "off",
+      "energy": 1.2,
+      "maxAdjacentRelative": 0.01669545420931977,
+      "brightnessRange": 0.01669611447405952,
+      "fps": 60.116475673633225
+    },
+    {
+      "mode": "off",
+      "energy": 1.8,
+      "maxAdjacentRelative": 0.013688298160747694,
+      "brightnessRange": 0.01370490281011338,
+      "fps": 60.21829130530875
+    },
+    {
+      "mode": "off",
+      "energy": 2,
+      "maxAdjacentRelative": 0.014744904179736425,
+      "brightnessRange": 0.014758363193871556,
+      "fps": 60.093896713615024
+    },
+    {
+      "mode": "overlap",
+      "energy": 0.5,
+      "maxAdjacentRelative": 0.007851121386790014,
+      "brightnessRange": 0.00791324926735192,
+      "fps": 60.17299736945464
+    },
+    {
+      "mode": "overlap",
+      "energy": 1,
+      "maxAdjacentRelative": 0.005361878768569499,
+      "brightnessRange": 0.009814504699768817,
+      "fps": 58.10786272143218
+    },
+    {
+      "mode": "overlap",
+      "energy": 1.2,
+      "maxAdjacentRelative": 0.004303538581066764,
+      "brightnessRange": 0.00816450719022269,
+      "fps": 61.53846153846154
+    },
+    {
+      "mode": "overlap",
+      "energy": 1.8,
+      "maxAdjacentRelative": 0.00414144632048423,
+      "brightnessRange": 0.007160821039420795,
+      "fps": 61.010486177311726
+    },
+    {
+      "mode": "overlap",
+      "energy": 2,
+      "maxAdjacentRelative": 0.0036596741751965573,
+      "brightnessRange": 0.007758640216961869,
+      "fps": 60.27500470830803
+    }
+  ],
+  "errors": []
+}

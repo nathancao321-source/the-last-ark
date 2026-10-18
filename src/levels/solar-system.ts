@@ -42,6 +42,7 @@ const pass=(id:string,label:string,x:number,requires?:string[])=>({id,label,requ
 /** Compressed, initially aligned solar system. All physical bodies exchange locally indexed gravity; initial circular speeds are seeded.
  * Ship gravity is still integrated from the actual moving source positions; no slingshot triggers. */
 export const solarSystem:Level={
+  solarWave:{sourceId:'sun',exitId:'interstellar',launchAt:50,warningSeconds:5,shockwaveTravelTime:25,thickness:44,duration:40},
   id:'solar-exodus',name:'Level 1 · SOLAR EXODUS / 逃离太阳系',width:1100,height:620,seed:76127,shipHealth:100,
   mapBounds:{minX:-600,minY:-1000,maxX:6000,maxY:1000},decorations,
   players:structuredClone(firstLevel.players).map((p,i)=>({...p,position:i?{x:-200,y:140}:{x:60,y:-150}})) as Level['players'],

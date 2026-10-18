@@ -21,7 +21,7 @@ import { SceneController } from '../src/scenes/controller';
 import { Keyboard } from '../src/input/keyboard';
 
 /** Feedback pilot controls only the two normal player intents, never the ship or planets. */
-function pilot(game:GameState, speed=100, clearance=600) {
+function pilot(game:GameState, speed=100, clearance=600, departureSpeed=speed) {
   const waypoints=[{x:450,y:-clearance},{x:1000,y:-clearance-20},{x:1450,y:-clearance+20},{x:2100,y:-clearance-20},{x:3000,y:-clearance-20},{x:4170,y:-clearance-20},{x:4900,y:0},{x:5480,y:0}];
   const camera=createCamera(game.bodies[0].position);
   let stage=0;
@@ -31,7 +31,7 @@ function pilot(game:GameState, speed=100, clearance=600) {
     const ship=game.bodies[0],target=waypoints[stage];
     if(length(sub(target,ship.position))<120&&stage<waypoints.length-1)stage++;
     const delta=sub(waypoints[stage],ship.position);
-    const cruise=stage===waypoints.length-1?Math.min(speed,45):speed;
+    const cruise=stage===waypoints.length-1?Math.min(speed,45):stage<3?departureSpeed:speed;
     const desired=scale(delta,cruise/Math.max(1,length(delta)));
     let environment={x:0,y:0};
     for(const body of game.bodies)if(body!==ship&&body.emitsGravity!==false)environment=add(environment,fieldAcceleration(ship.position,body.position,bodyGravity(body)));
@@ -50,9 +50,9 @@ function pilot(game:GameState, speed=100, clearance=600) {
   return {phase:game.phase,stage,seconds:game.elapsed,position:game.bodies[0].position,hp:game.health?.current,message:game.message,objectives:game.mission.completedObjectives};
 }
 describe('Solar Exodus physical routes',()=>{
-  for(const speed of [90,100,110])it(`flies a real cooperative route from Earth to interstellar space at ${speed}`,()=>{
+  for(const speed of [110,120,130])it(`flies a real cooperative route from Earth to interstellar space at ${speed}`,()=>{
     const game=createGame(solarSystem);const result=pilot(game,speed);
-    expect(result.phase,JSON.stringify(result)).toBe('completed');expect(result.seconds).toBeLessThan(90);
+    expect(result.phase,JSON.stringify(result)).toBe('completed');expect(result.seconds).toBeLessThan(65);
     expect(game.encounters).toContain('belt-approach');expect(game.mission.completedObjectives).toHaveLength(6);
   });
   for(const index of [0,1] as const)it(`can complete after ${index?'exploding':'collapsing'} the sun through real node travel and dwell`,()=>{
@@ -63,7 +63,7 @@ describe('Solar Exodus physical routes',()=>{
     pause(game);
     positionPlayer(game,0,add(game.bodies[0].position,{x:-100,y:-180}));
     positionPlayer(game,1,add(game.bodies[0].position,{x:100,y:180}));
-    const result=pilot(game,100,700);expect(result.phase,JSON.stringify(result)).toBe('completed');
+    const result=pilot(game,130,700,100);expect(result.phase,JSON.stringify(result)).toBe('completed');
   });
   it('does not award an unassisted straight flight a free boost or safe bypass',()=>{
     const game=createGame(solarSystem);togglePause(game);for(let i=0;i<2400&&game.phase==='running';i++)stepGame(game,NO_CONTROLS);

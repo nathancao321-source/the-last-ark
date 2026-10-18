@@ -1,0 +1,57 @@
+{
+  "checks": [
+    {
+      "name": "cover enters native fullscreen",
+      "value": true
+    },
+    {
+      "name": "fullscreen button exits",
+      "value": true
+    },
+    {
+      "name": "game enters native fullscreen",
+      "value": true
+    },
+    {
+      "name": "fullscreen preserves game and music instance",
+      "value": true
+    },
+    {
+      "name": "fullscreen canvas fills available height without overflow",
+      "value": true
+    },
+    {
+      "name": "canvas backing resolution follows display size",
+      "value": true
+    },
+    {
+      "name": "settings work while fullscreen",
+      "value": true
+    },
+    {
+      "name": "Escape closes settings without leaving scene",
+      "value": true
+    },
+    {
+      "name": "Escape exits fullscreen without navigating away",
+      "value": true
+    },
+    {
+      "name": "windowed layout restored",
+      "value": true
+    },
+    {
+      "name": "short landscape fullscreen canvas fits",
+      "value": true
+    },
+    {
+      "name": "new header controls fit narrow viewport",
+      "value": true
+    },
+    {
+      "name": "rejected fullscreen request reports error and remains usable",
+      "value": true
+    }
+  ],
+  "errors": []
+}

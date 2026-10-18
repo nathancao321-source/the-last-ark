@@ -49,7 +49,11 @@ describe('Beyond the Horizon playable routes',()=>{
   for(const speed of [75,90,105])for(const side of [-1,1])it(`completes a physical ${side<0?'upper':'lower'} cooperative bypass at ${speed}`,()=>{
     const game=createGame(blackHoleLevel),result=pilot(game,speed,side);
     expect(result.phase,JSON.stringify(result)).toBe('completed');expect(result.seconds).toBeLessThan(90);
-    expect(result.minHealth).toBe(100);expect(result.usage.every(n=>n>0)).toBe(true);
+    // The new timed jets can hit a previously safe tidal bypass once. The slower
+    // 75-unit route crosses during warning/cooldown and remains fully uninjured.
+    expect(result.minHealth).toBeGreaterThanOrEqual(50);
+    if(speed===75)expect(result.minHealth).toBe(100);
+    expect(result.usage.every(n=>n>0)).toBe(true);
     expect(length(game.bodies[0].velocity)).toBeLessThanOrEqual(65);
     expect(game.checkpoint!.id).toBe('beyond-horizon');
   });
@@ -156,8 +160,8 @@ describe('chapter progression into exploration',()=>{
     c.enter(c.nextScene()!);expect(c.scene).toBe('endless');expect(c.game!.health!.current).toBe(100);expect(c.game!.level.scoring).toBeUndefined();
     c.toggle();for(let i=0;i<60;i++)c.step(NO_CONTROLS);expect(c.game!.phase).toBe('running');
     expect(c.enter('endless')).toBe(true);expect(c.scene).toBe('endless');
-    expect(chapterChoices(c.registry).find(v=>v.id==='black_hole')!.playable).toBe(true);
-    expect(chapterChoices(c.registry).find(v=>v.id==='endless')!.playable).toBe(true);
+    expect(chapterChoices(c.registry,{...c.progress,level0Complete:true}).find(v=>v.id==='black_hole')!.playable).toBe(true);
+    expect(chapterChoices(c.registry,{...c.progress,level0Complete:true}).find(v=>v.id==='endless')!.playable).toBe(true);
   });
   it('persists chapter completion and accepts old progress saves',()=>{
     let value=JSON.stringify({version:1,level0Complete:true});const storage={getItem:()=>value,setItem:(_key:string,v:string)=>{value=v;}};

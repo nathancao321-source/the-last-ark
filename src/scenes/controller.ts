@@ -3,6 +3,7 @@ import type { Controls, GameState } from '../game/types';
 import type { SceneId, SceneRegistry } from './types';
 import { scenes } from './registry';
 import type { CampaignProgress } from '../game/progress';
+import { isSceneUnlocked } from './campaign';
 /** Scene identity and simulation phase are independent; planned scenes cannot run. */
 export class SceneController {
   scene: SceneId = 'title';
@@ -11,6 +12,10 @@ export class SceneController {
   notice = '';
   arrival?: { from: SceneId; seconds: number; distance: number };
   constructor(readonly registry: SceneRegistry = scenes, readonly progress: CampaignProgress = {level0Complete:false}) {}
+  enterPlayable(id: SceneId): boolean {
+    if (!isSceneUnlocked(id, this.progress)) { this.notice = '请先完成前一章节'; return false; }
+    return this.enter(id);
+  }
   enter(id: SceneId): boolean {
     const scene = this.registry[id];
     if (!scene || scene.status === 'planned' || (id !== 'title' && !scene.level)) {
@@ -40,6 +45,7 @@ export class SceneController {
     if(this.game.phase==='completed' && this.registry[this.scene].completion)this.game.message=this.registry[this.scene].completion!.message;
     const next = this.game.pendingScene;
     if (next) {
+      if (this.scene === 'tutorial_part_1' && next === 'tutorial_part_2') this.progress.tutorialPart1Complete = true;
       const arrival = { from: this.scene, seconds: this.game.elapsed, distance: this.game.distance };
       delete this.game.pendingScene;
       if (!this.enter(next)) this.game!.message = this.notice;

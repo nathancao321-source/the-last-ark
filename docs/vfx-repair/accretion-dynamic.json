@@ -1,0 +1,72 @@
+{
+  "report": {
+    "frames": 540,
+    "simulationSeconds": 9,
+    "fps": 25.547324166602248,
+    "drawP95": 9.5,
+    "materialP95": 0,
+    "maxAdjacentLuminance": 0.00016338910452753957,
+    "pauseDiff": 0,
+    "checkpoints": [
+      {
+        "frame": 0,
+        "time": 0,
+        "sum": 53343141,
+        "pixelDifference": 0
+      },
+      {
+        "frame": 90,
+        "time": 1.5,
+        "sum": 53762931,
+        "pixelDifference": 237427
+      },
+      {
+        "frame": 180,
+        "time": 3,
+        "sum": 53234271,
+        "pixelDifference": 231846
+      },
+      {
+        "frame": 270,
+        "time": 4.5,
+        "sum": 52905006,
+        "pixelDifference": 229314
+      },
+      {
+        "frame": 360,
+        "time": 6,
+        "sum": 52427309,
+        "pixelDifference": 224251
+      },
+      {
+        "frame": 539,
+        "time": 8.983333333333333,
+        "sum": 52072936,
+        "pixelDifference": 221718
+      }
+    ],
+    "cache": {
+      "ready": true,
+      "failed": false,
+      "bakeMs": 98.19999998807907,
+      "frameMs": 0,
+      "layers": [
+        {
+          "name": "rear",
+          "pixels": 44839
+        },
+        {
+          "name": "disc",
+          "pixels": 117568
+        },
+        {
+          "name": "rim",
+          "pixels": 6948
+        }
+      ],
+      "width": 768,
+      "height": 384
+    }
+  },
+  "errors": []
+}

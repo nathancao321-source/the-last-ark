@@ -6,6 +6,7 @@ import { inverseMass,resolveContact } from './collision-resolution';
 import { applyCollisionEvent } from '../game/collision-events';
 import { hasCollider } from './collision-policy';
 export interface ContactStep {
+  shipPath: import('../game/hazard-types').MotionChord[];
   bodies:Body[]; events:{type:string;a:string;b:string}[]; failure?:string; notice?:string;
   substeps:number; budgetExhausted:boolean; shipDistance:number;
 }
@@ -21,7 +22,7 @@ export function collisionSubsteps(bodies:Body[],dt:number):number {
  * contacts in earliest-time order, advance all paths to contact, then recompute
  * remaining motion after impulses. This catches secondary collisions in the same step. */
 export function integrateContacts(bodies:Body[],players:Player[],dt:number,stabilization=true):ContactStep {
-  const result:ContactStep={bodies,events:[],substeps:collisionSubsteps(bodies,dt),budgetExhausted:false,shipDistance:0};
+  const result:ContactStep={bodies,events:[],substeps:collisionSubsteps(bodies,dt),budgetExhausted:false,shipDistance:0,shipPath:[]};
   if(!Number.isFinite(dt)||dt<=0)return result;
   const h=dt/result.substeps;
   for(let s=0;s<result.substeps;s++) {
@@ -34,7 +35,10 @@ export function integrateContacts(bodies:Body[],players:Player[],dt:number,stabi
     const advance=(fraction:number)=>{
       for(const body of result.bodies){
         const end=ends.get(body.id)!,dx=(end.x-body.position.x)*fraction,dy=(end.y-body.position.y)*fraction;
-        if(body.kind==='ship')result.shipDistance+=Math.hypot(dx,dy);
+        if(body.kind==='ship'){
+          result.shipDistance+=Math.hypot(dx,dy);
+          result.shipPath.push({from:{...body.position},to:{x:body.position.x+dx,y:body.position.y+dy},start:s*h+h-remaining,end:s*h+h-remaining+remaining*fraction});
+        }
         body.position={x:body.position.x+dx,y:body.position.y+dy};
       }
     };

@@ -7,6 +7,7 @@ import { contains } from '../world/geometry';
 import { advanceLesson, currentLesson, initializeTutorial, updateTutorial } from './tutorial';
 import { updateStellar } from './stellar';
 import { updateDamageZones } from './damage-zones';
+import { initializeHazards, updateHazards, hazardNotice } from './hazards';
 import { initializeUniverse, rebaseUniverse, streamUniverse } from '../world/universe';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
@@ -25,6 +26,7 @@ export function createGame(level: Level): GameState {
   initializeTutorial(game);
   game.mission.completedObjectives=[...(config.initialObjectives ?? [])];
   if(config.shipHealth)game.health={current:config.shipHealth,max:config.shipHealth};
+  initializeHazards(game);
   if(config.procedural)initializeUniverse(game);
   saveCheckpoint(game, 'start');
   return game;
@@ -84,12 +86,15 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   if (!ship) { lose(game, '关卡缺少方舟'); return; }
   game.distance += contacts.shipDistance;
   if(contacts.failure){lose(game,contacts.failure);return;}
+  const hazardFailure=updateHazards(game,contacts.shipPath,dt);
+  if(hazardFailure){lose(game,hazardFailure);return;}
   const stellarFailure=updateStellar(game,previous,dt);
   if(stellarFailure){lose(game,stellarFailure);return;}
   // Capture is checked first: entering an event horizon can never become a
   // surviving fly-through or a goal transition, even within a single fast step.
   const damageFailure = updateDamageZones(game, dt);
   if (damageFailure) { lose(game, damageFailure); return; }
+  game.hazardMessage=hazardNotice(game)??game.hazardMessage;
   const bounds = game.level.missionBounds;
   if (bounds && (!contains(bounds, {x:ship.position.x-ship.radius,y:ship.position.y-ship.radius}) || !contains(bounds, {x:ship.position.x+ship.radius,y:ship.position.y+ship.radius}))) {
     lose(game, '飞船离开任务边界'); return;

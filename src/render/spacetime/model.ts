@@ -5,10 +5,13 @@ import { seededRandom } from '../../world/sectors';
 import { worldFabric } from './noise';
 import { enabled } from './config';
 import type { WarpConfig } from './config';
+import type {CelestialEvents} from '../celestial-events';
 
 export interface Source { id:string; position:Vec2; field:Field; weight:number; active:boolean; motion:number; cooldown:number; table:Float32Array; phase:number;nodeClock:number;history:Float64Array;historyIndex:number;historyTime:number }
 export interface Ripple { alive:boolean; origin:Vec2; direction:Vec2; polarity:number; radius:number; age:number; decay:number; speed:number; amplitude:number; phase:number }
-export interface VisualState { time:number; revision:number; sources:Source[]; events:Ripple[]; emitted:number; invalid:number }
+export interface VisualState { time:number; revision:number; sources:Source[]; events:Ripple[]; emitted:number; invalid:number;
+  hazardWave?: {origin:Vec2;front:number;thickness:number};
+  portals?: {origin:Vec2;radius:number;approach:number}[];celestial?:CelestialEvents; }
 export interface Sample { dx:number; dy:number; luminance:number }
 const smooth=(t:number)=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
 const envelope=(r:number,R:number)=>{const t=Math.max(0,1-(r/R)**2);return t*t;};
@@ -27,9 +30,20 @@ export function lookupForce(s:Source,distance:number):number {
 }
 export function createVisualState(players:readonly Player[],revision=0):VisualState {
   const random=seededRandom(87122);
-  return {time:0,revision,emitted:0,invalid:0,sources:players.slice(0,2).map(p=>({id:p.id,position:{...p.position},field:{...p.field},
+  return {time:0,revision,emitted:0,invalid:0,portals:undefined,celestial:undefined,hazardWave:undefined,sources:players.slice(0,2).map(p=>({id:p.id,position:{...p.position},field:{...p.field},
     weight:0,active:false,motion:0,cooldown:0,table:buildForceTable(p.field),phase:random()*Math.PI*2,nodeClock:0,history:Float64Array.from(Array.from({length:16},(_,i)=>i%2?p.position.y:p.position.x)),historyIndex:0,historyTime:0})),
     events:Array.from({length:4},()=>({alive:false,origin:{x:0,y:0},direction:{x:0,y:0},polarity:1,radius:0,age:0,decay:1,speed:240,amplitude:0,phase:0}))};
+}
+/** Keep world anchors in sync while the game is paused or ready. This does not
+ * advance visual time, emit events, or change field weights; it only mirrors
+ * the real player transforms so a paused manual reposition cannot detach the
+ * read-only backdrop from its node. */
+export function syncVisualPositions(state:VisualState,players:readonly Player[],revision:number):void {
+  if(revision!==state.revision){Object.assign(state,createVisualState(players,revision));return;}
+  for(let i=0;i<state.sources.length&&i<players.length;i++){
+    const s=state.sources[i],p=players[i];s.position.x=p.position.x;s.position.y=p.position.y;s.active=p.active;
+    if(s.field.radius!==p.field.radius||s.field.strength!==p.field.strength||s.field.polarity!==p.field.polarity){s.field={...p.field};s.table=buildForceTable(s.field);}
+  }
 }
 function emit(state:VisualState,s:Source,p:Player,c:WarpConfig,amplitude:number):void {
   const e=state.events.find(event=>!event.alive);if(!e)return;
@@ -92,7 +106,20 @@ export function sampleDisturbance(out:Sample,x:number,y:number,state:VisualState
     brightness+=-e.polarity*H*0.025;
   }
   // Model displacement is in world units until this single projection. The
+  // Solar front refracts the SAME world material, never a new node-local cloud.
+  if(c.interaction&&state.hazardWave){
+    const wave=state.hazardWave,rx=x-wave.origin.x,ry=y-wave.origin.y,r=Math.hypot(rx,ry);
+    const q=(r-wave.front+wave.thickness*.5)/Math.max(24,wave.thickness),w=Math.exp(-q*q*2);
+    ex+=2.5*w*rx/Math.max(1,r);ey+=2.5*w*ry/Math.max(1,r);brightness+=.025*w*(.6+.4*fabric);
+  }
+  // Model displacement is in world units until this single projection. The
   // screen-pixel limit is an artistic safety cap, not a second camera transform.
+  for(const portal of state.portals??[]){
+    const rx=x-portal.origin.x,ry=y-portal.origin.y,r=Math.hypot(rx,ry),q=r/portal.radius;
+    const w=Math.exp(-(((q-1.15)*2.3)**2))*Math.min(1,q),a=Math.atan2(ry,rx);
+    const fold=w*(1+portal.approach*.65)*(1+.15*Math.sin(a*5+state.time*.2));
+    ex+=(-rx*.12-ry*.035)*fold;ey+=(-ry*.12+rx*.035)*fold;brightness-=fold*.055;
+  }
   const dx=(ax*base+ex)*zoom,dy=(ay*base+ey)*zoom,cap=Math.min(c.maxDisplacement,0.08*280*zoom);
   const limit=cap>0?1/Math.sqrt(1+(dx*dx+dy*dy)/(cap*cap)):0;
   if(c.starWarp&&cap>0){out.dx=dx*limit;out.dy=dy*limit;}

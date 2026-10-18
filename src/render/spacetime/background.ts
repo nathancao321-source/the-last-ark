@@ -61,6 +61,19 @@ function prepareView(b:BackgroundCache,c:Camera):void {
   ctx.fillRect(bounds.minX/unit,bounds.minY/unit,(bounds.maxX-bounds.minX)/unit,(bounds.maxY-bounds.minY)/unit);
 }
 export interface WorldCell {x:number;y:number;spacing:number;priority:number}
+/** Only visible WORLD-lattice cells intersecting the annulus; bounded separately
+ * from node mesh budgets. Camera culling never shifts the sampling lattice. */
+export function waveCells(state:VisualState,warp:WarpConfig,camera:Camera):WorldCell[] {
+ const wave=state.hazardWave;if(!wave||warp.quality==='off'||warp.quality==='low')return [];
+ const bounds=viewBounds(camera),base=warp.quality==='high'?192:256;
+ const spacing=base*2**Math.max(0,Math.ceil(Math.log2((bounds.maxX-bounds.minX)/base/14)));
+ const cells:WorldCell[]=[],middle=wave.front-wave.thickness*.5;
+ for(let iy=Math.floor(bounds.minY/spacing);iy<=Math.floor(bounds.maxY/spacing);iy++)for(let ix=Math.floor(bounds.minX/spacing);ix<=Math.floor(bounds.maxX/spacing);ix++){
+  const x=ix*spacing,y=iy*spacing,near=Math.hypot(Math.max(x-wave.origin.x,0,wave.origin.x-x-spacing),Math.max(y-wave.origin.y,0,wave.origin.y-y-spacing));
+  const far=Math.max(...[x,x+spacing].flatMap(xx=>[y,y+spacing].map(yy=>Math.hypot(xx-wave.origin.x,yy-wave.origin.y))));
+  if(near<=wave.front+spacing&&far>=Math.max(0,middle-wave.thickness-spacing))cells.push({x,y,spacing,priority:1});
+ }return cells.slice(0,96);
+}
 /** Fixed WORLD lattice, selected without a camera. Thus camera motion cannot
  * reshuffle illumination samples or move their interpolation cells. Only real
  * source/event changes affect this bounded, faint-edge visual LOD selection. */
@@ -68,6 +81,7 @@ export function worldCells(state:VisualState,warp:WarpConfig):WorldCell[] {
   const spacing=warp.quality==='high'?256:320,capacity=warp.quality==='high'?48:32,cells=new Map<string,WorldCell>();
   const regions=state.sources.filter(s=>s.weight>1e-5).map(s=>({x:s.position.x,y:s.position.y,r:s.field.radius,w:s.weight}));
   if(warp.interaction)for(const e of state.events)if(e.alive)regions.push({x:e.origin.x,y:e.origin.y,r:e.radius,w:Math.exp(-e.age/e.decay)*e.amplitude});
+  for(const p of state.portals??[])regions.push({x:p.origin.x,y:p.origin.y,r:p.radius*2.5,w:.6});
   for(const p of regions)for(let iy=Math.floor((p.y-p.r)/spacing);iy<=Math.floor((p.y+p.r)/spacing);iy++)for(let ix=Math.floor((p.x-p.r)/spacing);ix<=Math.floor((p.x+p.r)/spacing);ix++){
     const x=ix*spacing,y=iy*spacing,dx=Math.max(x-p.x,0,p.x-x-spacing),dy=Math.max(y-p.y,0,p.y-y-spacing),d=Math.hypot(dx,dy);
     if(d>=p.r)continue;const priority=p.w*(1-d/p.r)**2,key=ix+','+iy,old=cells.get(key);
@@ -88,7 +102,7 @@ function triangle(ctx:CanvasRenderingContext2D,image:HTMLCanvasElement,a:Vertex,
 /** Shared D/B model deforms the actual cached nebula sheet, not an overlaid disc. */
 export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,sample:Sample):{samples:number;vertices:number;cells:number} {
   prepareView(b,c);let samples=0,vertices=0,cells=0;
-  const advanced=warp.quality!=='low',active=advanced&&(state.sources.some(s=>s.weight>1e-5)||(warp.interaction&&state.events.some(e=>e.alive)));
+  const advanced=warp.quality!=='low',active=advanced&&(state.sources.some(s=>s.weight>1e-5)||!!state.portals?.length||!!state.hazardWave||(warp.interaction&&state.events.some(e=>e.alive)));
   ctx.drawImage(b.view,0,0,c.width,c.height);
   if(active&&(warp.starWarp||warp.luminance)) {
     const vertex=(wx:number,wy:number):Vertex=>{
@@ -96,7 +110,7 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
       return {x:p.x+s.dx,y:p.y+s.dy,u:p.x/c.width*b.view.width,v:p.y/c.height*b.view.height,b:s.luminance};
     };
     const illumination:{x:number;y:number;size:number;value:number}[]=[];
-    for(const cell of worldCells(state,warp)) {
+    for(const cell of [...worldCells(state,warp),...waveCells(state,warp,c)]) {
       const origin=worldToScreen(c,cell),size=cell.spacing*c.zoom;
       if(origin.x+size< -42||origin.y+size< -42||origin.x>c.width+42||origin.y>c.height+42)continue;
       cells++;

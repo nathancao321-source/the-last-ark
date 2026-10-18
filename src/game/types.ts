@@ -96,6 +96,8 @@ export interface Player extends Entity {
 }
 export interface Port { position: Vec2; radius: number; maxEntrySpeed: number }
 export interface Level {
+  solarWave?: import('./hazard-types').SolarWaveConfig;
+  blackHoleJets?: import('./hazard-types').JetConfig;
   id: string; name: string;
   /** Reference framing only. Never a physical boundary or a viewport size. */
   width: number; height: number;
@@ -117,6 +119,7 @@ export interface Level {
 }
 export type Phase = 'ready' | 'running' | 'paused' | 'completed' | 'failed';
 export interface GameState {
+  hazards?: import('./hazard-types').HazardState;
   collisionBudgetExhausted?: boolean;
   collisionEvents?: { type:string; a:string; b:string }[];
   collisionNotice?: { message:string; until:number };

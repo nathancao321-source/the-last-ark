@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "name": "cover renders",
+      "value": true
+    },
+    {
+      "name": "chapter menu renders",
+      "value": true
+    },
+    {
+      "name": "chapter unlocks preserved",
+      "value": true
+    },
+    {
+      "name": "settings dialog opens",
+      "value": true
+    },
+    {
+      "name": "Escape closes modal without leaving menu",
+      "value": true
+    },
+    {
+      "name": "tutorial launch",
+      "value": true
+    },
+    {
+      "name": "modal isolates gameplay shortcuts",
+      "value": true
+    },
+    {
+      "name": "music persists across scene changes",
+      "value": true
+    },
+    {
+      "name": "music loops",
+      "value": true
+    },
+    {
+      "name": "music button pauses",
+      "value": true
+    },
+    {
+      "name": "music button resumes",
+      "value": true
+    },
+    {
+      "name": "narrow cover fits viewport",
+      "value": true
+    },
+    {
+      "name": "narrow chapters fit viewport",
+      "value": true
+    },
+    {
+      "name": "existing black hole scene and debug retained",
+      "value": true
+    },
+    {
+      "name": "no Vite error overlay",
+      "value": true
+    }
+  ],
+  "errors": []
+}

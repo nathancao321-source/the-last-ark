@@ -1,0 +1,23 @@
+{
+  "repository": "nathancao321-source/the-last-ark",
+  "branch": "feature/cinematic-menu",
+  "commit": "a381dda56346e3fd82ff9c7d8a286f73e6138b44",
+  "archive": ".local/github-ui-a381dda/source.zip",
+  "archiveSha256": "50ee08ff5cdf2f02b6d9682849b744a550ce1a87a26ab140488db21f4c5e54b3",
+  "backup": ".local/before-github-ui-20261018",
+  "unchangedFiles": 118,
+  "changedFiles": [
+    "index.html",
+    "README.md",
+    "src/game/progress.ts",
+    "src/input/keyboard.ts",
+    "src/main.ts",
+    "src/render/scene-ui.ts",
+    "src/scenes/controller.ts",
+    "src/style.css",
+    "tests/accretion.test.ts",
+    "tests/black-hole.test.ts",
+    "tests/first-contact.test.ts"
+  ],
+  "unexpectedChanges": []
+}
