@@ -13,11 +13,11 @@ export function chapterChoices(registry: SceneRegistry, progress: CampaignProgre
   });
 }
 
-const CHAPTER_ART: {id: SceneId; number: string; title: string; english: string; description: string; locked: string}[] = [
-  {id:'tutorial_part_1', number:'00', title:'初次接触', english:'FIRST CONTACT', description:'掌握吸引与排斥，完成第一次合作跃迁。', locked:''},
-  {id:'solar_system', number:'01', title:'逃离太阳系', english:'SOLAR EXODUS', description:'告别蓝色故乡，穿越太阳与小行星带。', locked:'完成「初次接触」后解锁'},
-  {id:'black_hole', number:'02', title:'银河深渊', english:'BEYOND THE HORIZON', description:'绕过黑洞的视界，为方舟找到前行的路。', locked:'完成「逃离太阳系」后解锁'},
-  {id:'endless', number:'∞', title:'群星之间', english:'BEYOND THE STARS', description:'驶入无尽宇宙，自由发现新的星域。', locked:'完成全部主线后解锁'},
+const CHAPTER_ART: {id: SceneId; number: string; title: string; description: string; locked: string}[] = [
+  {id:'tutorial_part_1', number:'00', title:'初次接触', description:'掌握吸引与排斥，完成第一次合作跃迁。', locked:''},
+  {id:'solar_system', number:'01', title:'逃离太阳系', description:'告别蓝色故乡，穿越太阳与小行星带。', locked:'完成「初次接触」后解锁'},
+  {id:'black_hole', number:'02', title:'银河深渊', description:'绕过黑洞的视界，为方舟找到前行的路。', locked:'完成「逃离太阳系」后解锁'},
+  {id:'endless', number:'∞', title:'群星之间', description:'驶入无尽宇宙，自由发现新的星域。', locked:'完成全部主线后解锁'},
 ];
 const LOCK = '<svg viewBox="0 0 16 20" fill="none" stroke-width="1.2" aria-hidden="true"><rect x="2" y="8" width="12" height="10" rx="2"/><path d="M4 8V5a4 4 0 0 1 8 0v3"/><path d="M8 12v3"/></svg>';
 
@@ -39,15 +39,14 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
   const showHome = (destination: 'cover' | 'menu') => { if (controller.scene !== 'title') enter('title'); home = destination; update(); element(destination === 'cover' ? 'begin-journey' : 'campaign-tab').focus(); };
   const launch = (id: SceneId) => { enter(id); update(); };
   const complete = (id: SceneId) => id === 'tutorial_part_1' ? controller.progress.level0Complete : id === 'solar_system' ? !!controller.progress.level1Complete : id === 'black_hole' ? !!controller.progress.level2Complete : false;
-  function createCard(id: SceneId, number: string, title: string, english: string, description: string, playable: boolean, state: string, recommended: boolean, destination = id): HTMLButtonElement {
+  function createCard(id: SceneId, number: string, title: string, description: string, playable: boolean, state: string, recommended: boolean, destination = id): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'level-card' + (recommended ? ' recommended' : ''); button.dataset.scene = id; button.dataset.destination = destination;
     button.disabled = !playable;
-    button.innerHTML = '<span class="chapter-number"></span><span class="chapter-copy"><span class="chapter-topline"><strong></strong><span class="chapter-state"></span></span><span class="chapter-english"></span><span class="chapter-description"></span></span><span class="chapter-icon" aria-hidden="true"></span>';
+    button.innerHTML = '<span class="chapter-number"></span><span class="chapter-copy"><span class="chapter-topline"><strong></strong><span class="chapter-state"></span></span><span class="chapter-description"></span></span><span class="chapter-icon" aria-hidden="true"></span>';
     button.querySelector('.chapter-number')!.textContent = number;
     button.querySelector('strong')!.textContent = title;
     button.querySelector('.chapter-state')!.textContent = state;
-    button.querySelector('.chapter-english')!.textContent = english;
     button.querySelector('.chapter-description')!.textContent = description;
     button.querySelector('.chapter-icon')!.innerHTML = playable ? (complete(id) ? '✓' : '↗') : LOCK;
     return button;
@@ -60,13 +59,13 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
       const current = destination === recommended;
       const state = !playable ? '未解锁' : complete(chapter.id) ? '已完成' : chapter.id === 'endless' ? '自由探索' : current ? (chapter.id === 'tutorial_part_1' ? '必修教程' : '下一航程') : '已解锁';
       const description = !playable ? chapter.locked : destination === 'tutorial_part_2' ? '接续教程第二部分 · 行星也会回应你的引力。' : chapter.description;
-      return createCard(chapter.id, chapter.number, chapter.title, chapter.english, description, playable, state, current, destination);
+      return createCard(chapter.id, chapter.number, chapter.title, description, playable, state, current, destination);
     }));
     const replayIds: SceneId[] = ['tutorial_part_1','tutorial_part_2','solar_system','black_hole','prototype','galactic_rest'];
     if (debug && controller.registry.coop_test.status === 'available') replayIds.push('coop_test');
     replayCards.replaceChildren(...replayIds.map((id, index) => createCard(id, String(index + 1).padStart(2,'0'),
       ({tutorial_part_1:'初次接触',tutorial_part_2:'移动的世界',solar_system:'逃离太阳系',black_hole:'银河深渊',prototype:'绕行与制动',galactic_rest:'银河边缘',coop_test:'开发合作测试'} as Partial<Record<SceneId,string>>)[id]!,
-      controller.registry[id].name, controller.registry[id].description ?? '开发场景',
+      controller.registry[id].description ?? '开发场景',
       (debug || campaignComplete(p)) && controller.registry[id].status === 'available', '回溯航程', false)));
   }
   const chooseCard: EventListener = event => {
@@ -112,7 +111,6 @@ export function mountSceneUI(controller: SceneController, enter: (id: SceneId) =
     element('journey-progress-fill').style.width = `${count / 3 * 100}%`;
     text(element('begin-label'), count || controller.progress.tutorialPart1Complete ? '继续航行' : '启程');
     text(element('cover-hint'), finished ? '主线已完成 · 自由回溯与无限探索已开放' : controller.progress.level0Complete ? '继续下一段已解锁的航程' : controller.progress.tutorialPart1Complete ? '继续新手教程 · 移动的世界' : '首次航行将从新手教程开始');
-    text(element('journey-description'), mode === 'replay' ? '重访走过的星域，自由选择任意章节。' : '从第一次引力接触开始，逐章驶向深空。');
     text(element('unlock-note'), finished ? '主线已完成。自由回溯与群星之间现已开放。' : '完成前一章节，解锁下一段航程。全部完成后可自由回溯。');
     skipButton.hidden = !debug || !step || step.condition.type === 'exit' || game?.phase === 'failed' || game?.phase === 'completed';
     if (game && step) {

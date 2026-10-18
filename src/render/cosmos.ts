@@ -48,7 +48,12 @@ function starPlate(): HTMLCanvasElement {
   c.restore();
   return plate;
 }
-const LIVE_STARS=(()=>{const rng=random(90317);return Array.from({length:160},()=>({x:rng(),y:rng(),r:.3+Math.pow(rng(),3)*1.6,a:.2+rng()*.62,p:rng()*TAU,s:.35+rng()*1.5,d:.35+rng()*1.2,warm:rng()<.27,flare:rng()>.93}));})();
+const LIVE_STARS=(()=>{const rng=random(90317);return Array.from({length:280},()=>({x:rng(),y:rng(),r:.3+Math.pow(rng(),3)*1.7,a:.24+rng()*.62,p:rng()*TAU,s:.5+rng()*1.7,d:.35+rng()*1.35,warm:rng()<.28,flare:rng()>.9}));})();
+const METEORS=[
+  {x:.13,y:.13,dx:.30,dy:.12,period:14,delay:.7,duration:1.7},
+  {x:.63,y:.09,dx:.26,dy:.10,period:19,delay:8.4,duration:1.3},
+  {x:.81,y:.33,dx:-.31,dy:.12,period:23,delay:15.2,duration:1.5},
+];
 const AURORA=[
   {x:.18,y:.73,r:.42,c:'118,64,206',a:.085,p:0,s:.5,rot:-.28},
   {x:.48,y:.23,r:.38,c:'62,104,208',a:.07,p:2.1,s:.38,rot:.22},
@@ -56,17 +61,17 @@ const AURORA=[
   {x:.31,y:.36,r:.24,c:'88,126,224',a:.048,p:5.2,s:.6,rot:.3},
 ];
 function drawAurora(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean):void {
-  const t=still?0:now*.000021,size=Math.max(w,h);
+  const t=still?0:now*.000034,size=Math.max(w,h);
   c.save();c.globalCompositeOperation='screen';
   for(const b of AURORA) {
-    const x=(b.x+Math.sin(t*b.s+b.p)*.035)*w,y=(b.y+Math.cos(t*b.s*.8+b.p)*.03)*h,r=size*b.r;
-    c.save();c.translate(x,y);c.rotate(b.rot+Math.sin(t*.6+b.p)*.07);c.scale(1.5,.64);
+    const x=(b.x+Math.sin(t*b.s+b.p)*.05)*w,y=(b.y+Math.cos(t*b.s*.8+b.p)*.042)*h,r=size*b.r;
+    c.save();c.translate(x,y);c.rotate(b.rot+Math.sin(t*.6+b.p)*.1);c.scale(1.5,.64);
     const g=c.createRadialGradient(0,0,0,0,0,r);
     g.addColorStop(0,`rgba(${b.c},${b.a})`);g.addColorStop(.48,`rgba(${b.c},${b.a*.44})`);g.addColorStop(1,`rgba(${b.c},0)`);
     c.fillStyle=g;c.beginPath();c.arc(0,0,r,0,TAU);c.fill();c.restore();
   }
   for(let i=0;i<3;i++) {
-    const y0=h*(.24+i*.26),ph=t*(.4+i*.11)+i*2.2;
+    const y0=h*(.24+i*.26),ph=t*(.55+i*.15)+i*2.2;
     c.beginPath();c.moveTo(-w*.08,y0+Math.sin(ph)*h*.025);
     c.bezierCurveTo(w*.27,y0+Math.sin(ph+1.1)*h*.075,w*.62,y0+Math.cos(ph*.8)*h*.07,w*1.08,y0+Math.sin(ph+2.2)*h*.025);
     c.lineWidth=h*(.075+i*.028);c.strokeStyle=i===0?'rgba(122,74,208,.03)':'rgba(74,108,214,.025)';c.stroke();
@@ -75,19 +80,44 @@ function drawAurora(c:CanvasRenderingContext2D,w:number,h:number,now:number,stil
   c.restore();
 }
 function drawLiveStars(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean,drift:number):void {
+  const t=now*.001;
   c.save();
   for(const s of LIVE_STARS) {
-    const x=(s.x*w+drift*.7+Math.sin(now*.00011*s.d+s.p)*7+w)%w;
-    const y=(s.y*h+Math.cos(now*.00009*s.d+s.p)*5+h)%h;
-    const twinkle=still?1:.52+.48*Math.sin(now*.0011*s.s+s.p);
-    const a=s.a*twinkle;
+    const travel=still?0:t*(3+s.d*5),sway=still?0:Math.sin(t*(.055+s.d*.035)+s.p)*7;
+    const x=((s.x*w+drift*s.d*.8+travel+sway)%w+w)%w;
+    const y=((s.y*h+(still?0:Math.cos(t*(.045+s.d*.03)+s.p*1.7)*6))%h+h)%h;
+    const wave=.5+.5*Math.sin(t*(1.1+s.s*.9)+s.p);
+    const twinkle=still?1:.34+.66*wave,flare=s.flare&&!still?Math.pow(wave,7)*.9:0;
+    const a=Math.min(1,s.a*twinkle+flare);
     if(a<=.01)continue;
     c.beginPath();c.arc(x,y,s.r,0,TAU);
     c.fillStyle=s.warm?`rgba(242,216,182,${a})`:`rgba(190,212,255,${a})`;c.fill();
-    if(s.flare&&a>.25) {
-      c.beginPath();c.moveTo(x-s.r*4,y);c.lineTo(x+s.r*4,y);c.moveTo(x,y-s.r*4);c.lineTo(x,y+s.r*4);
-      c.strokeStyle=`rgba(200,220,255,${a*.45})`;c.lineWidth=.6;c.stroke();
+    if(s.flare&&(a>.3||flare>.08)) {
+      const len=s.r*(4+flare*7);
+      c.beginPath();c.moveTo(x-len,y);c.lineTo(x+len,y);c.moveTo(x,y-len);c.lineTo(x,y+len);
+      c.strokeStyle=`rgba(200,220,255,${Math.min(1,a*.5+flare*.4)})`;c.lineWidth=.6;c.stroke();
     }
+  }
+  c.restore();
+}
+function drawMeteors(c:CanvasRenderingContext2D,w:number,h:number,now:number,still:boolean):void {
+  if(still)return;
+  c.save();c.globalCompositeOperation='screen';
+  for(const m of METEORS) {
+    const local=((now/1000+m.delay)%m.period+m.period)%m.period;
+    if(local>m.duration)continue;
+    const p=local/m.duration,fade=Math.sin(p*Math.PI);
+    if(fade<=0)continue;
+    const headX=(m.x+m.dx*p)*w,headY=(m.y+m.dy*p)*h;
+    const travel=Math.hypot(m.dx*w,m.dy*h),ux=m.dx*w/travel,uy=m.dy*h/travel;
+    const length=Math.max(90,w*.075)*(.55+fade*.45),tailX=headX-ux*length,tailY=headY-uy*length;
+    const trail=c.createLinearGradient(tailX,tailY,headX,headY);
+    trail.addColorStop(0,'rgba(160,190,255,0)');
+    trail.addColorStop(.55,`rgba(198,214,255,${.3*fade})`);
+    trail.addColorStop(1,`rgba(255,248,232,${.95*fade})`);
+    c.strokeStyle=trail;c.lineWidth=1.8;c.beginPath();c.moveTo(tailX,tailY);c.lineTo(headX,headY);c.stroke();
+    c.fillStyle=`rgba(255,251,242,${.95*fade})`;c.beginPath();c.arc(headX,headY,1.4,0,TAU);c.fill();
+    glow(c,headX,headY,18,`rgba(255,232,200,${.32*fade})`);
   }
   c.restore();
 }
@@ -161,10 +191,13 @@ export function mountCosmos(canvas: HTMLCanvasElement): { dispose(): void } {
     if(!changed && (document.hidden || screen==='game' || (motion.matches && last!==-Infinity) || now-last<50))return;
     last=now;lastScreen=screen;
     const c=ctx!;c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle='#03060c';c.fillRect(0,0,width,height);
-    const drift=motion.matches?0:Math.sin(now*.000018)*9,ratio=Math.max(width/1920,height/1080),sw=1920*ratio+24,sh=1080*ratio+24;
-    c.drawImage(stars,(width-sw)/2+drift,(height-sh)/2,sw,sh);
+    const drift=motion.matches?0:Math.sin(now*.000082)*20+Math.cos(now*.000039)*9;
+    const rise=motion.matches?0:Math.cos(now*.000057)*11;
+    const ratio=Math.max(width/1920,height/1080),sw=1920*ratio+110,sh=1080*ratio+80;
+    c.drawImage(stars,(width-sw)/2+drift,(height-sh)/2+rise,sw,sh);
     drawAurora(c,width,height,now,motion.matches);
     drawLiveStars(c,width,height,now,motion.matches,drift);
+    drawMeteors(c,width,height,now,motion.matches);
     if(screen==='menu') {
       const mobile=width<=800,r=mobile?98:Math.min(width*.19,height*.245),x=mobile?width*.70:width*.255,y=mobile?415:Math.max(468,height*.69);
       glow(c,x-r*.3,y-r*.18,r*1.22,'rgba(38,89,144,.16)');
