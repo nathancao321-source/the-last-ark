@@ -109,7 +109,7 @@ const mouse = new MouseInput();
 const pads: [XboxInput,XboxInput] = [0,1].map(index=>new XboxInput(index,()=>navigator.getGamepads(),()=>document.hasFocus()&&!document.hidden,toggle)) as [XboxInput,XboxInput];
 const devices = mountDeviceUI(inputs,keyboard,mouse,pads);
 const detachMouse = mouse.attach(canvas,camera);
-const detach = keyboard.attach(window);
+const detach = keyboard.attach(window, () => ui.settingsOpen());
 const ui = mountSceneUI(scenes, id => { if (debug ? scenes.enter(id) : scenes.enterPlayable(id)) { syncScene(); if (scenes.game) canvas.focus(); } }, () => {
   if (debug && scenes.game) { skipTeachingStep(scenes.game); lastPredictionTime = -Infinity; canvas.focus(); }
 }, debug, devices.text, () => {
@@ -143,7 +143,7 @@ function frame(now: number): void {
   const lessonKey = lesson && !scenes.game!.tutorial!.acknowledged && scenes.game!.phase !== 'failed' && scenes.game!.phase !== 'completed'
     ? scenes.scene + ':' + scenes.revision + ':' + lesson.id : undefined;
   overlay.sync(lessonKey,lesson ? devices.text(lesson.title + '\n' + lesson.text) : '');
-  if (!mapOpen && overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
+  if (!mapOpen && !ui.settingsOpen() && overlay.update(seconds) === lessonKey && lessonKey) scenes.toggle();
   clock.advance(seconds, () => {
     const origin=scenes.game?.universe?{...scenes.game.universe.origin}:undefined;
     const intent=inputs.read();if(!mapOpen && !ui.settingsOpen())scenes.step(intent);
