@@ -22,6 +22,7 @@ import {drawBlackHoleArt,drawAccretionDebug} from './black-hole-art';
 import {drawCelestialEvents} from './celestial-events';
 import { drawHazards, drawHazardImpact, drawHazardColliders } from './hazards';
 import {createEndlessBackground,drawEndlessBackground,suspendEndlessBackground} from './endless-background';
+import {drawEndlessStar,drawEndlessLighting} from './endless-stellar';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -94,7 +95,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     drawCelestialEvents(ctx,options.visuals!,game.elapsed);
     for(const body of game.bodies)if(body.layer!=='hidden'&&!body.spawnPending&&isVisible(camera,body.position,body.radius*(body.kind==='black_hole'?5:2.2))){
       if(body.kind==='wormhole')drawPortalArt(ctx,body,game.elapsed,options.warp!.quality,Math.max(0,1-Math.hypot(ship.position.x-body.position.x,ship.position.y-body.position.y)/(body.radius*4)));
-      if(body.kind==='star')drawStellarArt(ctx,body,game.elapsed,camera,options.warp!.quality);
+      if(body.kind==='star'){if(game.universe&&body.stellarState?.status!=='neutron')drawEndlessStar(ctx,body,game.elapsed,camera,options.warp!.quality);else drawStellarArt(ctx,body,game.elapsed,camera,options.warp!.quality);}
       if(body.kind==='black_hole')drawBlackHoleArt(ctx,body,game.elapsed,options.warp!.quality);
     }
     drawHazards(ctx,game,camera,true,options.warp!.quality);
@@ -141,6 +142,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
       ctx.fillText(body.appearance.name,body.position.x,body.position.y-body.radius-12/camera.zoom);
     }
   }
+  if(cinematic&&game.universe)drawEndlessLighting(ctx,game,camera,options.warp!.quality);
   for (const player of visibleEntities(camera, game.players)) {
     const i = player.id === 'attractor' ? 0 : 1;
     if(player.capture) {

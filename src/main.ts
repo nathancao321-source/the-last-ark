@@ -40,6 +40,7 @@ import { isSceneUnlocked } from './scenes/campaign';
 import { mountCosmos } from './render/cosmos';
 import {enhancedScene,syncUniverseVisuals} from './render/endless-bridge';
 import {resetEndlessBackground} from './render/endless-background';
+import {clearEndlessStellarCache} from './render/endless-stellar';
 const cosmos = mountCosmos(document.querySelector<HTMLCanvasElement>('#cosmos')!);
 const music=mountMusic(document.querySelector<HTMLElement>('.header-right')!,musicUrl);
 document.querySelector('#music-toggle')!.classList.add('music-button');
@@ -155,6 +156,7 @@ const fullscreen = mountFullscreen(canvas, document.querySelector<HTMLButtonElem
 function syncScene(): void {
   if (revision === scenes.revision) return;
   if(visualRenderer.endless)resetEndlessBackground(visualRenderer.endless);
+  clearEndlessStellarCache();
   revision = scenes.revision; inputs.reset(); keyboard.clear(); clock.reset(); lastPredictionTime = -Infinity;
   mapOpen=false;resumeAfterMap=false;
   mouse.setSuspended(false);
