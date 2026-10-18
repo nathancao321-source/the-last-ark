@@ -84,8 +84,8 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     // The cinematic pass expresses the field through the shared star warp and
     // luminance material. Keep only a low-contrast footprint so the field
     // radius remains legible without turning the scene into a textbook ring.
-    if(cinematic)circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff08' : '#e9bd4808');
-    else {
+    if(cinematic&&!game.universe)circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff08' : '#e9bd4808');
+    else if(!cinematic) {
       circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff12' : '#e9bd4812');
       circle(ctx, player.position.x, player.position.y, player.field.radius, i === 0 ? '#409eff70' : '#e9bd4870', false);
     }

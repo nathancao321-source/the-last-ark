@@ -58,8 +58,8 @@ export function sampleEndlessField(seed:number,x:number,y:number):EndlessFieldSa
 
 /** Pixel centres include a one-texel gutter. The neighboring tile's inner edge
  * and this tile's gutter sample identical world positions, including negatives. */
-export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,res=128):{pixels:Uint8ClampedArray;activity:Uint8ClampedArray} {
- const size=res+2,pixels=new Uint8ClampedArray(size*size*4),activity=new Uint8ClampedArray(size*size*4),step=span/res,center=nebulaCenter(seed);
+export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,res=128):{pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray} {
+ const size=res+2,pixels=new Uint8ClampedArray(size*size*4),activity=new Uint8ClampedArray(size*size*4),activity2=new Uint8ClampedArray(size*size*4),step=span/res,center=nebulaCenter(seed);
  for(let py=0;py<size;py++)for(let px=0;px<size;px++) {
   const x=tx*span+(px-.5)*step,y=ty*span+(py-.5)*step,s=sample(seed,x,y,center);
   const lit=Math.max(0,s.filament*(1-s.dust*.82)),mist=s.cloud*(1-s.dust*.65),i=(py*size+px)*4;
@@ -70,8 +70,15 @@ export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,re
   // so gas never slides with the camera and no per-frame noise is generated.
   activity[i]=74+s.tint*26;activity[i+1]=86-s.tint*14;activity[i+2]=156;
   activity[i+3]=Math.round(clamp(lit*.36+mist*.07)*255);
+  // Complementary dust structure has a different fixed spatial phase from the
+  // emissive filaments. The renderer breathes these two maps independently at
+  // periods >=25s; no texture translation or frame-time noise is required.
+  const shadows=s.density*(.10+s.dust*.70)*(.30+s.cloud*.70)*(1-s.filament*.55);
+  const foldedDust=s.cloud*s.dust*(.2+.8*s.tint);
+  activity2[i]=1;activity2[i+1]=3;activity2[i+2]=8;
+  activity2[i+3]=Math.round(clamp(shadows+foldedDust*.45)*255);
  }
- return {pixels,activity};
+ return {pixels,activity,activity2};
 }
 
 /** Choose one descendant from each quadtree block. A coarser block chooses one

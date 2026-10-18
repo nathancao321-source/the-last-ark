@@ -1,0 +1,122 @@
+{
+  "checks": [
+    {
+      "name": "return same coordinate/time exact background pixels",
+      "value": true
+    },
+    {
+      "name": "camera translation preserves world texture under pixel shift",
+      "value": true
+    },
+    {
+      "name": "floating origin exact background pixel match",
+      "value": true
+    },
+    {
+      "name": "warm HIGH to OFF same pixels as cold OFF including active nodes",
+      "value": true
+    },
+    {
+      "name": "ten minute actual simulation remains endless and bounded",
+      "value": true
+    },
+    {
+      "name": "400 browser stream jumps keep background cache bounded",
+      "value": true
+    },
+    {
+      "name": "zoom 2 finite bounded renderer",
+      "value": true
+    },
+    {
+      "name": "zoom 0.8 finite bounded renderer",
+      "value": true
+    },
+    {
+      "name": "zoom 0.2 finite bounded renderer",
+      "value": true
+    },
+    {
+      "name": "zoom 0.05 finite bounded renderer",
+      "value": true
+    },
+    {
+      "name": "zoom 0.001 finite bounded renderer",
+      "value": true
+    },
+    {
+      "name": "no browser runtime exceptions",
+      "value": true
+    }
+  ],
+  "frames": [
+    {
+      "nebulaTime": 0
+    },
+    {
+      "nebulaTime": 12
+    },
+    {
+      "nebulaTime": 24
+    }
+  ],
+  "errors": [],
+  "translation": {
+    "mean": 0.000010636330003699593,
+    "max": 1
+  },
+  "nodes": {
+    "sources": [
+      {
+        "position": {
+          "x": 1354.166666666664,
+          "y": 884
+        },
+        "weight": 0.9999999422225148,
+        "history": 16
+      },
+      {
+        "position": {
+          "x": 723.833333333332,
+          "y": 1164
+        },
+        "weight": 0.9999999422225148,
+        "history": 16
+      }
+    ],
+    "events": 4
+  },
+  "flight": {
+    "elapsed": 599.999999999783,
+    "distance": 132000.00000006892,
+    "origin": {
+      "x": 64,
+      "y": 0
+    },
+    "phase": "running",
+    "peakBodies": 91,
+    "peakChunks": 23,
+    "peakCache": 32,
+    "computeMs": 8404.90000000596
+  },
+  "stream": {
+    "views": 400,
+    "maxTiles": 32,
+    "maxPending": 29,
+    "maxBytes": 10682112
+  },
+  "heap": {
+    "before": {
+      "usedSize": 10552876,
+      "totalSize": 12500992,
+      "embedderHeapUsedSize": 8919832,
+      "backingStorageSize": 27729812
+    },
+    "after": {
+      "usedSize": 10816568,
+      "totalSize": 12500992,
+      "embedderHeapUsedSize": 8917672,
+      "backingStorageSize": 27729812
+    }
+  }
+}

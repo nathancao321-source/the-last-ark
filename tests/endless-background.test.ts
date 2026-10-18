@@ -24,13 +24,14 @@ function harness(){
     set:(_target,key,value)=>{commands++;if(record)ops.push({method:String(key),args:[value]});return true;},
   }) as CanvasRenderingContext2D;
   class FakeWorker {
-    onmessage?: (event:{data:{key:string;pixels:Uint8ClampedArray;activity:Uint8ClampedArray;ms:number}})=>void;
+    onmessage?: (event:{data:{key:string;pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray;ms:number}})=>void;
     onerror?:()=>void;job?:Job;terminated=false;submitted=0;
     constructor(){workers.push(this);}
     postMessage(job:Job){expect(this.job).toBeUndefined();this.job=job;this.submitted++;}
     terminate(){this.terminated=true;this.job=undefined;}
     complete(){const job=this.job;if(!job||this.terminated)return false;this.job=undefined;
-      const pixels=new Uint8ClampedArray((job.res+2)**2*4);this.onmessage?.({data:{key:job.key,pixels,activity:pixels,ms:1}});return true;}
+      const length=(job.res+2)**2*4,pixels=new Uint8ClampedArray(length),activity=new Uint8ClampedArray(length),activity2=new Uint8ClampedArray(length);
+      this.onmessage?.({data:{key:job.key,pixels,activity,activity2,ms:1}});return true;}
   }
   vi.stubGlobal('Worker',FakeWorker);
   vi.stubGlobal('document',{createElement:(tag:string)=>{expect(tag).toBe('canvas');canvases++;const ctx=context();return {width:0,height:0,getContext:()=>ctx};}});
@@ -43,7 +44,7 @@ function fixture(){
   const draw=(ctx:CanvasRenderingContext2D,quality:Quality='high')=>drawEndlessBackground(ctx,cache,game,camera,state,{...DEFAULT_WARP,quality},CINEMATIC_ART,sample);
   return {game,camera,state,cache,draw};
 }
-afterEach(()=>{vi.unstubAllGlobals();vi.mocked(generateEndlessStars).mockRestore();});
+afterEach(()=>{vi.unstubAllGlobals();vi.mocked(generateEndlessStars).mockRestore();vi.restoreAllMocks();});
 
 describe('bounded world-anchored Endless background rendering',()=>{
   it('bypasses all rendering, DOM, worker and cache work from a cold off state',()=>{
@@ -56,6 +57,9 @@ describe('bounded world-anchored Endless background rendering',()=>{
   it('does not redraw, request or allocate residual high quality materials when off',()=>{
     const h=harness(),f=fixture();f.draw(h.ctx);expect(h.completeAll()).toBeGreaterThan(0);f.draw(h.ctx);
     expect(f.cache.stats.drawn).toBeGreaterThan(0);expect(f.cache.stats.bytes).toBeGreaterThan(0);
+    const ready=[...f.cache.tiles.values()].filter(tile=>!!tile.texture);
+    expect(ready.every(tile=>!!tile.activity&&!!tile.activity2)).toBe(true);
+    expect(f.cache.stats.bytes).toBe(ready.reduce((bytes,tile)=>bytes+3*(tile.res+2)**2*4,0)+f.cache.sheet!.view.width*f.cache.sheet!.view.height*4);
     const counts=h.counts(),stats={...f.cache.stats},clock=f.cache.clock,entries=f.cache.tiles.size;h.clear();
     for(let i=0;i<5;i++){f.camera.position.x+=5000;f.draw(h.ctx,'off');}
     expect(h.ops).toEqual([]);expect(h.counts()).toEqual(counts);expect(f.cache.clock).toBeLessThanOrEqual(clock);
@@ -95,6 +99,27 @@ describe('bounded world-anchored Endless background rendering',()=>{
     for(let i=0;i<10;i++){f.state.time+=1/60;f.draw(h.ctx);}
     expect(vi.mocked(generateEndlessStars).mock.calls.length).toBe(sampled);expect(h.workers[0].submitted).toBe(submitted);expect(f.cache.stats.generated).toBe(generated);
   });
+  it('retains every visible ready tile while a zoom boundary loads the next LOD',()=>{
+    const h=harness(),f=fixture();f.camera.width=1200;f.camera.height=1200;f.camera.position={x:3000,y:3000};f.camera.zoom=.196;
+    const oldPlan=endlessTilePlan(f.camera,{x:0,y:0});expect(oldPlan[0].span).toBe(2048);
+    f.draw(h.ctx);h.completeAll();f.draw(h.ctx);
+    const oldVisible=oldPlan.map(p=>[f.game.universe!.seed,p.span,p.tx,p.ty,192].join(':'));
+    expect(oldVisible).toHaveLength(16);for(const key of oldVisible)expect(f.cache.tiles.get(key)?.texture).toBeDefined();
+    f.camera.zoom=.195;expect(endlessTilePlan(f.camera,{x:0,y:0})[0].span).toBe(4096);
+    const bounds=viewBounds(f.camera),generated=f.cache.stats.generated;
+    // No worker completion: the previous world tiles must cover the whole frame
+    // until new LOD surfaces exist, across repeated animation frames as well.
+    for(let frame=0;frame<3;frame++){
+      f.draw(h.ctx);expect(f.cache.stats.generated).toBe(generated);expect(f.cache.tiles.size).toBeLessThanOrEqual(32);
+      for(const key of oldVisible)expect(f.cache.tiles.get(key)?.texture,`missing visible fallback ${key}`).toBeDefined();
+      const ready=[...f.cache.tiles.values()].filter(t=>!!t.texture);
+      for(let iy=0;iy<=8;iy++)for(let ix=0;ix<=8;ix++){
+        const x=bounds.minX+(bounds.maxX-bounds.minX)*ix/8,y=bounds.minY+(bounds.maxY-bounds.minY)*iy/8;
+        expect(ready.some(t=>x>=t.tx*t.span&&x<=(t.tx+1)*t.span&&y>=t.ty*t.span&&y<=(t.ty+1)*t.span)).toBe(true);
+      }
+      expect(f.cache.stats.drawn).toBeGreaterThanOrEqual(oldVisible.length);
+    }
+  });
   it('bounds cache and queued jobs across 1000 unrelated views and quality changes',()=>{
     // Noise sampling has independent deterministic tests; isolate cache load/unload
     // here with stable one-star tiles instead of spending this stress test on fBm.
@@ -107,10 +132,29 @@ describe('bounded world-anchored Endless background rendering',()=>{
       peakEntries=Math.max(peakEntries,f.cache.tiles.size);peakPending=Math.max(peakPending,f.cache.pending.length+Number(!!f.cache.busy));
       expect(f.cache.tiles.size).toBeLessThanOrEqual(ENDLESS_TILE_LIMIT);expect(f.cache.pending.length).toBeLessThanOrEqual(28);
       expect(f.cache.pending.length+Number(!!f.cache.busy)).toBeLessThanOrEqual(29);
-      expect(f.cache.stats.bytes).toBeLessThanOrEqual(32*2*194*194*4+1600*1000*4);h.clear();
+      expect(f.cache.stats.bytes).toBeLessThanOrEqual(32*3*194*194*4+1600*1000*4);h.clear();
     }
     expect(peakEntries).toBe(32);expect(peakPending).toBeGreaterThan(0);expect(h.workers).toHaveLength(1);
     expect(h.completeAll()).toBeLessThanOrEqual(29);f.draw(h.ctx);expect(f.cache.stats.drawn).toBeGreaterThan(0);
+  });
+  it('keeps star transitions free of old canvas references and releases them after fading',()=>{
+    let now=1000;vi.spyOn(performance,'now').mockImplementation(()=>now);
+    const h=harness(),f=fixture();f.camera.width=1200;f.camera.height=1200;f.camera.position={x:3000,y:3000};f.camera.zoom=.196;
+    f.draw(h.ctx);h.completeAll();now+=400;f.draw(h.ctx);
+    const oldVisible=f.cache.lastTiles!.slice();expect(oldVisible.every(tile=>!!tile.texture&&!!tile.activity&&!!tile.activity2)).toBe(true);
+    f.camera.zoom=.195;f.draw(h.ctx);
+    const transition=f.cache.starTransition!;expect(transition).toBeDefined();expect(transition.tiles).toHaveLength(oldVisible.length);
+    for(let i=0;i<transition.tiles.length;i++){const tile=transition.tiles[i];
+      expect(tile).not.toBe(oldVisible[i]);expect(tile.stars).toBe(oldVisible[i].stars);
+      expect(tile.texture).toBeUndefined();expect(tile.activity).toBeUndefined();expect(tile.activity2).toBeUndefined();
+    }
+    h.completeAll();now+=351;f.draw(h.ctx);expect(f.cache.starTransition).toBeUndefined();
+    expect(f.cache.lastTiles!.every(tile=>f.cache.tiles.get(tile.key)===tile)).toBe(true);
+    // Subsequent eviction cannot retain a detached old tile through the visual
+    // transition or the previous-view list, outside the bounded cache budget.
+    for(let i=1;i<=4;i++){now+=400;f.camera.position={x:i*60000,y:i*60000};f.draw(h.ctx);}
+    expect(oldVisible.every(tile=>!f.cache.tiles.has(tile.key))).toBe(true);expect(f.cache.starTransition).toBeUndefined();
+    expect(f.cache.lastTiles!.every(tile=>f.cache.tiles.get(tile.key)===tile)).toBe(true);expect(f.cache.tiles.size).toBeLessThanOrEqual(32);
   });
   it('drops stale evicted worker results and resets all cache ownership on seed change',()=>{
     const h=harness(),f=fixture();f.draw(h.ctx);const staleKey=f.cache.busy!;

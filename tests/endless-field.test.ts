@@ -15,7 +15,7 @@ describe('continuous deterministic endless background field',()=>{
   const res=16,size=res+2,row=(a:Uint8ClampedArray,x:number,y:number)=>a.slice((y*size+x)*4,(y*size+x+1)*4);
   for(const [tx,ty] of [[0,0],[-2,-1],[2**35,-(2**35)]]) {
    const a=generateEndlessTile(seed,tx,ty,2048,res),right=generateEndlessTile(seed,tx+1,ty,2048,res),down=generateEndlessTile(seed,tx,ty+1,2048,res);
-   for(const kind of ['pixels','activity'] as const)for(let n=0;n<size;n++) {
+   for(const kind of ['pixels','activity','activity2'] as const)for(let n=0;n<size;n++) {
     expect(row(a[kind],res+1,n)).toEqual(row(right[kind],1,n));
     expect(row(a[kind],res,n)).toEqual(row(right[kind],0,n));
     expect(row(a[kind],n,res+1)).toEqual(row(down[kind],n,1));
@@ -63,9 +63,14 @@ describe('continuous deterministic endless background field',()=>{
   expect(generateEndlessStars(seed,0,0,Infinity)).toEqual([]);expect(generateEndlessStars(seed,0,0,0)).toEqual([]);
  });
  it('keeps opacity, activity and fixed star metadata bounded',()=>{
-  const tile=generateEndlessTile(seed,13,-3,2048,32);expect(tile.pixels).toHaveLength(34*34*4);expect(tile.activity).toHaveLength(tile.pixels.length);
+  const tile=generateEndlessTile(seed,13,-3,2048,32);expect(tile.pixels).toHaveLength(34*34*4);expect(tile.activity).toHaveLength(tile.pixels.length);expect(tile.activity2).toHaveLength(tile.pixels.length);
   for(let i=3;i<tile.pixels.length;i+=4)expect(tile.pixels[i]).toBe(255);
   expect(tile.activity.some((v,i)=>i%4===3&&v>0)).toBe(true);
+  expect(tile.activity2.some((v,i)=>i%4===3&&v>0)).toBe(true);
+  const emission=tile.activity.filter((_v,i)=>i%4===3),dust=tile.activity2.filter((_v,i)=>i%4===3);
+  expect(dust).not.toEqual(emission);expect(new Set(dust).size).toBeGreaterThan(12);
+  expect(generateEndlessTile(seed+1,13,-3,2048,32).activity2).not.toEqual(tile.activity2);
+  for(let i=0;i<tile.activity2.length;i+=4)expect(Array.from(tile.activity2.slice(i,i+3))).toEqual([1,3,8]);
   const stars=generateEndlessStars(seed,-2,3);
   for(const star of stars){expect(star.x).toBeGreaterThanOrEqual(-4096);expect(star.x).toBeLessThan(-2048);expect(star.y).toBeGreaterThanOrEqual(6144);expect(star.y).toBeLessThan(8192);expect(star.brightness).toBeLessThanOrEqual(1);expect(star.size).toBeGreaterThan(0);}
  });

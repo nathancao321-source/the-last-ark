@@ -66,6 +66,7 @@ const visualWarp = parseWarp(location.search);
 const visualArt = { ...CINEMATIC_ART };
 const artPanel=debug?mountArtPanel(visualArt,visualWarp):undefined;
 let visualState: VisualState | undefined;
+let previousVisualQuality=visualWarp.quality;
 function syncVisualState(): void { visualState = scenes.game && enhancedScene(scenes.scene) ? createVisualState(scenes.game.players, scenes.revision) : undefined;if(visualState&&scenes.game)syncUniverseVisuals(visualState,scenes.game); }
 const clock = new FixedClock();
 let prediction: Trajectory = {points:[],seconds:0,outcome:'horizon'};
@@ -175,6 +176,8 @@ function frame(now: number): void {
   const workStart=performance.now();
   const seconds = previousTime === undefined ? 0 : (now - previousTime) / 1000; previousTime = now;
   syncScene();
+  if(previousVisualQuality==='off'&&visualWarp.quality!=='off')syncVisualState();
+  previousVisualQuality=visualWarp.quality;
   const lesson = scenes.game && currentLesson(scenes.game);
   const lessonKey = lesson && !scenes.game!.tutorial!.acknowledged && scenes.game!.phase !== 'failed' && scenes.game!.phase !== 'completed'
     ? scenes.scene + ':' + scenes.revision + ':' + lesson.id : undefined;

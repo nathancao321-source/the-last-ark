@@ -75,8 +75,8 @@ function material(body: Readonly<Body>, sample: EndlessStarSample): StarMaterial
     const angle = hash(sample.seed, i + 101) * TAU, radius = Math.sqrt(hash(sample.seed, i + 141)) * half * .84;
     const x = half + Math.cos(angle) * radius, y = half + Math.sin(angle) * radius;
     const size = half * (.055 + hash(sample.seed, i + 171) * (cool ? .09 : .17));
-    a.globalAlpha = .10 + hash(sample.seed, i + 151) * .10;
-    a.strokeStyle = i % 3 === 0 ? colors.spot : colors.hot; a.lineWidth = size * (cool ? .18 : .32);
+    a.globalAlpha = .025 + hash(sample.seed, i + 151) * .035;
+    a.strokeStyle = i % 3 === 0 ? colors.spot : colors.hot; a.lineWidth = size * .10;
     a.beginPath(); a.ellipse(x, y, size, size * (.25 + hash(sample.seed, i + 181) * .45), angle, .15, Math.PI * 1.7); a.stroke();
   }
   a.restore();
