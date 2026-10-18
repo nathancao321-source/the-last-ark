@@ -1,14 +1,14 @@
 /** Fullscreen belongs to presentation; simulation and camera scaling stay in main. */
-export function mountFullscreen(button: HTMLButtonElement, notice: HTMLElement, onChange: () => void) {
-  const doc = button.ownerDocument, root = doc.documentElement;
+export function mountFullscreen(canvas: HTMLCanvasElement, button: HTMLButtonElement, notice: HTMLElement, onChange: () => void) {
+  const doc = canvas.ownerDocument;
   let pending = false, disposed = false, wasFullscreen = !!doc.fullscreenElement, exitedAt = -Infinity;
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
-  const supported = !!doc.fullscreenEnabled && typeof root.requestFullscreen === 'function';
+  const supported = !!doc.fullscreenEnabled && typeof canvas.requestFullscreen === 'function';
   function sync() {
     const active = !!doc.fullscreenElement;
     button.setAttribute('aria-pressed', String(active));
-    button.setAttribute('aria-label', active ? '退出全屏' : '进入全屏');
-    button.title = supported ? (active ? '退出全屏 · Esc' : '进入全屏') : '当前浏览器不支持全屏';
+    button.setAttribute('aria-label', active ? '退出游戏画面全屏' : '游戏画面全屏');
+    button.title = supported ? (active ? '退出游戏画面全屏 · Esc' : '游戏画面全屏 · Esc 退出') : '当前浏览器不支持全屏';
     button.disabled = !supported || pending;
   }
   function showFailure() {
@@ -22,7 +22,7 @@ export function mountFullscreen(button: HTMLButtonElement, notice: HTMLElement, 
     pending = true; notice.textContent = ''; sync();
     try {
       if (doc.fullscreenElement) await doc.exitFullscreen();
-      else await root.requestFullscreen();
+      else if (!canvas.hidden) await canvas.requestFullscreen();
     } catch { showFailure(); }
     finally { pending = false; if (!disposed) sync(); }
   }

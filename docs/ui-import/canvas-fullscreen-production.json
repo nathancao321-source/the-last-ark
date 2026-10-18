@@ -1,0 +1,86 @@
+{
+  "mode": "production",
+  "checks": [
+    {
+      "name": "cover no longer offers page fullscreen",
+      "value": true
+    },
+    {
+      "name": "native fullscreen target is canvas and fills exact viewport",
+      "value": true
+    },
+    {
+      "name": "all four screen corners are gameplay rather than webpage chrome",
+      "value": true
+    },
+    {
+      "name": "fullscreen preserves scene phase and BGM instance",
+      "value": true
+    },
+    {
+      "name": "canvas retains keyboard focus",
+      "value": true
+    },
+    {
+      "name": "canvas backing pixels match viewport resolution",
+      "value": true
+    },
+    {
+      "name": "star map shortcut works inside canvas fullscreen",
+      "value": true
+    },
+    {
+      "name": "Escape exits only fullscreen and preserves flight",
+      "value": true
+    },
+    {
+      "name": "windowed canvas and game actions restore",
+      "value": true
+    },
+    {
+      "name": "settings usable after leaving fullscreen",
+      "value": true
+    },
+    {
+      "name": "short landscape also fills exact viewport",
+      "value": true
+    },
+    {
+      "name": "live resize retains fullscreen coverage",
+      "value": true
+    },
+    {
+      "name": "high DPI render stays crisp",
+      "value": true
+    },
+    {
+      "name": "denied fullscreen request allows retry",
+      "value": true
+    }
+  ],
+  "desktop": {
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 1000,
+    "viewportWidth": 1440,
+    "viewportHeight": 1000,
+    "pixels": [
+      1440,
+      1000
+    ]
+  },
+  "landscape": {
+    "x": 0,
+    "y": 0,
+    "width": 844,
+    "height": 390,
+    "viewportWidth": 844,
+    "viewportHeight": 390,
+    "pixels": [
+      844,
+      390
+    ]
+  },
+  "errors": []
+}

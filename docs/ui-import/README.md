@@ -20,7 +20,7 @@
 - 动态星空封面、启程入口、章节目录、故事航线与自由回溯。
 - 章节解锁与进度保存、操作设置弹窗、暂停与返回按钮。
 - BGM 保持同一音频实例跨菜单/场景播放，右上角保留音乐开关。
-- 右上角四角图标进入/退出全屏，封面、目录和游戏内均可使用。游戏全屏时画布占满剩余高度，保留设置和航行按钮；Esc 先退出全屏，不同时离开当前关卡。设置弹窗打开时先处理弹窗。
+- 进入关卡后点击「画面全屏」，游戏 canvas 本身铺满整个屏幕，网页导航与说明均不显示。Esc 退出后保留当前关卡；Space、M 及双人控制继续可用。
 - 现有黑洞吸积盘、危险机制、太阳波、虫洞渲染与双人控制代码保留。118 个备份文件逐个文本比对相同；其余变化仅为 UI 合并和测试兼容修复。详见 source-and-preservation.json。
 
 ## 验证
@@ -28,7 +28,7 @@
 - npm run check：31 个测试文件、473 项测试通过，TypeScript 与 Vite 生产构建通过。
 - Edge 浏览器实测：封面、章节锁、教程入口、设置窗口、Escape 关闭、弹窗键盘隔离、音乐跨场景连续播放、循环与开关、390px 窄屏无横向溢出。15 项断言通过，运行时错误 0。
 - 生产构建另行验证，详见 production-verification.json。测试时的临时进度数据已恢复。
-- 全屏浏览器验收：13 项断言通过，包含原生全屏进入/退出、画布分辨率、低高度横屏、设置弹窗、音乐实例保持和请求失败提示。详见 fullscreen-verification.json 与 fullscreen-game.png。
+- 画面全屏浏览器验收：开发版与生产版分别 14 项断言通过。画布起点为 (0, 0)，宽高精确等于视口，四角均为游戏画面；同时验证 Esc、星图、高 DPI、横屏、音乐保持和失败重试。详见 fullscreen-verification.json、canvas-fullscreen-production.json 和 fullscreen-game.png。
 - 旧特效关闭基线：太阳系/黑洞冷缓存与热缓存均为 0 个字节差异；两端喷流在三档缩放下均可见；虫洞轨迹仍可辨。
 - 截图：cover.png、chapters.png、settings.png、tutorial.png、cover-mobile.png、chapters-mobile.png、black-hole-game.png。
 

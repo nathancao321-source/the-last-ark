@@ -13,7 +13,7 @@
     <main>
       <header class="masthead">
         <button id="brand-home" class="brand" aria-label="返回封面"><span class="ark-mark" aria-hidden="true">Λ</span><span>THE LAST ARK<small>最后的方舟</small></span></button>
-        <div class="header-right"><span class="connection"><i></i> 双人合作 · 同屏共航</span><button id="fullscreen-toggle" class="icon-button" type="button" aria-label="进入全屏" aria-pressed="false" title="进入全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path class="fullscreen-expand" d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path class="fullscreen-contract" d="M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5"/></svg></button><button id="open-settings" class="icon-button" aria-label="操作设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></svg></button></div>
+        <div class="header-right"><span class="connection"><i></i> 双人合作 · 同屏共航</span><button id="open-settings" class="icon-button" aria-label="操作设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></svg></button></div>
       </header>
 
       <section id="cover" aria-labelledby="cover-title">
@@ -47,7 +47,7 @@
       </section>
 
       <section id="game-shell" hidden aria-label="游戏">
-        <nav class="scene-nav" aria-label="当前章节"><div><span class="eyebrow">IN FLIGHT / 航行中</span><strong id="scene-name"></strong></div><div class="scene-actions"><button id="pause-game" type="button">开始 / 暂停 · Space</button><button id="star-map" type="button" hidden>全局星图 · M</button><button id="next-chapter" type="button" hidden>继续航程</button><button id="back-menu" type="button" hidden>航行目录 · Esc</button></div></nav>
+        <nav class="scene-nav" aria-label="当前章节"><div><span class="eyebrow">IN FLIGHT / 航行中</span><strong id="scene-name"></strong></div><div class="scene-actions"><button id="fullscreen-toggle" type="button" aria-label="游戏画面全屏" aria-pressed="false" title="游戏画面全屏 · Esc 退出">画面全屏</button><button id="pause-game" type="button">开始 / 暂停 · Space</button><button id="star-map" type="button" hidden>全局星图 · M</button><button id="next-chapter" type="button" hidden>继续航程</button><button id="back-menu" type="button" hidden>航行目录 · Esc</button></div></nav>
         <div id="exploration-tools" hidden><label>宇宙 Seed <input id="universe-seed" type="number" min="0" max="4294967295" step="1" value="20261017"></label><button id="new-universe" type="button">开始新探索</button><button id="save-universe" type="button">保存探索 · K</button><button id="load-universe" type="button">恢复探索 · L</button><span id="exploration-notice" role="status"></span></div>
         <section id="lesson" hidden aria-label="当前教学提示"><div id="lesson-progress" class="sr-only"></div><p id="lesson-text" class="sr-only" role="status" aria-live="polite"></p><button id="skip-lesson" type="button" hidden>跳过当前提示（调试）</button></section>
         <p id="telemetry" role="status" aria-live="off"></p>

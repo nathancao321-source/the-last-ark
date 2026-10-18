@@ -12,9 +12,18 @@
     "debugPanels": 0
   },
   "fullscreen": {
-    "active": true,
-    "height": 818,
-    "screen": 1000
+    "target": "game canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 1000,
+    "viewportWidth": 1440,
+    "viewportHeight": 1000,
+    "pixels": [
+      1440,
+      1000
+    ],
+    "verification": "canvas-fullscreen-production.json"
   },
   "errors": []
 }

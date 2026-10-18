@@ -146,7 +146,7 @@ function resize(): void {
   canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr);
 }
 const observer = new ResizeObserver(resize); observer.observe(canvas); resize();
-const fullscreen = mountFullscreen(document.querySelector<HTMLButtonElement>('#fullscreen-toggle')!, document.querySelector<HTMLElement>('#fullscreen-notice')!, () => {
+const fullscreen = mountFullscreen(canvas, document.querySelector<HTMLButtonElement>('#fullscreen-toggle')!, document.querySelector<HTMLElement>('#fullscreen-notice')!, () => {
   inputs.releaseMovement(); keyboard.releaseKeys(); clock.reset();
   if (scenes.game && !ui.settingsOpen()) canvas.focus({preventScroll:true});
 });
