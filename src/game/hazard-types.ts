@@ -6,7 +6,8 @@ export interface SolarWaveConfig {
 }
 export interface JetConfig {
   sourceId: string; length: number; coreRadius: number; plumeRadius: number;
-  idle: number; warning: number; firing: number; dissipating: number; cooldown: number;
+  /** Pulse period and duration come from the source body's nodeInfluence. */
+  warning: number; dissipating: number;
   invulnerability: number;
 }
 export type JetPhase = 'idle' | 'warning' | 'firing' | 'dissipating' | 'cooldown';

@@ -75,33 +75,35 @@ describe('continuous hazard geometry',()=>{
 describe('bipolar gamma damage',()=>{
   it('has full warning and only firing is lethal; both poles deal half maximum HP',()=>{
     const c=blackHoleLevel.blackHoleJets!;
-    expect([0,2,4,6.5,7.25,12.25].map(t=>jetClock(c,t).phase)).toEqual(['idle','warning','firing','dissipating','cooldown','idle']);
+    expect([0,3,5,5.8,6.55,10].map(t=>jetClock(c,t,blackHoleLevel.bodies[1].nodeInfluence!).phase)).toEqual(['idle','warning','firing','dissipating','cooldown','firing']);
     for(const sign of [-1,1]){const g=createGame(blackHoleLevel),p={x:1300,y:sign*600};
-      advance(g,3,p);expect(g.health!.current).toBe(100);advance(g,4.1,p);expect(g.health!.current).toBe(50);
-      for(let t=4.2;t<6.5;t+=.1)advance(g,t,p);expect(g.health!.current).toBe(50);
+      advance(g,3,p);expect(g.health!.current).toBe(100);advance(g,5.1,p);expect(g.health!.current).toBe(50);
+      for(let t=5.2;t<5.8;t+=.1)advance(g,t,p);expect(g.health!.current).toBe(50);
       advance(g,7,p);expect(g.health!.current).toBe(50);
-      expect(advance(g,16.5,p)).toContain('伽马');expect(g.health!.current).toBe(0);
+      expect(advance(g,10.1,p)).toContain('伽马');expect(g.health!.current).toBe(0);
     }
   });
   it('requires independent reentry, respects grace and consumes exposure during grace',()=>{
     const g=createGame(blackHoleLevel),inside={x:1300,y:-600},outside={x:1400,y:-600};
-    advance(g,4.1,inside);advance(g,4.2,outside);advance(g,4.3,inside);advance(g,5.3,inside);expect(g.health!.current).toBe(50);
-    advance(g,5.4,outside);expect(advance(g,5.5,inside)).toContain('失效');expect(g.health!.current).toBe(0);
+    // A longer configured pulse exercises leave/reenter both during and after grace.
+    g.bodies[1].nodeInfluence!.jetSeconds=2.5;
+    advance(g,5.1,inside);advance(g,5.2,outside);advance(g,5.3,inside);advance(g,6.3,inside);expect(g.health!.current).toBe(50);
+    advance(g,6.4,outside);expect(advance(g,6.5,inside)).toContain('失效');expect(g.health!.current).toBe(0);
   });
   it('detects fast fly-through and clips CCD at activation boundaries',()=>{
     const g=createGame(blackHoleLevel);
-    advance(g,4.2,{x:1000,y:600},{x:1600,y:600},.1);expect(g.health!.current).toBe(50);
-    const early=createGame(blackHoleLevel);advance(early,4.1,{x:1200,y:600},{x:1600,y:600},.4);expect(early.health!.current).toBe(100);
-    const late=createGame(blackHoleLevel);advance(late,6.7,{x:1000,y:600},{x:1400,y:600},.4);expect(late.health!.current).toBe(100);
+    advance(g,5.2,{x:1000,y:600},{x:1600,y:600},.1);expect(g.health!.current).toBe(50);
+    const early=createGame(blackHoleLevel);advance(early,5.1,{x:1200,y:600},{x:1600,y:600},.4);expect(early.health!.current).toBe(100);
+    const late=createGame(blackHoleLevel);advance(late,6.0,{x:1000,y:600},{x:1400,y:600},.4);expect(late.health!.current).toBe(100);
   });
   it('uses collision-integrator chords for a real fast crossing and scales damage to maximum HP',()=>{
-    const g=createGame(blackHoleLevel);g.elapsed=4.1;g.phase='running';g.health={current:200,max:200};
+    const g=createGame(blackHoleLevel);g.elapsed=5.1;g.phase='running';g.health={current:200,max:200};
     g.bodies[0].position={x:1230,y:-1000};g.bodies[0].velocity={x:240,y:0};
     stepGame(g,NO_CONTROLS,.7);expect(g.health.current).toBe(100);expect(g.bodies[0].position.x).toBeGreaterThan(1332);
     expect(g.phase).toBe('running');pause(g);const before=structuredClone(g.hazards);stepGame(g,NO_CONTROLS);expect(g.hazards).toEqual(before);
   });
   it('restores exposure/grace/HP on checkpoint retry and leaves event horizons fatal',()=>{
-    const g=createGame(blackHoleLevel);advance(g,4.1,{x:1300,y:600});saveCheckpoint(g,'hit');advance(g,17,{x:1300,y:600});
+    const g=createGame(blackHoleLevel);advance(g,5.1,{x:1300,y:600});saveCheckpoint(g,'hit');advance(g,10.1,{x:1300,y:600});
     const retry=retryGame(g);expect(retry.health!.current).toBe(50);expect(retry.hazards!.jet!.exposed).toBe(true);
     const fresh=createGame(blackHoleLevel);expect(fresh.health!.current).toBe(100);expect(fresh.hazards!.jet!.exposed).toBe(false);
     fresh.bodies[0].position={x:1300,y:0};togglePause(fresh);stepGame(fresh,NO_CONTROLS);expect(fresh.phase).toBe('failed');expect(fresh.message).toContain('视界');
@@ -131,7 +133,7 @@ describe('render / level isolation',()=>{
   it('is DOM-free and changing camera cannot mutate gameplay or launch geometry',()=>{
     const gradient={addColorStop:()=>{}};
     const ctx=new Proxy({},{get:(_t,key)=>key==='createLinearGradient'?()=>gradient:()=>{},set:()=>true}) as CanvasRenderingContext2D;
-    for(const level of [solarSystem,blackHoleLevel]){const g=createGame(level);advance(g,level.solarWave?60:4.2);const before=structuredClone(g);
+    for(const level of [solarSystem,blackHoleLevel]){const g=createGame(level);advance(g,level.solarWave?60:5.2);const before=structuredClone(g);
       for(const zoom of [.05,1,3]){const camera=createCamera({x:2000,y:-300});camera.zoom=zoom;drawHazards(ctx,g,camera,true);}
       expect(g).toEqual(before);
     }

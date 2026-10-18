@@ -22,7 +22,9 @@ export function mountHazardPanel(scenes:SceneController){
   button('载入危险快照',()=>{
     pilot=undefined;const jet=select.value.startsWith('jet');scenes.enter(jet?'black_hole':'solar_system');
     const g=scenes.game!,ship=g.bodies[0];g.phase='running';
-    if(jet){ship.position={x:1420,y:-600};ship.velocity={x:0,y:0};g.elapsed=select.value==='jet-second'?16.24:select.value==='jet-warning'?3:select.value==='jet-firing'?4.2:select.value==='jet-dissipating'?6.6:0;
+    if(jet){ship.position={x:1420,y:-600};ship.velocity={x:0,y:0};
+      const timing=g.bodies.find(b=>b.id===g.level.blackHoleJets!.sourceId)!.nodeInfluence!,period=timing.jetPeriod;
+      g.elapsed=select.value==='jet-second'?2*period-.01:select.value==='jet-warning'?period-g.level.blackHoleJets!.warning/2:select.value==='jet-firing'?period+timing.jetSeconds/4:select.value==='jet-dissipating'?period+timing.jetSeconds+.1:0;
       if(select.value==='jet-second')g.health!.current=50;updateHazards(g,[],1/60);
     }else{
       g.level.solarWave!.shockwaveTravelTime=Number(travel.value);

@@ -3,6 +3,7 @@ import type { Vec2 } from '../physics/vector';
 import { length, sub } from '../physics/vector';
 import { bodyGravity } from '../physics/gravity';
 import { sweptOverlap } from '../physics/collision';
+import { launchSolarWave } from './hazards';
 
 /** Configured stellar hazards. No blast impulse, orbit bonus or ship velocity edits. */
 export function updateStellar(game: GameState, previous: Map<string,Vec2>, dt: number): string | undefined {
@@ -19,6 +20,7 @@ export function updateStellar(game: GameState, previous: Map<string,Vec2>, dt: n
     if(state.goldSeconds+1e-9>=config.activationSeconds) {
       state.status='exploded';star.emitsGravity=false;star.collision='none';star.motion='static';star.layer='hidden';
       star.velocity={x:0,y:0};star.affectedByFields=false;
+      if(game.level.solarWave?.sourceId===star.id)launchSolarWave(game,game.elapsed);
       if(sweptOverlap(previous.get(ship.id)??ship.position,ship.position,previous.get(star.id)??star.position,star.position,config.burnRadius+ship.radius)) return '太阳爆炸：方舟位于爆炸范围内';
       game.hazardMessage='太阳已引爆 · 方舟在爆炸范围外，继续逃逸';continue;
     }

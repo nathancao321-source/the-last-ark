@@ -19,7 +19,7 @@ describe('authoritative hazard rendering contract',()=>{
   expect(w.front).toBeCloseTo(distance);
  });
  it.each(['low','medium','high','off'])('paints the entire shared core immediately at firing start in %s',quality=>{
-  const g=createGame(blackHoleLevel),config=g.level.blackHoleJets!;g.phase='running';g.elapsed=4;g.bodies[0].position={x:0,y:-10000};updateHazards(g,[],1/60);
+  const g=createGame(blackHoleLevel),config=g.level.blackHoleJets!;g.phase='running';g.elapsed=5;g.bodies[0].position={x:0,y:-10000};updateHazards(g,[],1/60);
   const geometry=g.hazards!.jet!.geometry!;expect(geometry.damaging).toBe(true);expect(geometry.progress).toBe(0);
   const strokes:{width:number;cap:string;points:number[][]}[]=[],props:Record<string,unknown>={};let points:number[][]=[];
   const ctx=new Proxy(props,{get:(target,key)=>{if(key==='createLinearGradient')return ()=>({addColorStop:()=>{}});if(key==='beginPath')return ()=>{points=[];};if(key==='moveTo'||key==='lineTo')return (...p:number[])=>points.push(p);if(key==='stroke')return ()=>strokes.push({width:target.lineWidth as number,cap:target.lineCap as string,points:[...points]});return target[key as string]??(()=>{});},set:(t,k,v)=>{t[k as string]=v;return true;}}) as unknown as CanvasRenderingContext2D;
@@ -33,11 +33,11 @@ describe('authoritative hazard rendering contract',()=>{
   for(const beam of geometry.beams){expect(jetParticle(beam,0,0)).toEqual(beam.start);for(let i=0;i<100;i++){const p=jetParticle(beam,i,i*.019);expect(Math.abs(p.x-beam.start.x)).toBeLessThanOrEqual(beam.coreRadius*.35);expect((p.y-beam.start.y)*beam.direction).toBeGreaterThanOrEqual(0);expect((p.y-beam.start.y)*beam.direction).toBeLessThanOrEqual(beam.length);}}
  });
  it('keeps the lethal contact visible when CCD crosses the firing-to-fade boundary',()=>{
-  const g=createGame(blackHoleLevel);g.phase='running';g.elapsed=6.51;g.health!.current=50;g.bodies[0].position={x:1300,y:-600};
+  const g=createGame(blackHoleLevel);g.phase='running';g.elapsed=5.81;g.health!.current=50;g.bodies[0].position={x:1300,y:-600};
   const result=updateHazards(g,[{from:{x:1300,y:-600},to:{x:1300,y:-600},start:0,end:.02}],.02);
   expect(result).toContain('失效');expect(g.hazards!.jet!.phase).toBe('firing');expect(g.hazards!.jet!.geometry!.damaging).toBe(true);expect(g.hazards!.jet!.geometry!.intensity).toBe(1);
  });
- it.each([3.999,6.5,6.8,7.3])('keeps the nonfiring snapshot harmless at %s',time=>{
+ it.each([4.999,5.8,6.1,6.6])('keeps the nonfiring snapshot harmless at %s',time=>{
   const g=createGame(blackHoleLevel);g.phase='running';g.elapsed=time;g.bodies[0].position={x:1300,y:600};updateHazards(g,[],0);expect(g.health!.current).toBe(100);expect(g.hazards!.jet!.geometry!.damaging).toBe(false);
  });
 });

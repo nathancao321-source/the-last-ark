@@ -2,28 +2,42 @@ import type { GameState } from './types';
 import type { JetConfig, JetPhase, MotionChord } from './hazard-types';
 import { capsuleExposure, expandingRingContact, interpolate } from '../physics/hazard-collision';
 import {jetGeometry,shockwaveRadius} from './hazard-geometry';
+import {jetPulse, JET_EPS, type JetTiming} from './jet-timing';
 const EPS=1e-8;
-export function jetClock(config:JetConfig,time:number): {phase:JetPhase;cycle:number;progress:number;next:number} {
-  const stages: [JetPhase,number][]=[['idle',config.idle],['warning',config.warning],['firing',config.firing],['dissipating',config.dissipating],['cooldown',config.cooldown]];
-  const period=stages.reduce((n,s)=>n+s[1],0),cycle=Math.floor((time+EPS)/period);
-  let start=cycle*period;
-  for(const [phase,duration] of stages) {
-    if(time+EPS<start+duration)return {phase,cycle,progress:Math.max(0,(time-start)/duration),next:start+duration};
-    start+=duration;
-  }
-  return {phase:'idle',cycle:cycle+1,progress:0,next:start+config.idle};
+export function jetClock(config:JetConfig,time:number,timing:JetTiming): {phase:JetPhase;cycle:number;progress:number;next:number;flowAge:number} {
+  const pulse=jetPulse(timing,time),warningAt=pulse.nextAt-config.warning;
+  const fadingAt=pulse.startedAt+timing.jetSeconds,cooledAt=fadingAt+config.dissipating;
+  if(pulse.firing)return {phase:'firing',cycle:pulse.cycle,progress:pulse.progress!,next:fadingAt,flowAge:pulse.age};
+  if(pulse.cycle>0&&time+JET_EPS<cooledAt)return {phase:'dissipating',cycle:pulse.cycle,progress:Math.max(0,(time-fadingAt)/config.dissipating),next:cooledAt,flowAge:0};
+  if(time+JET_EPS>=warningAt)return {phase:'warning',cycle:pulse.cycle,progress:Math.max(0,(time-warningAt)/config.warning),next:pulse.nextAt,flowAge:0};
+  return {phase:pulse.cycle===0?'idle':'cooldown',cycle:pulse.cycle,progress:0,next:warningAt,flowAge:0};
 }
 export function initializeHazards(game:GameState):void {
   if(!game.level.solarWave&&!game.level.blackHoleJets)return;
   game.hazards={};
-  if(game.level.blackHoleJets){const config=game.level.blackHoleJets,clock=jetClock(config,0),source=game.bodies.find(b=>b.id===config.sourceId);game.hazards.jet={...clock,exposed:false,protectedUntil:0,geometry:source?jetGeometry(source.position,source.radius,config,clock):undefined};}
+  if(game.level.blackHoleJets){
+    const config=game.level.blackHoleJets,source=game.bodies.find(b=>b.id===config.sourceId);
+    if(!source?.nodeInfluence){game.hazards.configurationError='喷流配置无效：缺少源天体的喷射时钟';return;}
+    const clock=jetClock(config,0,source.nodeInfluence);
+    game.hazards.jet={...clock,exposed:false,protectedUntil:0,geometry:jetGeometry(source.position,source.radius,config,clock)};
+  }
 }
 export function waveRadius(game:GameState,time:number):number {
   const wave=game.hazards?.wave;
   return wave?shockwaveRadius(wave,time):0;
 }
+/** Both the scheduled event and gold-node detonation enter here, exactly once.
+ * Snapshot geometry now so hiding/moving the source cannot delay the wave. */
+export function launchSolarWave(game:GameState,launchedAt:number):void {
+  const state=game.hazards,solar=game.level.solarWave;
+  if(!state||!solar||state.wave||state.configurationError)return;
+  const source=game.bodies.find(b=>b.id===solar.sourceId),exit=game.bodies.find(b=>b.id===solar.exitId);
+  const radius=source?.radius??0,distance=source&&exit?Math.hypot(exit.position.x-source.position.x,exit.position.y-source.position.y):0;
+  if(!source||!exit||!Number.isFinite(distance+radius+solar.shockwaveTravelTime)||distance<=radius||solar.shockwaveTravelTime<=0)state.configurationError='能量波配置无效：出口必须在太阳表面之外';
+  else state.wave={origin:{...source.position},radius0:radius,speed:(distance-radius)/solar.shockwaveTravelTime,launchedAt,front:radius,active:true,targetDistance:distance,thickness:solar.thickness,endsAt:launchedAt+Math.max(solar.duration,solar.shockwaveTravelTime+5),travelTime:solar.shockwaveTravelTime};
+}
 /** Simulation clock only. Launch geometry survives checkpoints and subsequent sun
- * motion. A transformed/exploded sun releases scheduled residual energy as well.
+ * motion. An early explosion consumes the same one-shot scheduled event.
  * Invalid geometry disables emission with an explicit diagnostic. */
 export function updateHazards(game:GameState,path:MotionChord[],dt:number):string|undefined {
   const state=game.hazards;if(!state||game.phase!=='running')return;
@@ -31,12 +45,7 @@ export function updateHazards(game:GameState,path:MotionChord[],dt:number):strin
   const chords=path.slice(),last=chords.at(-1);
   if(!last||last.end<dt-EPS)chords.push({from:last?.to??ship.position,to:ship.position,start:last?.end??0,end:dt});
   const solar=game.level.solarWave;
-  if(solar&&!state.wave&&!state.configurationError&&game.elapsed+EPS>=solar.launchAt) {
-    const source=game.bodies.find(b=>b.id===solar.sourceId),exit=game.bodies.find(b=>b.id===solar.exitId);
-    const radius=source?.radius??0,distance=source&&exit?Math.hypot(exit.position.x-source.position.x,exit.position.y-source.position.y):0;
-    if(!source||!exit||!Number.isFinite(distance+radius+solar.shockwaveTravelTime)||distance<=radius||solar.shockwaveTravelTime<=0)state.configurationError='能量波配置无效：出口必须在太阳表面之外';
-    else state.wave={origin:{...source.position},radius0:radius,speed:(distance-radius)/solar.shockwaveTravelTime,launchedAt:solar.launchAt,front:radius,active:true,targetDistance:distance,thickness:solar.thickness,endsAt:solar.launchAt+Math.max(solar.duration,solar.shockwaveTravelTime+5),travelTime:solar.shockwaveTravelTime};
-  }
+  if(solar&&game.elapsed+EPS>=solar.launchAt)launchSolarWave(game,solar.launchAt);
   if(solar&&state.wave){
     const wave=state.wave;
     wave.front=waveRadius(game,game.elapsed);
@@ -54,14 +63,15 @@ export function updateHazards(game:GameState,path:MotionChord[],dt:number):strin
   const jet=game.level.blackHoleJets,hit=state.jet;
   if(jet&&hit){
     const source=game.bodies.find(b=>b.id===jet.sourceId);
-    const finalClock=jetClock(jet,game.elapsed);
+    const timing=source?.nodeInfluence;if(!timing)return;
+    const finalClock=jetClock(jet,game.elapsed,timing);
     hit.geometry=source&&source.layer!=='hidden'?jetGeometry(source.position,source.radius,jet,finalClock):undefined;
     if(source&&source.layer!=='hidden')for(const chord of chords){
       let a=start+chord.start;const end=start+chord.end;
       if(end-a<EPS)continue;
       const position=(t:number)=>interpolate(chord.from,chord.to,(t-start-chord.start)/(chord.end-chord.start));
       while(a<end-EPS){
-        const clock=jetClock(jet,a),b=Math.min(end,clock.next);
+        const clock=jetClock(jet,a,timing),b=Math.min(end,clock.next);
         if(clock.cycle!==hit.cycle||clock.phase!=='firing')hit.exposed=false;
         hit.cycle=clock.cycle;
         if(clock.phase==='firing'){
@@ -82,7 +92,7 @@ export function updateHazards(game:GameState,path:MotionChord[],dt:number):strin
               if(game.health.current<=0){
                 // A terminal CCD contact can precede the end-of-step phase. Freeze
                 // the exact firing snapshot that caused death, never a later fade.
-                const contactClock=jetClock(jet,contactTime);
+                const contactClock=jetClock(jet,contactTime,timing);
                 hit.geometry=jetGeometry(source.position,source.radius,jet,contactClock);
                 hit.phase=contactClock.phase;hit.progress=contactClock.progress;
                 return '伽马喷流命中：方舟船体失效';
@@ -95,7 +105,7 @@ export function updateHazards(game:GameState,path:MotionChord[],dt:number):strin
         a=b;
       }
     }
-    const clock=jetClock(jet,game.elapsed);
+    const clock=jetClock(jet,game.elapsed,timing);
     if(clock.phase!=='firing'||clock.cycle!==hit.cycle)hit.exposed=false;
     Object.assign(hit,{phase:clock.phase,cycle:clock.cycle,progress:clock.progress});
   }
@@ -103,7 +113,7 @@ export function updateHazards(game:GameState,path:MotionChord[],dt:number):strin
 export function hazardNotice(game:GameState):string|undefined {
   if(game.hazards?.configurationError)return game.hazards.configurationError;
   const solar=game.level.solarWave;
-  if(solar&&game.elapsed>=solar.launchAt-solar.warningSeconds&&game.elapsed<solar.launchAt)
+  if(solar&&!game.hazards?.wave&&game.elapsed>=solar.launchAt-solar.warningSeconds&&game.elapsed<solar.launchAt)
     return `太阳能量异常 · ${(solar.launchAt-game.elapsed).toFixed(1)} 秒后爆发`;
   if(game.hazards?.wave?.active)return '灭绝波向外扩散 · 逃离金色高能环带';
   const jet=game.hazards?.jet;

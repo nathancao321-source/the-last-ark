@@ -86,10 +86,12 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   if (!ship) { lose(game, '关卡缺少方舟'); return; }
   game.distance += contacts.shipDistance;
   if(contacts.failure){lose(game,contacts.failure);return;}
-  const hazardFailure=updateHazards(game,contacts.shipPath,dt);
-  if(hazardFailure){lose(game,hazardFailure);return;}
   const stellarFailure=updateStellar(game,previous,dt);
   if(stellarFailure){lose(game,stellarFailure);return;}
+  // Stellar transformations can launch a wave this tick. Resolve its geometry
+  // and contacts immediately, before publishing the frame to the renderer.
+  const hazardFailure=updateHazards(game,contacts.shipPath,dt);
+  if(hazardFailure){lose(game,hazardFailure);return;}
   // Capture is checked first: entering an event horizon can never become a
   // surviving fly-through or a goal transition, even within a single fast step.
   const damageFailure = updateDamageZones(game, dt);

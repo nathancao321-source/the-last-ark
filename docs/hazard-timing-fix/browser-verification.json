@@ -1,0 +1,369 @@
+{
+  "pulses": [
+    {
+      "time": 4.999999999999988,
+      "cycle": 1,
+      "node": "jet",
+      "nodeAge": 0,
+      "beamAge": 0,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              173,
+              193,
+              233,
+              255
+            ],
+            [
+              175,
+              194,
+              233,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    },
+    {
+      "time": 5.399999999999986,
+      "cycle": 1,
+      "node": "jet",
+      "nodeAge": 0.39999999999999997,
+      "beamAge": 0.39999999999998614,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              181,
+              197,
+              233,
+              255
+            ],
+            [
+              180,
+              193,
+              230,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    },
+    {
+      "time": 10.000000000000076,
+      "cycle": 2,
+      "node": "jet",
+      "nodeAge": 7.638334409421077e-14,
+      "beamAge": 7.638334409421077e-14,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              181,
+              192,
+              229,
+              255
+            ],
+            [
+              184,
+              193,
+              228,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    },
+    {
+      "time": 10.400000000000096,
+      "cycle": 2,
+      "node": "jet",
+      "nodeAge": 0.40000000000007635,
+      "beamAge": 0.4000000000000963,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              180,
+              198,
+              234,
+              255
+            ],
+            [
+              180,
+              194,
+              230,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    },
+    {
+      "time": 15.000000000000325,
+      "cycle": 3,
+      "node": "jet",
+      "nodeAge": 3.2507330161024584e-13,
+      "beamAge": 3.2507330161024584e-13,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              185,
+              192,
+              228,
+              255
+            ],
+            [
+              185,
+              193,
+              228,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    },
+    {
+      "time": 15.400000000000345,
+      "cycle": 3,
+      "node": "jet",
+      "nodeAge": 0.40000000000032504,
+      "beamAge": 0.40000000000034497,
+      "damaging": true,
+      "checks": [
+        {
+          "quality": "high",
+          "pixels": [
+            [
+              177,
+              198,
+              235,
+              255
+            ],
+            [
+              172,
+              193,
+              233,
+              255
+            ]
+          ]
+        },
+        {
+          "quality": "off",
+          "pixels": [
+            [
+              230,
+              246,
+              255,
+              255
+            ],
+            [
+              230,
+              246,
+              255,
+              255
+            ]
+          ]
+        }
+      ],
+      "renderReadonly": true
+    }
+  ],
+  "solar": [
+    {
+      "time": 2.9833333333333276,
+      "status": "star",
+      "wave": null
+    },
+    {
+      "time": 2.9999999999999942,
+      "status": "exploded",
+      "wave": {
+        "origin": {
+          "x": 900,
+          "y": 0
+        },
+        "radius0": 100,
+        "speed": 179.2,
+        "launchedAt": 2.9999999999999942,
+        "front": 100,
+        "active": true,
+        "targetDistance": 4580,
+        "thickness": 44,
+        "endsAt": 42.99999999999999,
+        "travelTime": 25
+      }
+    },
+    {
+      "time": 3.4999999999999925,
+      "status": "exploded",
+      "wave": {
+        "origin": {
+          "x": 900,
+          "y": 0
+        },
+        "radius0": 100,
+        "speed": 179.2,
+        "launchedAt": 2.9999999999999942,
+        "front": 189.59999999999968,
+        "active": true,
+        "targetDistance": 4580,
+        "thickness": 44,
+        "endsAt": 42.99999999999999,
+        "travelTime": 25
+      }
+    },
+    {
+      "time": 4.999999999999988,
+      "status": "exploded",
+      "wave": {
+        "origin": {
+          "x": 900,
+          "y": 0
+        },
+        "radius0": 100,
+        "speed": 179.2,
+        "launchedAt": 2.9999999999999942,
+        "front": 458.3999999999988,
+        "active": true,
+        "targetDistance": 4580,
+        "thickness": 44,
+        "endsAt": 42.99999999999999,
+        "travelTime": 25
+      }
+    }
+  ],
+  "checks": [],
+  "offPixels": {
+    "solar": 0,
+    "hole": 0
+  },
+  "deployment": {
+    "elapsed": 0,
+    "positions": [
+      {
+        "x": 1770.1666666666595,
+        "y": 0
+      },
+      {
+        "x": 829.8333333333354,
+        "y": 0
+      }
+    ],
+    "captures": [
+      null,
+      null
+    ]
+  },
+  "pause": true,
+  "solarNoRelaunch": {
+    "sameWave": true,
+    "launch": 2.9999999999999942,
+    "active": false,
+    "sameOrigin": true,
+    "phase": "running"
+  },
+  "errors": []
+}

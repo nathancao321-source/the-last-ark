@@ -78,7 +78,7 @@ describe('node capture, gamma jet and reformation',()=>{
     const q=game.players[1];q.position={...hole.position};q.velocity={x:260,y:0};stepNode(q,{...idle,moveX:1},[hole],1/60,true);
     expect(q.capture?.phase).toBe('captured');
   });
-  it('freezes capture/jet on pause; a free node can be deployed but cannot hide inside the horizon',()=>{
+  it('freezes existing capture/jet on pause while free nodes remain deployable',()=>{
     const game=captureBoth();for(let i=0;i<120;i++)stepGame(game,NO_CONTROLS);
     pause(game);const snapshot=structuredClone(game.players);
     for(let i=0;i<400;i++)stepGame(game,NO_CONTROLS);expect(game.players).toEqual(snapshot);
@@ -86,7 +86,7 @@ describe('node capture, gamma jet and reformation',()=>{
     expect(game.players[0].capture?.phase).toBe('jet');pause(game);const jet=structuredClone(game.players);
     for(let i=0;i<60;i++)stepGame(game,NO_CONTROLS);expect(game.players).toEqual(jet);
     const free=fixture();free.players[0].position={...free.bodies[1].position};stepGame(free,NO_CONTROLS);
-    expect(free.players[0].capture?.phase).toBe('captured');expect(free.players[0].capture!.elapsed).toBe(0);
+    expect(free.players[0].capture).toBeUndefined();expect(free.elapsed).toBe(0);
   });
   it('restores captured checkpoint timers, clears stale field intent and resets completely on R-style restart',()=>{
     const game=captureBoth();for(let i=0;i<90;i++)stepGame(game,createControls({abilityActive:true},{}));saveCheckpoint(game,'captured');

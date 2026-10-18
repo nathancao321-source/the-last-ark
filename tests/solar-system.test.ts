@@ -55,7 +55,7 @@ describe('Solar Exodus physical routes',()=>{
     expect(result.phase,JSON.stringify(result)).toBe('completed');expect(result.seconds).toBeLessThan(65);
     expect(game.encounters).toContain('belt-approach');expect(game.mission.completedObjectives).toHaveLength(6);
   });
-  for(const index of [0,1] as const)it(`can complete after ${index?'exploding':'collapsing'} the sun through real node travel and dwell`,()=>{
+  for(const index of [0,1] as const)it(`real node travel and dwell ${index?'launches an early wave that intercepts the old route':'allows completion after collapse'}`,()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!;
     positionPlayer(game,index,sun.position);togglePause(game);
     for(let i=0;i<182;i++)stepGame(game,NO_CONTROLS);
@@ -63,7 +63,11 @@ describe('Solar Exodus physical routes',()=>{
     pause(game);
     positionPlayer(game,0,add(game.bodies[0].position,{x:-100,y:-180}));
     positionPlayer(game,1,add(game.bodies[0].position,{x:100,y:180}));
-    const result=pilot(game,130,700,100);expect(result.phase,JSON.stringify(result)).toBe('completed');
+    const result=pilot(game,130,700,100);
+    if(index){
+      expect(game.hazards!.wave!.launchedAt).toBeCloseTo(3);
+      expect(result.phase,JSON.stringify(result)).toBe('failed');expect(result.message).toContain('灭绝');expect(result.seconds).toBeLessThan(10);
+    }else expect(result.phase,JSON.stringify(result)).toBe('completed');
   });
   it('does not award an unassisted straight flight a free boost or safe bypass',()=>{
     const game=createGame(solarSystem);togglePause(game);for(let i=0;i<2400&&game.phase==='running';i++)stepGame(game,NO_CONTROLS);

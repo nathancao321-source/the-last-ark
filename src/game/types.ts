@@ -4,6 +4,7 @@ import type { Mission, MissionState } from './mission';
 import type { SceneId } from '../scenes/types';
 import type { TutorialConfig, TutorialState } from './tutorial';
 import type { UniverseState } from '../world/universe';
+import type { JetTiming } from './jet-timing';
 export interface Field { radius: number; strength: number; softening: number; maxAcceleration: number; polarity: 1 | -1 }
 export type EntityKind = 'ship' | 'player' | 'asteroid' | 'planet' | 'star' | 'black_hole' | 'station' | 'wormhole';
 export interface Entity {
@@ -27,13 +28,11 @@ export interface StabilizationConfig {
   fieldEpsilon?: number;
 }
 export interface StabilizationState { playerVelocity: Vec2; idleTime: number }
-export interface NodeInfluence {
+export interface NodeInfluence extends JetTiming {
   gravityMultiplier: number;
   /** Sum of node gravity is capped below its own movement acceleration. */
   maxAccelerationRatio: number;
   steeringSeconds: number;
-  jetPeriod: number;
-  jetSeconds: number;
   reformSeconds: number;
   ejectionDistance: number;
 }

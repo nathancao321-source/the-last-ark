@@ -4,9 +4,9 @@ export interface JetBeam {readonly start:Readonly<Vec2>;readonly end:Readonly<Ve
 export interface JetGeometry {readonly origin:Readonly<Vec2>;readonly beams:readonly JetBeam[];readonly phase:JetPhase;readonly cycle:number;readonly progress:number;readonly flowAge:number;readonly intensity:number;readonly damaging:boolean}
 /** The single definition of jet origin, axis, capsule and instant activation.
  * Simulation owns these snapshots. Collision and renderer consume them. */
-export function jetGeometry(origin:Vec2,radius:number,config:JetConfig,clock:{phase:JetPhase;cycle:number;progress:number}):JetGeometry {
+export function jetGeometry(origin:Vec2,radius:number,config:JetConfig,clock:{phase:JetPhase;cycle:number;progress:number;flowAge?:number}):JetGeometry {
  const beams=([-1,1] as const).map(direction=>({direction,start:{x:origin.x,y:origin.y+direction*radius},end:{x:origin.x,y:origin.y+direction*(radius+config.length)},length:config.length,coreRadius:config.coreRadius,plumeRadius:config.plumeRadius}));
- return {origin:{...origin},beams,...clock,flowAge:clock.progress*config.firing,damaging:clock.phase==='firing',intensity:clock.phase==='firing'?1:clock.phase==='warning'?.12+.35*clock.progress:clock.phase==='dissipating'?.18*(1-clock.progress):0};
+ return {origin:{...origin},beams,...clock,flowAge:clock.flowAge??0,damaging:clock.phase==='firing',intensity:clock.phase==='firing'?1:clock.phase==='warning'?.12+.35*clock.progress:clock.phase==='dissipating'?.18*(1-clock.progress):0};
 }
 export function shockwaveRadius(wave:SolarWaveState,time:number):number {return wave.radius0+wave.speed*Math.max(0,Math.min(time,wave.endsAt)-wave.launchedAt);}
 export function waveGeometry(wave:SolarWaveState){return {origin:wave.origin,outer:wave.front,inner:Math.max(0,wave.front-wave.thickness),center:Math.max(0,wave.front-wave.thickness*.5),thickness:wave.thickness,damaging:wave.active} as const;}
