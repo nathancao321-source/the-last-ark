@@ -10,6 +10,7 @@ import type {CelestialEvents} from '../celestial-events';
 export interface Source { id:string; position:Vec2; field:Field; weight:number; active:boolean; motion:number; cooldown:number; table:Float32Array; phase:number;nodeClock:number;history:Float64Array;historyIndex:number;historyTime:number }
 export interface Ripple { alive:boolean; origin:Vec2; direction:Vec2; polarity:number; radius:number; age:number; decay:number; speed:number; amplitude:number; phase:number }
 export interface VisualState { time:number; revision:number; sources:Source[]; events:Ripple[]; emitted:number; invalid:number;
+  worldOrigin?:Vec2;
   hazardWave?: {origin:Vec2;front:number;thickness:number};
   portals?: {origin:Vec2;radius:number;approach:number}[];celestial?:CelestialEvents; }
 export interface Sample { dx:number; dy:number; luminance:number }
@@ -81,7 +82,7 @@ export function updateVisuals(state:VisualState,players:readonly Player[],phase:
 export function sampleDisturbance(out:Sample,x:number,y:number,state:VisualState,c:WarpConfig,zoom:number,spatialScale=192):Sample {
   out.dx=0;out.dy=0;out.luminance=0;if(!enabled(c))return out;
   let ax=0,ay=0,core=1,brightness=0,ex=0,ey=0;
-  const fabric=worldFabric(x,y);
+  const wx=x+(state.worldOrigin?.x??0),wy=y+(state.worldOrigin?.y??0),fabric=worldFabric(wx,wy);
   for(const s of state.sources) {
     if(s.weight<1e-8||s.field.radius<=0)continue;
     const rx=x-s.position.x,ry=y-s.position.y,r=Math.hypot(rx,ry),R=s.field.radius,w=envelope(r,R);
@@ -92,7 +93,7 @@ export function sampleDisturbance(out:Sample,x:number,y:number,state:VisualState
     // Both nodes modulate the SAME fixed material. Node-relative noise would
     // carry a separate cloud around with each source even with correct anchors.
     brightness+=-s.field.polarity*strength/Math.sqrt(3600+strength*strength)*w*(.035+.035*fabric);
-    const idle=c.idle*s.weight*w*-s.field.polarity*(Math.sin(state.time*2*Math.PI/23+x/110)*.6+Math.sin(state.time*2*Math.PI/37+y/97)*.4);
+    const idle=c.idle*s.weight*w*-s.field.polarity*(Math.sin(state.time*2*Math.PI/23+wx/110)*.6+Math.sin(state.time*2*Math.PI/37+wy/97)*.4);
     brightness+=idle;ex+=idle*45*rx/soft;ey+=idle*45*ry/soft;
   }
   brightness*=core;

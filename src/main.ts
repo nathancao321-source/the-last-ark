@@ -38,6 +38,7 @@ import {updateCelestialVisuals} from './render/celestial-events';
 import {mountArtPanel} from './debug/art-panel';
 import { isSceneUnlocked } from './scenes/campaign';
 import { mountCosmos } from './render/cosmos';
+import {enhancedScene,syncUniverseVisuals} from './render/endless-bridge';
 const cosmos = mountCosmos(document.querySelector<HTMLCanvasElement>('#cosmos')!);
 const music=mountMusic(document.querySelector<HTMLElement>('.header-right')!,musicUrl);
 document.querySelector('#music-toggle')!.classList.add('music-button');
@@ -62,8 +63,7 @@ const visualWarp = parseWarp(location.search);
 const visualArt = { ...CINEMATIC_ART };
 const artPanel=debug?mountArtPanel(visualArt,visualWarp):undefined;
 let visualState: VisualState | undefined;
-const enhancedScene = (id: SceneId): boolean => id === 'tutorial_part_1' || id === 'tutorial_part_2' || id === 'solar_system' || id === 'black_hole';
-function syncVisualState(): void { visualState = scenes.game && enhancedScene(scenes.scene) ? createVisualState(scenes.game.players, scenes.revision) : undefined; }
+function syncVisualState(): void { visualState = scenes.game && enhancedScene(scenes.scene) ? createVisualState(scenes.game.players, scenes.revision) : undefined;if(visualState&&scenes.game)syncUniverseVisuals(visualState,scenes.game); }
 const clock = new FixedClock();
 let prediction: Trajectory = {points:[],seconds:0,outcome:'horizon'};
 let lastPredictionTime = -Infinity;
@@ -180,10 +180,11 @@ function frame(now: number): void {
     const next=scenes.game?.universe?.origin;
     if(origin&&next&&(origin.x!==next.x||origin.y!==next.y)) {
       camera.position.x-=(next.x-origin.x)*SECTOR_SIZE;camera.position.y-=(next.y-origin.y)*SECTOR_SIZE;
+      if(visualState&&scenes.game)syncUniverseVisuals(visualState,scenes.game);
       lastPredictionTime=-Infinity;
     }
     syncScene();
-    if(visualState&&scenes.game&&enhancedScene(scenes.scene)){updateVisuals(visualState,scenes.game.players,scenes.game.phase,scenes.revision,1/60,visualWarp,mapOpen);if(visualWarp.quality!=='off')updateCelestialVisuals(visualState,scenes.game,1/60);}
+    if(visualState&&scenes.game&&enhancedScene(scenes.scene)&&visualWarp.quality!=='off'){updateVisuals(visualState,scenes.game.players,scenes.game.phase,scenes.revision,1/60,visualWarp,mapOpen);updateCelestialVisuals(visualState,scenes.game,1/60);}
   });
   const game = scenes.game;
   ui.update();

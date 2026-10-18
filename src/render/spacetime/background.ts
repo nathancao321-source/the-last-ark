@@ -48,17 +48,17 @@ export function createBackground(a:ArtConfig,stars:Float32Array=new Float32Array
     cache.viewKey='';cache.pattern=undefined;cache.generationMs=result.ms;
   });return cache;
 }
-function prepareView(b:BackgroundCache,c:Camera):void {
+function prepareView(b:BackgroundCache,c:Camera,offset={x:0,y:0}):void {
   const factor=Math.min(1,1600/c.width,1000/c.height),w=Math.max(1,Math.round(c.width*factor)),h=Math.max(1,Math.round(c.height*factor));
-  const key=[w,h,c.position.x,c.position.y,c.zoom].join(',');if(key===b.viewKey)return;b.viewKey=key;
+  const key=[w,h,c.position.x+offset.x,c.position.y+offset.y,c.zoom].join(',');if(key===b.viewKey)return;b.viewKey=key;
   if(b.view.width!==w||b.view.height!==h){b.view.width=w;b.view.height=h;}
   const ctx=b.view.getContext('2d')!;
   // Texture texel (u,v) has the same stable world origin as its stars. No
   // parallax or accumulated camera deltas; zoom and translation applied once.
-  const bounds=viewBounds(c),origin=worldToScreen(c,{x:0,y:0}),unit=TILE/RES;
+  const bounds=viewBounds(c),origin=worldToScreen(c,{x:-offset.x,y:-offset.y}),unit=TILE/RES;
   b.pattern??=ctx.createPattern(b.texture,'repeat')!;ctx.fillStyle=b.pattern;
   ctx.setTransform(w/c.width*c.zoom*unit,0,0,h/c.height*c.zoom*unit,origin.x*w/c.width,origin.y*h/c.height);
-  ctx.fillRect(bounds.minX/unit,bounds.minY/unit,(bounds.maxX-bounds.minX)/unit,(bounds.maxY-bounds.minY)/unit);
+  ctx.fillRect((bounds.minX+offset.x)/unit,(bounds.minY+offset.y)/unit,(bounds.maxX-bounds.minX)/unit,(bounds.maxY-bounds.minY)/unit);
 }
 export interface WorldCell {x:number;y:number;spacing:number;priority:number}
 /** Only visible WORLD-lattice cells intersecting the annulus; bounded separately
@@ -79,11 +79,12 @@ export function waveCells(state:VisualState,warp:WarpConfig,camera:Camera):World
  * source/event changes affect this bounded, faint-edge visual LOD selection. */
 export function worldCells(state:VisualState,warp:WarpConfig):WorldCell[] {
   const spacing=warp.quality==='high'?256:320,capacity=warp.quality==='high'?48:32,cells=new Map<string,WorldCell>();
+  const offset=state.worldOrigin??{x:0,y:0};
   const regions=state.sources.filter(s=>s.weight>1e-5).map(s=>({x:s.position.x,y:s.position.y,r:s.field.radius,w:s.weight}));
   if(warp.interaction)for(const e of state.events)if(e.alive)regions.push({x:e.origin.x,y:e.origin.y,r:e.radius,w:Math.exp(-e.age/e.decay)*e.amplitude});
   for(const p of state.portals??[])regions.push({x:p.origin.x,y:p.origin.y,r:p.radius*2.5,w:.6});
-  for(const p of regions)for(let iy=Math.floor((p.y-p.r)/spacing);iy<=Math.floor((p.y+p.r)/spacing);iy++)for(let ix=Math.floor((p.x-p.r)/spacing);ix<=Math.floor((p.x+p.r)/spacing);ix++){
-    const x=ix*spacing,y=iy*spacing,dx=Math.max(x-p.x,0,p.x-x-spacing),dy=Math.max(y-p.y,0,p.y-y-spacing),d=Math.hypot(dx,dy);
+  for(const p of regions)for(let iy=Math.floor((p.y+offset.y-p.r)/spacing);iy<=Math.floor((p.y+offset.y+p.r)/spacing);iy++)for(let ix=Math.floor((p.x+offset.x-p.r)/spacing);ix<=Math.floor((p.x+offset.x+p.r)/spacing);ix++){
+    const x=ix*spacing-offset.x,y=iy*spacing-offset.y,dx=Math.max(x-p.x,0,p.x-x-spacing),dy=Math.max(y-p.y,0,p.y-y-spacing),d=Math.hypot(dx,dy);
     if(d>=p.r)continue;const priority=p.w*(1-d/p.r)**2,key=ix+','+iy,old=cells.get(key);
     if(old)old.priority+=priority;else cells.set(key,{x,y,spacing,priority});
   }
@@ -101,7 +102,7 @@ function triangle(ctx:CanvasRenderingContext2D,image:HTMLCanvasElement,a:Vertex,
 }
 /** Shared D/B model deforms the actual cached nebula sheet, not an overlaid disc. */
 export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,sample:Sample):{samples:number;vertices:number;cells:number} {
-  prepareView(b,c);let samples=0,vertices=0,cells=0;
+  const offset=state.worldOrigin??{x:0,y:0};prepareView(b,c,offset);let samples=0,vertices=0,cells=0;
   const advanced=warp.quality!=='low',active=advanced&&(state.sources.some(s=>s.weight>1e-5)||!!state.portals?.length||!!state.hazardWave||(warp.interaction&&state.events.some(e=>e.alive)));
   ctx.drawImage(b.view,0,0,c.width,c.height);
   if(active&&(warp.starWarp||warp.luminance)) {
@@ -130,7 +131,7 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
     }
   }
 
-  const density=a.stars*(a.background==='dense'?1:.21),bounds=viewBounds(c),padding=42/c.zoom;
+  const density=a.stars*(a.background==='dense'?1:.21),localBounds=viewBounds(c),bounds={minX:localBounds.minX+offset.x,maxX:localBounds.maxX+offset.x,minY:localBounds.minY+offset.y,maxY:localBounds.maxY+offset.y},padding=42/c.zoom;
   // At extreme zoom-out thin fixed world sites, never rescale their positions.
   // At ordinary demo zoom this is 1. Bounds stay finite even at tiny camera zoom.
   const stride=2**Math.max(0,Math.ceil(Math.log2(Math.max(c.width,c.height)/c.zoom/TILE/4)));
@@ -139,7 +140,7 @@ export function drawBackground(ctx:CanvasRenderingContext2D,b:BackgroundCache,c:
     for(let ty=Math.floor((bounds.minY-padding)/TILE/stride)*stride;ty<=Math.floor((bounds.maxY+padding)/TILE);ty+=stride)for(let tx=Math.floor((bounds.minX-padding)/TILE/stride)*stride;tx<=Math.floor((bounds.maxX+padding)/TILE);tx+=stride)for(let i=0;i<b.stars.length;i+=5) {
       const light=b.stars[i+2],group=light<.55?0:light<.82?1:light<.95?2:light<.99?3:4;
       if(group!==bucket||b.stars[i+4]>density)continue;
-      const wx=b.stars[i]+tx*TILE,wy=b.stars[i+1]+ty*TILE,p=worldToScreen(c,{x:wx,y:wy});let x=p.x,y=p.y;if(x< -42||y< -42||x>c.width+42||y>c.height+42)continue;
+      const wx=b.stars[i]+tx*TILE-offset.x,wy=b.stars[i+1]+ty*TILE-offset.y,p=worldToScreen(c,{x:wx,y:wy});let x=p.x,y=p.y;if(x< -42||y< -42||x>c.width+42||y>c.height+42)continue;
       if(active&&warp.starWarp){const s=sampleDisturbance(sample,wx,wy,state,warp,c.zoom,224);x+=s.dx;y+=s.dy;samples++;}
       const size=Math.max(.3,(bucket===4?1.8:.65+bucket*.23+b.stars[i+3]*.4)*c.zoom);ctx.rect(x,y,size,size);if(bucket===4){ctx.rect(x-2*c.zoom,y+.5*c.zoom,6*c.zoom,.5*c.zoom);ctx.rect(x+.5*c.zoom,y-2*c.zoom,.5*c.zoom,6*c.zoom);}vertices++;
     }ctx.fill();

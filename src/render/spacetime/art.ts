@@ -5,6 +5,7 @@ export const DEFAULT_ART:ArtConfig={background:'dense',nebula:1,stars:1,exposure
 export const CINEMATIC_ART:Readonly<ArtConfig>=Object.freeze({background:'dense',nebula:2,stars:1,exposure:1.6,nodeEnergy:1.8,particles:true});
 /** Level grading affects the backdrop only; the abyss keeps the requested preset. */
 export function levelArt(base:ArtConfig,levelId:string):ArtConfig {
+ if(levelId==='beyond-the-stars')return {...base,background:'sparse',stars:.65,nebula:.7,exposure:.9};
  if(levelId==='solar-exodus')return {...base,nebula:base.nebula*.6,exposure:base.exposure*.75};
  if(levelId==='first-contact'||levelId==='moving-world')return {...base,background:'sparse',stars:.65,nebula:.7};
  return base;

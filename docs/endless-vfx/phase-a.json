@@ -1,0 +1,30 @@
+{
+  "phase": "phase-a",
+  "cases": [
+    {
+      "name": "deep",
+      "diff": 0,
+      "p50": 1.5,
+      "p95": 2,
+      "readonly": true,
+      "bodies": 55
+    },
+    {
+      "name": "triple",
+      "diff": 0,
+      "p50": 0.9000000059604645,
+      "p95": 1.199999988079071,
+      "readonly": true,
+      "bodies": 31
+    },
+    {
+      "name": "nebula",
+      "diff": 0,
+      "p50": 0.800000011920929,
+      "p95": 1.199999988079071,
+      "readonly": true,
+      "bodies": 43
+    }
+  ],
+  "errors": []
+}
