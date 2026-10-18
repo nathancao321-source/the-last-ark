@@ -1,0 +1,35 @@
+{
+  "planets": [
+    {
+      "type": "ice",
+      "id": "-5,-5/planet0",
+      "x": -8928.311304015773,
+      "y": -9130.939937674044,
+      "radius": 25.18603393761441
+    },
+    {
+      "type": "rocky",
+      "id": "-5,-5/planet1",
+      "x": -9503.688695984227,
+      "y": -9301.060062325956,
+      "radius": 22.506584766320884
+    },
+    {
+      "type": "ring",
+      "id": "-4,-5/planet0",
+      "x": -6878.153539091782,
+      "y": -9138.611182338915,
+      "radius": 35.610739663243294
+    },
+    {
+      "type": "gas",
+      "id": "-1,-5/planet0",
+      "x": -736.0366522405973,
+      "y": -9131.874437017055,
+      "radius": 34.18730230163783
+    }
+  ],
+  "special": "Mainline reuse regression only: no endless black hole / neutron generator",
+  "errors": [],
+  "neutron": "neutron"
+}
