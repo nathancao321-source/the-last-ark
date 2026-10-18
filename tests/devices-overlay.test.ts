@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { XboxInput, stickIntent } from '../src/input/gamepad';
+import { XboxInput, connectedPads, stickIntent } from '../src/input/gamepad';
 import type { PadState } from '../src/input/gamepad';
 import { MouseInput } from '../src/input/mouse';
 import { createCamera, follow } from '../src/camera/camera';
@@ -49,11 +49,28 @@ describe('real Gamepad adapter contract (synthetic standard Xbox reports)',()=>{
     focused=true;expect(input.read().moveX).toBe(0);
     report.axes=[0,0];report.buttons[0].pressed=false;input.read();report.axes=[1,0];expect(input.read().moveX).toBe(1);
   });
-  it('safely rejects unsupported mappings and unavailable browser APIs',()=>{
+  it('accepts usable non-standard pads and rejects reports with no controls',()=>{
     const report=pad();report.mapping='';const input=new XboxInput(0,()=>[report],()=>true,()=>{});
-    expect(input.read().abilityActive).toBe(false);expect(input.status).toContain('标准');
+    input.read();report.axes=[1,0];report.buttons[0].pressed=true;
+    expect(input.read()).toEqual({moveX:1,moveY:0,abilityActive:true});
+    expect(input.status).toContain('兼容');
+    const empty={...pad(),axes:[],buttons:[]},broken=new XboxInput(0,()=>[empty],()=>true,()=>{});
+    expect(broken.read()).toEqual({moveX:0,moveY:0,abilityActive:false});
     const unavailable=new XboxInput(0,()=>{throw new Error('unsupported');},()=>true,()=>{});
     expect(unavailable.read()).toEqual({moveX:0,moveY:0,abilityActive:false});
+  });
+  it('compacts sparse browser slots so the first connected pad is 手柄 1',()=>{
+    const first=pad(),second=pad();
+    expect(connectedPads([null,undefined,first,second])).toEqual([first,second]);
+    expect(connectedPads([null,null])).toEqual([null,null]);
+    expect(connectedPads([null,second])).toEqual([second,null]);
+  });
+  it('arms a drifting stick without waiting forever for an exact zero',()=>{
+    const report=pad();report.axes=[0.31,0.02];
+    const input=new XboxInput(0,()=>[report],()=>true,()=>{});
+    expect(input.read().moveX).toBe(0);
+    report.axes=[0,0];expect(input.read().moveX).toBe(0);
+    report.axes=[1,0];expect(input.read().moveX).toBe(1);
   });
   it('drives the existing acceleration and field pipeline alongside the keyboard',()=>{
     const report=pad(), xbox=new XboxInput(0,()=>[report],()=>true,()=>{}), keyboard=new Keyboard(()=>{});

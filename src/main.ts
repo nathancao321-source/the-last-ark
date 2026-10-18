@@ -4,7 +4,7 @@ import { FixedClock } from './game/clock';
 import { Keyboard } from './input/keyboard';
 import { PlayerInputs } from './input/sources';
 import { MouseInput } from './input/mouse';
-import { XboxInput } from './input/gamepad';
+import { XboxInput, connectedPads } from './input/gamepad';
 import { mountDeviceUI } from './input/device-ui';
 import { TutorialOverlay } from './render/tutorial-overlay';
 import { currentLesson } from './game/tutorial';
@@ -128,7 +128,8 @@ const keyboard = new Keyboard(action => {
 // Each player owns an independently selectable device channel.
 const inputs = new PlayerInputs([keyboard.source(0), keyboard.source(1)]);
 const mouse = new MouseInput();
-const pads: [XboxInput,XboxInput] = [0,1].map(index=>new XboxInput(index,()=>navigator.getGamepads(),()=>document.hasFocus()&&!document.hidden,toggle)) as [XboxInput,XboxInput];
+const readPads = () => connectedPads(navigator.getGamepads());
+const pads: [XboxInput,XboxInput] = [0,1].map(index=>new XboxInput(index,readPads,()=>document.hasFocus()&&!document.hidden,toggle)) as [XboxInput,XboxInput];
 const devices = mountDeviceUI(inputs,keyboard,mouse,pads);
 const detachMouse = mouse.attach(canvas,camera);
 const detach = keyboard.attach(window, () => ui.settingsOpen());

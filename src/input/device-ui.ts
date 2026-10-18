@@ -29,7 +29,14 @@ export function mountDeviceUI(inputs: PlayerInputs, keyboard: Keyboard, mouse: M
     },
     update() {
       select.forEach((element,i)=> {
-        for(const option of element.options) option.disabled=option.value!=='keyboard' && option.value===selected[1-i];
+        for(const option of element.options) {
+          option.disabled=option.value!=='keyboard' && option.value===selected[1-i];
+          const value=option.value as Choice;
+          if(value==='xbox0'||value==='xbox1') {
+            const label=labels[value]+(pads[value==='xbox0'?0:1].detected?' · 已连接':'');
+            if(option.textContent!==label)option.textContent=label;
+          }
+        }
         const choice=selected[i];
         const message=choice==='keyboard' ? (i===0?'WASD 移动 / F 技能':'方向键移动 / Enter 技能') : choice==='mouse' ? `持续追踪屏幕鼠标 / 左键技能 / 右键切换制动 · ${mouse.isBraking?'已制动':'追踪中'}` : pads[choice==='xbox0'?0:1].status;
         if(status[i].textContent!==message)status[i].textContent=message;
