@@ -32,6 +32,7 @@ import type { DemoRenderer } from './render/spacetime/renderer';
 import { parseWarp } from './render/spacetime/config';
 import { CINEMATIC_ART, levelArt } from './render/spacetime/art';
 import { mountHazardPanel } from './debug/hazard-panel';
+import {mountUISounds} from './audio/ui-sounds';
 import {updateCelestialVisuals} from './render/celestial-events';
 import {mountArtPanel} from './debug/art-panel';
 import { isSceneUnlocked } from './scenes/campaign';
@@ -41,6 +42,7 @@ import {resetEndlessBackground} from './render/endless-background';
 import {clearEndlessStellarCache} from './render/endless-stellar';
 import {clearEndlessPlanetCache} from './render/endless-planets';
 const cosmos = mountCosmos(document.querySelector<HTMLCanvasElement>('#cosmos')!);
+const uiSounds=mountUISounds();
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
 const ctx = canvas.getContext('2d');
 if (!ctx) throw new Error('此浏览器不支持 Canvas 2D。');
@@ -244,4 +246,4 @@ function frame(now: number): void {
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
-if (import.meta.hot) import.meta.hot.dispose(() => { fullscreen.dispose(); artPanel?.dispose(); inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); cosmos.dispose(); pauseButton.removeEventListener('click',toggleFromButton); hazardPanel?.dispose(); mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
+if (import.meta.hot) import.meta.hot.dispose(() => { fullscreen.dispose(); uiSounds.dispose(); artPanel?.dispose(); inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); cosmos.dispose(); pauseButton.removeEventListener('click',toggleFromButton); hazardPanel?.dispose(); mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });
