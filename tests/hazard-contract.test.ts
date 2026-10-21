@@ -8,6 +8,11 @@ import {drawHazards} from '../src/render/hazards';
 import {createCamera} from '../src/camera/camera';
 
 describe('authoritative hazard rendering contract',()=>{
+ it.each([.1,.4,1.2])('uses continuous warning geometry without any nonempty dash at zoom %s',zoom=>{
+  const g=createGame(blackHoleLevel);g.phase='running';g.elapsed=4;g.bodies[0].position={x:0,y:-10000};updateHazards(g,[],0);
+  const dash:number[][]=[];const ctx=new Proxy({} as CanvasRenderingContext2D,{get:(_t,key)=>key==='createLinearGradient'?()=>({addColorStop:()=>{}}):key==='setLineDash'?(d:number[])=>dash.push(d):()=>{},set:()=>true});
+  const c=createCamera({x:1300,y:0},1280,720);c.zoom=zoom;drawHazards(ctx,g,c,true,'high');expect(dash.length).toBeGreaterThan(0);expect(dash.every(d=>d.length===0)).toBe(true);expect(g.health!.current).toBe(100);
+ });
  it.each([15,20,25,30])('uses actual coordinates and %s second travel for both boundaries',travel=>{
   const g=createGame(solarSystem);g.level.solarWave!.shockwaveTravelTime=travel;
   const sun=g.bodies.find(b=>b.id==='sun')!,exit=g.bodies.find(b=>b.id===g.level.solarWave!.exitId)!;
@@ -21,12 +26,12 @@ describe('authoritative hazard rendering contract',()=>{
  it.each(['low','medium','high','off'])('paints the entire shared core immediately at firing start in %s',quality=>{
   const g=createGame(blackHoleLevel),config=g.level.blackHoleJets!;g.phase='running';g.elapsed=5;g.bodies[0].position={x:0,y:-10000};updateHazards(g,[],1/60);
   const geometry=g.hazards!.jet!.geometry!;expect(geometry.damaging).toBe(true);expect(geometry.progress).toBe(0);
-  const strokes:{width:number;cap:string;points:number[][]}[]=[],props:Record<string,unknown>={};let points:number[][]=[];
-  const ctx=new Proxy(props,{get:(target,key)=>{if(key==='createLinearGradient')return ()=>({addColorStop:()=>{}});if(key==='beginPath')return ()=>{points=[];};if(key==='moveTo'||key==='lineTo')return (...p:number[])=>points.push(p);if(key==='stroke')return ()=>strokes.push({width:target.lineWidth as number,cap:target.lineCap as string,points:[...points]});return target[key as string]??(()=>{});},set:(t,k,v)=>{t[k as string]=v;return true;}}) as unknown as CanvasRenderingContext2D;
+  const strokes:{width:number;cap:string;alpha:number;points:number[][]}[]=[],props:Record<string,unknown>={};let points:number[][]=[];
+  const ctx=new Proxy(props,{get:(target,key)=>{if(key==='createLinearGradient')return ()=>({addColorStop:()=>{}});if(key==='beginPath')return ()=>{points=[];};if(key==='moveTo'||key==='lineTo')return (...p:number[])=>points.push(p);if(key==='stroke')return ()=>strokes.push({width:target.lineWidth as number,cap:target.lineCap as string,alpha:target.globalAlpha as number,points:[...points]});return target[key as string]??(()=>{});},set:(t,k,v)=>{t[k as string]=v;return true;}}) as unknown as CanvasRenderingContext2D;
   // Editing level config after a simulation snapshot cannot change the rendered geometry.
   config.length=17;config.coreRadius=1;const camera=createCamera({x:1300,y:0},1600,1600);camera.zoom=.5;
   drawHazards(ctx,g,camera,quality!=='off',quality);
-  const cores=strokes.filter(s=>s.width===48);expect(cores).toHaveLength(2);for(const core of cores){expect(core.cap).toBe('round');expect(core.points).toEqual([[0,0],[0,geometry.beams[0].length]]);}
+  const cores=strokes.filter(s=>s.width===48);expect(cores).toHaveLength(2);for(const core of cores){expect(core.cap).toBe('round');expect(core.alpha).toBeGreaterThanOrEqual(.56);expect(core.points).toEqual([[0,0],[0,geometry.beams[0].length]]);}
  });
  it('anchors both particle roots and axis to the physical poles',()=>{
   const geometry=jetGeometry({x:501,y:-91},100,blackHoleLevel.blackHoleJets!,{phase:'firing',cycle:7,progress:0});

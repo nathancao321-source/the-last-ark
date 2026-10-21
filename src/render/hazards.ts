@@ -2,7 +2,7 @@ import type { GameState } from '../game/types';
 import type { Camera } from '../camera/camera';
 import { viewBounds } from '../camera/camera';
 import { HAZARD } from './palette';
-import {jetParticle,jetSpatialFade,jetVisualIntensity,waveGeometry} from '../game/hazard-geometry';
+import {jetParticle,jetSpatialFade,jetVisualEnvelope,waveGeometry} from '../game/hazard-geometry';
 
 /** Read-only world-space rendering. Fixed budgets, no persistent particles or
  * camera-relative noise. Enhanced=false preserves mandatory hazard silhouettes. */
@@ -13,43 +13,64 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
   if(j){
     const legacyGuide=!enhanced&&(j.phase==='idle'||j.phase==='cooldown');
     if(j.intensity>0||legacyGuide){
-      const active=j.damaging,warning=j.phase==='warning';
-      const opacity=legacyGuide?.025:jetVisualIntensity(j);
+      const envelope=jetVisualEnvelope(j),opacity=legacyGuide?.025:envelope.opacity;
       for(const jet of j.beams){
-        const sign=jet.direction,x=jet.start.x,y=jet.start.y,end=jet.end.y;
+        const sign=jet.direction,x=jet.start.x,y=jet.start.y,extent=jet.visualLength,end=y+sign*extent;
         if(x+jet.plumeRadius<view.minX||x-jet.plumeRadius>view.maxX||Math.max(y,end)+jet.plumeRadius<view.minY||Math.min(y,end)-jet.plumeRadius>view.maxY)continue;
-        ctx.save();ctx.translate(x,y);ctx.scale(1,sign);ctx.globalAlpha=opacity;
-        // A fully legible constant-width damage core; feathered visual plume is NOT lethal.
-        const cross=ctx.createLinearGradient(-jet.coreRadius,0,jet.coreRadius,0);
-        cross.addColorStop(0,HAZARD.jetRim);cross.addColorStop(.28,HAZARD.jetLight);cross.addColorStop(.48,HAZARD.jetWhite);
-        cross.addColorStop(.52,HAZARD.jetWhite);cross.addColorStop(.72,HAZARD.jetLight);cross.addColorStop(1,HAZARD.jetRim);
-        ctx.lineCap='round';ctx.strokeStyle=active?cross:HAZARD.warning;ctx.lineWidth=jet.coreRadius*2;
-        if(warning)ctx.setLineDash([14/camera.zoom,12/camera.zoom]);
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,jet.length);ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.save();ctx.translate(x,y);ctx.scale(1,sign);ctx.lineCap='round';ctx.setLineDash([]);
+        // Every axial layer uses the SAME envelope, sampled into a continuous
+        // Canvas gradient. No opaque marker strokes or special test-only paths.
+        const axial=(color:readonly number[],alpha=1)=>{
+          const g=ctx.createLinearGradient(0,0,0,extent);
+          for(let i=0;i<=40;i++){const u=i/40;g.addColorStop(u,'rgba('+color.join(',')+','+(alpha*jetSpatialFade(u*extent,extent))+')');}return g;
+        };
         if(enhanced){
-          const gradient=ctx.createLinearGradient(0,0,0,jet.length);gradient.addColorStop(0,HAZARD.jetLight);gradient.addColorStop(.58,HAZARD.jetPlume);gradient.addColorStop(.78,'#5046aa99');gradient.addColorStop(1,'#5046aa00');
-          ctx.fillStyle=gradient;
+          ctx.fillStyle=axial([95,112,224]);
           for(let layer=3;layer>=1;layer--){
-            ctx.globalAlpha=opacity*.12;ctx.beginPath();
-            for(const side of [-1,1])for(let n=0;n<=32;n++){
-              const u=side<0?n/32:1-n/32;
-              const noise=Math.sin(u*28-t*2.2+layer)*Math.sin(u*13+t*.7);
-              const width=jet.coreRadius+(jet.plumeRadius-jet.coreRadius)*(layer/3)*(.2+.8*u)*(1+.13*noise);
-              const xx=side*width,yy=u*jet.length;
-              if(side<0&&n===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
-            }
-            ctx.closePath();ctx.globalAlpha=opacity*.12;ctx.fill();
+            ctx.globalAlpha=opacity*.1;ctx.beginPath();
+            for(const side of [-1,1])for(let n=0;n<=48;n++){
+              const u=side<0?n/48:1-n/48,noise=Math.sin(u*28-t*2.2+layer)*Math.sin(u*13+t*.7);
+              const width=(jet.coreRadius+(jet.plumeRadius-jet.coreRadius)*(layer/3)*(.2+.8*u)*(1+.13*noise))*(.4+.6*envelope.width);
+              const xx=side*width,yy=u*extent;if(side<0&&n===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+            }ctx.closePath();ctx.fill();
           }
-          ctx.globalAlpha=opacity*.18;ctx.strokeStyle=HAZARD.jetLight;ctx.lineWidth=jet.coreRadius*.3;
+          // Tail is diffuse blue/violet, never an extension of the white lethal
+          // core. It fades beyond the visible rounded end of the damage capsule.
+          ctx.strokeStyle=axial([89,101,214]);ctx.globalAlpha=opacity*.17;ctx.lineWidth=jet.coreRadius*1.9*envelope.width;
+          ctx.beginPath();ctx.moveTo(0,jet.length);ctx.lineTo(0,extent);ctx.stroke();
+        }
+        const coreFade=axial([100+50*envelope.heat,130+88*envelope.heat,220+35*envelope.heat]);
+        // Continuous violet seed -> blue-white energy; never dash the game beam.
+        // Warning reaches full geometry before the authoritative firing instant.
+        ctx.lineWidth=jet.coreRadius*2*envelope.width;ctx.strokeStyle=coreFade;ctx.globalAlpha=opacity;
+        // The full-width, readable capsule ends at the authoritative hazard end.
+        // A rounded cap distinguishes it from the much dimmer, harmless tail.
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,jet.length);ctx.stroke();
+        ctx.fillStyle=axial([237,250,255]);ctx.globalAlpha=opacity*(.12+.6*envelope.heat);
+        // The white filament tapers inside the readable blue capsule. It does
+        // not carry a flat, full-brightness cap into the non-damaging tail.
+        ctx.beginPath();for(const side of [-1,1])for(let n=0;n<=48;n++){
+          const u=side<0?n/48:1-n/48,v=Math.max(0,(u-.5)/.5),taper=1-v*v*(3-2*v),xx=side*jet.coreRadius*.36*taper*envelope.width;
+          if(side<0&&n===0)ctx.moveTo(xx,0);else ctx.lineTo(xx,u*jet.length);
+        }ctx.closePath();ctx.fill();
+        if(enhanced){
+          ctx.strokeStyle=axial([125,199,250]);ctx.lineWidth=jet.coreRadius*.23*envelope.width;ctx.globalAlpha=opacity*.13;
           for(let strand=0;strand<(fine?5:2);strand++){
-            ctx.beginPath();for(let n=0;n<=24;n++){const u=n/24,xx=Math.sin(u*23-t*3+strand*2.4)*jet.coreRadius*.65*Math.min(1,u*jet.length/80);
-              if(n===0)ctx.moveTo(xx,0);else ctx.lineTo(xx,u*jet.length);}ctx.stroke();
+            ctx.beginPath();for(let n=0;n<=64;n++){
+              const u=n/64,xx=Math.sin(u*23-t*3+strand*2.4)*jet.coreRadius*.65*Math.min(1,u*extent/80)*envelope.width;
+              if(n===0)ctx.moveTo(xx,0);else ctx.lineTo(xx,u*extent);
+            }ctx.stroke();
           }
-          // Particles use the shared pole and direction, with simulation time only.
-          if(active||warning)for(let n=0;n<(fine?36:12);n++){const p=jetParticle(jet,n,j.flowAge+(warning?t*.25:0)),xx=p.x-x,yy=(p.y-y)*sign;
-            ctx.globalAlpha=opacity*(warning?.22:.6)*Math.max(.25,jetSpatialFade(yy,jet.length));ctx.strokeStyle=HAZARD.jetCore;ctx.lineWidth=1.4/camera.zoom;
-            ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx,Math.min(jet.length,yy+12));ctx.stroke();}
+          // A single simulation clock spans warning/firing/fade. Wrapped
+          // particles are invisible at the far end and ease in at the root.
+          for(let n=0;n<(fine?48:16);n++){
+            const p=jetParticle(jet,n,t,true),xx=(p.x-x)*envelope.width,yy=(p.y-y)*sign;
+            const root=Math.min(1,yy/60),tail=yy>jet.length?.18:1;
+            const birth=Math.max(0,Math.min(1,(envelope.density-(n%12)/16)*4));
+            ctx.globalAlpha=opacity*.6*birth*birth*(3-2*birth)*jetSpatialFade(yy,extent)*root*root*(3-2*root)*tail;
+            ctx.strokeStyle=yy>jet.length?HAZARD.jetPlume:HAZARD.jetCore;ctx.lineWidth=1.2/camera.zoom;
+            ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx,Math.min(extent,yy+12));ctx.stroke();
+          }
         }
         ctx.restore();
       }

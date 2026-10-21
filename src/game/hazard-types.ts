@@ -6,6 +6,8 @@ export interface SolarWaveConfig {
 }
 export interface JetConfig {
   sourceId: string; length: number; coreRadius: number; plumeRadius: number;
+  /** Non-damaging blue/violet tail, snapshotted alongside the collision capsule. */
+  visualTail?:number;
   /** Pulse period and duration come from the source body's nodeInfluence. */
   warning: number; dissipating: number;
   invulnerability: number;

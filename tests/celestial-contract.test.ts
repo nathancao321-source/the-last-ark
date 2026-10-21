@@ -11,6 +11,7 @@ import {createCamera} from '../src/camera/camera';
 import {DEFAULT_WARP} from '../src/render/spacetime/config';
 const calls=vi.hoisted(()=>[] as string[]);
 vi.mock('../src/render/spacetime/renderer',()=>({drawSpaceBackdrop:()=>{},drawCinematicNodes:()=>{}}));
+vi.mock('../src/render/spacetime/abyss-background',()=>({createAbyssBackground:()=>({}),drawAbyssBackground:()=>calls.push('background')}));
 vi.mock('../src/render/stellar-art',()=>({drawStellarArt:()=>calls.push('star')}));
 vi.mock('../src/render/black-hole-art',()=>({drawBlackHoleArt:()=>calls.push('hole')}));
 vi.mock('../src/render/portal-art',async original=>({...await original<typeof import('../src/render/portal-art')>(),drawPortalArt:()=>calls.push('portal')}));

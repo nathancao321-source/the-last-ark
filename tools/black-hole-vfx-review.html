@@ -4,6 +4,6 @@
 <p>仅检查渲染与危险快照，不作为普通操作通关证据。黑洞坐标固定 (1300, 0)。</p>
 <div><label>视野 <select id="view"><option value="near">黑洞近景</option><option value="jet">完整喷流</option><option value="wide">大范围背景</option><option value="left">平移左侧</option><option value="right">平移右侧</option></select></label>
 <label>时刻 <input id="time" type="number" min="0" max="12" step="0.05" value="5.4"></label>
-<button id="play">播放完整周期</button><button id="pause">冻结</button><button id="sequence">喷流连续帧</button><button id="pan">录制相机平移</button><button id="export">导出画面 PNG</button></div>
+<button id="play">播放完整周期</button><button id="pause">冻结</button><button id="sequence">喷流连续帧</button><button id="warning-frames">蓄力四帧</button><button id="pan">录制相机平移</button><button id="export">导出画面 PNG</button></div>
 <div id="layers"></div><canvas id="view-canvas" width="1280" height="720"></canvas><pre id="stats"></pre><div id="downloads"></div><div id="sequence-output"></div>
 <script type="module" src="./black-hole-vfx-review.ts"></script>

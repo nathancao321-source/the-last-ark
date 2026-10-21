@@ -28,7 +28,7 @@ function debris(x:number,y:number,radius:number,index:number) {
 export const blackHoleLevel: Level = {
   id: 'beyond-the-horizon', name: 'Level 2 · BEYOND THE HORIZON / 银河深渊',
   width: 1100, height: 620, seed: 20261016, shipHealth: 100,
-  blackHoleJets:{sourceId:'sagittarius-a',length:2400,coreRadius:24,plumeRadius:65,warning:2,dissipating:.75,invulnerability:1},
+  blackHoleJets:{sourceId:'sagittarius-a',length:2400,visualTail:960,coreRadius:24,plumeRadius:65,warning:2,dissipating:.75,invulnerability:1},
   mapBounds: {minX:-400,maxX:3500,minY:-1100,maxY:1100},
   players: structuredClone(firstLevel.players).map((p,i)=>({...p,position:i?{x:-80,y:150}:{x:130,y:-160}})) as Level['players'],
   bodies: [

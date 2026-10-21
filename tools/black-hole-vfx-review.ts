@@ -1,6 +1,6 @@
 import {createGame} from '../src/game/game';
 import {blackHoleLevel} from '../src/levels/black-hole';
-import {jetClock} from '../src/game/hazards';
+import {jetClock,hazardNotice} from '../src/game/hazards';
 import {jetGeometry} from '../src/game/hazard-geometry';
 import {render} from '../src/render/canvas';
 import {createCamera} from '../src/camera/camera';
@@ -21,6 +21,7 @@ control('Debug Collider / Lens Grid',false,on=>debug=on);
 const quality=document.createElement('select');quality.ariaLabel='Quality';for(const q of ['high','medium','low','off'])quality.add(new Option(q,q));quality.onchange=()=>warp.quality=quality.value as typeof warp.quality;document.querySelector('#layers')!.append(quality);
 function draw(t:number,target=ctx,c=camera){
  game.elapsed=t;const pulse=jetClock(game.level.blackHoleJets!,t,source.nodeInfluence!);Object.assign(game.hazards!.jet!,pulse,{geometry:jetGeometry(source.position,source.radius,game.level.blackHoleJets!,pulse)});
+ game.message=hazardNotice(game)??'喷流冷却 · 轴线无伤害';
  render(target,game,{points:[],seconds:0,outcome:'horizon'},c,{enhanced:true,visuals:state,renderer,warp,art:{...CINEMATIC_ART},layers,debugColliders:debug,debugLens:debug});
 }
 function configure(){camera.position={x:view.value==='left'?700:view.value==='right'?1900:1300,y:0};camera.zoom=view.value==='jet'?.1:view.value==='wide'?.06:.65;}
@@ -32,6 +33,13 @@ document.querySelector<HTMLButtonElement>('#sequence')!.onclick=()=>{
  playing=false;view.value='jet';configure();const times=[3.6,4.3,4.9,5,5.1,5.4,5.79,5.8,5.95,6.2,6.49,6.6],sheet=document.createElement('canvas');sheet.width=1280;sheet.height=4*235;const out=sheet.getContext('2d')!;
  for(const [i,t]of times.entries()){draw(t);out.drawImage(canvas,i%3*426,Math.floor(i/3)*235,426,240);out.fillStyle='#e9f3ff';out.font='16px monospace';out.fillText('t='+t.toFixed(2)+' '+game.hazards!.jet!.phase,i%3*426+12,Math.floor(i/3)*235+25);}
  document.querySelector('#sequence-output')!.replaceChildren(sheet);sheet.toBlob(blob=>{if(blob)download(blob,'jet-continuous-frames.png');});
+};
+document.querySelector<HTMLButtonElement>('#warning-frames')!.onclick=()=>{
+ playing=false;const container=document.querySelector('#sequence-output')!;container.replaceChildren();
+ for(const [index,t]of [3.5,4,4.983333,5.3].entries()){
+  draw(t);const shot=document.createElement('canvas');shot.width=1280;shot.height=720;shot.dataset.time=String(t);shot.dataset.index=String(index);
+  shot.getContext('2d')!.drawImage(canvas,0,0);container.append(shot);
+ }
 };
 document.querySelector<HTMLButtonElement>('#pan')!.onclick=()=>{
  playing=false;clock=3;view.value='near';configure();recordStart=performance.now();const stream=canvas.captureStream(30),chunks:Blob[]=[];
