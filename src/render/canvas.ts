@@ -26,6 +26,9 @@ import {drawEndlessStar,drawEndlessLighting} from './endless-stellar';
 import {drawEndlessPlanet} from './endless-planets';
 import {drawSolarPlanet,solarPlanetExtent} from './solar-planets';
 import {createAbyssBackground,drawAbyssBackground} from './spacetime/abyss-background';
+import type {AbyssLayers} from './spacetime/abyss-background';
+import {drawLensDebug} from './spacetime/lensing';
+import type {LensSource} from './spacetime/lensing';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -53,16 +56,18 @@ function drawPlanet(ctx: CanvasRenderingContext2D,body: GameState['bodies'][numb
 function drawAsteroid(ctx:CanvasRenderingContext2D,body:GameState['bodies'][number]):void {
   const {x,y}=body.position,r=body.radius,seed=hashText(body.id);ctx.save();ctx.translate(x,y);ctx.rotate(seed*Math.PI*2);ctx.beginPath();for(let i=0;i<9;i++){const a=i*Math.PI*2/9,rr=r*(.78+.2*((i*17+Math.floor(seed*100))%7)/6);if(i===0)ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);else ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();const g=ctx.createRadialGradient(-r*.3,-r*.4,0,0,0,r);g.addColorStop(0,CELESTIAL.rockLight);g.addColorStop(.5,CELESTIAL.rockMid);g.addColorStop(1,CELESTIAL.rockDark);ctx.fillStyle=g;ctx.fill();ctx.globalAlpha=.35;ctx.fillStyle='#202630';for(let i=0;i<4;i++){ctx.beginPath();ctx.arc((seed*7+i*3)%r-r/2,(seed*11+i*5)%r-r/2,Math.max(1,r*.08),0,Math.PI*2);ctx.fill();}ctx.restore();
 }
-export interface RenderVisualOptions { visuals?: VisualState; renderer?: DemoRenderer; art?: ArtConfig; warp?: WarpConfig; enhanced?: boolean; debugColliders?:boolean; debugAccretion?:boolean; }
+export interface RenderVisualOptions { visuals?: VisualState; renderer?: DemoRenderer; art?: ArtConfig; warp?: WarpConfig; enhanced?: boolean; debugColliders?:boolean; debugAccretion?:boolean; debugLens?:boolean; layers?:Readonly<AbyssLayers>; }
 export function render(ctx: CanvasRenderingContext2D, game: GameState, trajectory: Trajectory, camera: Camera, options: RenderVisualOptions = {}): void {
   const { width, height } = camera;
   const ship = game.bodies.find(b => b.kind === 'ship')!;
   const target = objectivePosition(game);
   const cinematic=Boolean(options.enhanced&&options.visuals&&options.renderer&&options.art&&options.warp&&options.warp.quality!=='off');
+  const hole=game.level.id==='beyond-the-horizon'?game.bodies.find(b=>b.kind==='black_hole'&&b.layer!=='hidden'):undefined;
+  const lens:LensSource|undefined=hole?{position:hole.position,coreRadius:hole.captureRadius??hole.radius,influenceRadius:(hole.captureRadius??hole.radius)*9,strength:1.6}:undefined;
   if(!cinematic&&options.renderer?.endless)suspendEndlessBackground(options.renderer.endless);
   ctx.clearRect(0, 0, width, height);
   if(cinematic&&game.universe){const r=options.renderer!;drawEndlessBackground(ctx,r.endless??=createEndlessBackground(),game,camera,options.visuals!,options.warp!,options.art!,r.sample);}
-  else if(cinematic&&game.level.id==='beyond-the-horizon')drawAbyssBackground(ctx,options.renderer!.abyss??=createAbyssBackground(),camera,options.visuals!,options.warp!,options.art!);
+  else if(cinematic&&game.level.id==='beyond-the-horizon')drawAbyssBackground(ctx,options.renderer!.abyss??=createAbyssBackground(),camera,options.visuals!,options.warp!,options.art!,lens,options.layers);
   else if(cinematic)drawSpaceBackdrop(ctx,options.renderer!,camera,options.visuals!,options.warp!,options.art!);
   else {ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, width, height);}
   if(cinematic)drawCinematicNodes(ctx,options.renderer!,game.players,camera,options.visuals!,options.warp!,options.art!);
@@ -100,9 +105,9 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
     for(const body of game.bodies)if(body.layer!=='hidden'&&!body.spawnPending&&isVisible(camera,body.position,body.radius*(body.kind==='black_hole'?5:2.2))){
       if(body.kind==='wormhole')drawPortalArt(ctx,body,game.elapsed,options.warp!.quality,Math.max(0,1-Math.hypot(ship.position.x-body.position.x,ship.position.y-body.position.y)/(body.radius*4)));
       if(body.kind==='star'){if(game.universe&&body.stellarState?.status!=='neutron')drawEndlessStar(ctx,body,game.elapsed,camera,options.warp!.quality);else drawStellarArt(ctx,body,game.elapsed,camera,options.warp!.quality);}
-      if(body.kind==='black_hole')drawBlackHoleArt(ctx,body,game.elapsed,options.warp!.quality);
+      if(body.kind==='black_hole'&&options.layers?.accretion!==false)drawBlackHoleArt(ctx,body,game.elapsed,options.warp!.quality);
     }
-    drawHazards(ctx,game,camera,true,options.warp!.quality);
+    if(options.layers?.jets!==false)drawHazards(ctx,game,camera,true,options.warp!.quality);
     // The event horizon remains black even where the beam's round cap overlaps it.
     for(const body of game.bodies)if(body.kind==='black_hole'&&body.layer!=='hidden')circle(ctx,body.position.x,body.position.y,body.captureRadius??body.radius,'#000000');
   }
@@ -167,6 +172,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   if(import.meta.env.DEV&&options.debugColliders)drawHazardColliders(ctx,game,camera);
   if(import.meta.env.DEV&&cinematic&&options.debugAccretion)for(const body of game.bodies)if(body.kind==='black_hole'&&body.layer!=='hidden')drawAccretionDebug(ctx,body,camera);
   ctx.restore();
+  if(import.meta.env.DEV&&cinematic&&options.debugLens&&lens)drawLensDebug(ctx,camera,lens);
   // Navigation and HUD are screen-space, never fed back into simulation.
   drawHazardImpact(ctx,game,camera);
   const marker = (position: {x:number;y:number}, label: string, color: string, margin = 30, labelOffset = 20) => {

@@ -62,7 +62,7 @@ const camera = createCamera({x:0,y:0});
 const visualRenderer: DemoRenderer = createDemoRenderer();
 const visualWarp = parseWarp(location.search);
 const visualArt = { ...CINEMATIC_ART };
-const artPanel=debug?mountArtPanel(visualArt,visualWarp):undefined;
+const artPanel=debug?mountArtPanel(visualArt,visualWarp,camera):undefined;
 let visualState: VisualState | undefined;
 let previousVisualQuality=visualWarp.quality;
 function syncVisualState(): void { visualState = scenes.game && enhancedScene(scenes.scene) ? createVisualState(scenes.game.players, scenes.revision) : undefined;if(visualState&&scenes.game)syncUniverseVisuals(visualState,scenes.game); }
@@ -213,12 +213,12 @@ function frame(now: number): void {
       prediction = predictTrajectory(game); lastPredictionTime = now; predictionKey = nextKey;
     }
     const ship = game.bodies.find(b => b.kind === 'ship')!;
-    followGroup(camera,[ship,...game.players],seconds);
+    if(!artPanel?.cameraLocked())followGroup(camera,[ship,...game.players],seconds);
     // Birth is presentation-aware; once born, normal fixed-step physics is camera-independent.
     // Use the exact final view rendered below, after group fit and landmark focus.
     if(!mapOpen&&game.phase==='running')updateEncounters(game,viewBounds(camera));
     const art=levelArt(visualArt,game.level.id);
-    render(ctx!,game,prediction,camera,{enhanced:enhancedScene(scenes.scene),visuals:visualState,renderer:visualRenderer,warp:visualWarp,art,debugColliders:hazardPanel?.colliders(),debugAccretion:artPanel?.accretionDebug()}); status.textContent = telemetry(game);
+    render(ctx!,game,prediction,camera,{enhanced:enhancedScene(scenes.scene),visuals:visualState,renderer:visualRenderer,warp:visualWarp,art,debugColliders:hazardPanel?.colliders(),debugAccretion:artPanel?.accretionDebug(),debugLens:artPanel?.lensDebug(),layers:artPanel?.layers()}); status.textContent = telemetry(game);
     overlay.draw(ctx!,camera.width,camera.height);
     if(mapOpen)renderStarMap(ctx!,game,camera.width,camera.height);
     if (debugView) debugView.textContent = movementTelemetry(game)+(game.universe?'\n'+explorationText(game):'');

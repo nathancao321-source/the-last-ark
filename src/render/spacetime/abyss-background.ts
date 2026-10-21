@@ -7,6 +7,11 @@ import type {VisualState} from './model';
 import {hash} from './noise';
 import {ABYSS_TILE,ABYSS_RES,ABYSS_GUTTER,ABYSS_CAPACITY} from './abyss-material';
 import type {AbyssTileRequest} from './abyss-material';
+import {lensProject,lensWeight} from './lensing';
+import type {LensSource} from './lensing';
+
+export interface AbyssLayers {nebula:boolean;stars:boolean;lensing:boolean;accretion:boolean;jets:boolean;fieldWarp:boolean}
+export const ABYSS_LAYERS:Readonly<AbyssLayers>={nebula:true,stars:true,lensing:true,accretion:true,jets:true,fieldWarp:true};
 
 interface Tile {canvas:HTMLCanvasElement;used:number}
 export interface AbyssBackground {tiles:Map<string,Tile>;pending:AbyssTileRequest[];worker?:Worker;busy?:string;tick:number;generationMs:number;error?:string}
@@ -30,12 +35,17 @@ export function disposeAbyssBackground(cache:AbyssBackground):void {cache.worker
 
 /** One world image, projected once. Fields displace a complete shared lattice;
  * no opaque local rectangles are painted over an already drawn backdrop. */
-export function drawAbyssBackground(ctx:CanvasRenderingContext2D,cache:AbyssBackground,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig):void {
+export function drawAbyssBackground(ctx:CanvasRenderingContext2D,cache:AbyssBackground,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,source?:LensSource,layers:Readonly<AbyssLayers>=ABYSS_LAYERS):void {
  cache.tick++;ctx.save();ctx.fillStyle='#03050b';ctx.fillRect(0,0,c.width,c.height);
+ const lens=layers.lensing&&warp.quality!=='low'&&warp.quality!=='off'?source:undefined;
+ if(!layers.fieldWarp)warp={...warp,starWarp:false,luminance:false};
  const bounds=viewBounds(c),span=ABYSS_TILE*2**Math.max(0,Math.ceil(Math.log2(.32/c.zoom)));
  const requests:AbyssTileRequest[]=[];
  for(let ty=Math.floor(bounds.minY/span);ty<=Math.floor(bounds.maxY/span);ty++)for(let tx=Math.floor(bounds.minX/span);tx<=Math.floor(bounds.maxX/span);tx++){
-  const key=[tx,ty,span,a.nebula,a.exposure].join(':');requests.push({key,x:tx*span,y:ty*span,span,art:a});
+  const x=tx*span,y=ty*span,pad=span/ABYSS_RES*2;
+  const near=lens&&Math.hypot(Math.max(x-pad-lens.position.x,0,lens.position.x-x-span-pad),Math.max(y-pad-lens.position.y,0,lens.position.y-y-span-pad))<lens.influenceRadius;
+  const localLens=near?lens:undefined;
+  const key=[tx,ty,span,a.nebula,a.exposure,localLens?JSON.stringify(localLens):'flat'].join(':');if(layers.nebula)requests.push({key,x,y,span,art:a,lens:localLens});
  }
  // Only current visible work may be queued; zooming cannot create an unbounded backlog.
  cache.pending=requests.filter(r=>!cache.tiles.has(r.key)&&r.key!==cache.busy).sort((a,b)=>Math.hypot(a.x+span/2-c.position.x,a.y+span/2-c.position.y)-Math.hypot(b.x+span/2-c.position.x,b.y+span/2-c.position.y));
@@ -53,7 +63,7 @@ export function drawAbyssBackground(ctx:CanvasRenderingContext2D,cache:AbyssBack
   };
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){const p=point(x,y),q=point(x+1,y),r=point(x,y+1),s=point(x+1,y+1);drawTriangle(ctx,tile.canvas,p,q,r);drawTriangle(ctx,tile.canvas,q,s,r);}
  }
- drawAbyssStars(ctx,c,state,warp,a);ctx.restore();
+ if(layers.stars)drawAbyssStars(ctx,c,state,warp,a,lens);ctx.restore();
 }
 interface Vertex{x:number;y:number;u:number;v:number}
 function drawTriangle(ctx:CanvasRenderingContext2D,image:HTMLCanvasElement,a:Vertex,b:Vertex,c:Vertex):void {
@@ -63,14 +73,16 @@ function drawTriangle(ctx:CanvasRenderingContext2D,image:HTMLCanvasElement,a:Ver
  for(const [i,p]of [a,b,c].entries()){const dx=p.x-cx,dy=p.y-cy,k=.45/Math.max(1,Math.hypot(dx,dy));if(i===0)ctx.moveTo(p.x+dx*k,p.y+dy*k);else ctx.lineTo(p.x+dx*k,p.y+dy*k);}
  ctx.closePath();ctx.clip();ctx.transform(m0,m1,m2,m3,a.x-m0*a.u-m2*a.v,a.y-m1*a.u-m3*a.v);ctx.drawImage(image,0,0);ctx.restore();
 }
-function drawAbyssStars(ctx:CanvasRenderingContext2D,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig):void {
+function drawAbyssStars(ctx:CanvasRenderingContext2D,c:Camera,state:VisualState,warp:WarpConfig,a:ArtConfig,lens?:LensSource):void {
  const bounds=viewBounds(c),cell=384,stride=2**Math.max(0,Math.ceil(Math.log2(.18/c.zoom))),spacing=cell*stride;
  for(let ty=Math.floor(bounds.minY/spacing)-1;ty<=Math.floor(bounds.maxY/spacing)+1;ty++)for(let tx=Math.floor(bounds.minX/spacing)-1;tx<=Math.floor(bounds.maxX/spacing)+1;tx++)for(let i=0;i<36;i++){
   if(hash(tx*stride,ty*stride,i+99)>a.stars)continue;
   const world={x:(tx*stride+hash(tx*stride,ty*stride,i*3+500))*cell,y:(ty*stride+hash(tx*stride,ty*stride,i*3+501))*cell};
-  const p=worldToScreen(c,world),light=hash(tx*stride,ty*stride,i*3+502);
-  if(warp.quality!=='low'&&warp.starWarp){const s=sampleDisturbance({dx:0,dy:0,luminance:0},world.x,world.y,state,warp,c.zoom,224);p.x+=s.dx;p.y+=s.dy;}
+  const projected=lens?lensProject(world,lens):world,p=worldToScreen(c,projected),light=hash(tx*stride,ty*stride,i*3+502);
+  if(warp.quality!=='low'&&warp.starWarp){const s=sampleDisturbance({dx:0,dy:0,luminance:0},projected.x,projected.y,state,warp,c.zoom,224);p.x+=s.dx;p.y+=s.dy;}
   const r=Math.max(.35,(light>.98?1.65:.45+light*.65)*c.zoom);ctx.globalAlpha=(.22+light*.65)*Math.min(1,a.exposure);ctx.fillStyle=light>.94?'#e7e3d9':'#b9bbcf';ctx.fillRect(p.x-r/2,p.y-r/2,r,r);
+  if(lens&&light>.94){const weight=lensWeight(world,lens),distance=Math.hypot(projected.x-lens.position.x,projected.y-lens.position.y),angle=Math.atan2(projected.y-lens.position.y,projected.x-lens.position.x),center=worldToScreen(c,lens.position);
+   const stretch=Math.min(.075,weight*9/Math.max(1,distance));if(weight>.02&&distance>lens.coreRadius){ctx.globalAlpha*=.55*weight;ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=Math.max(.55,r*.6);ctx.beginPath();ctx.arc(center.x,center.y,distance*c.zoom,angle-stretch,angle+stretch);ctx.stroke();}}
  }
  ctx.globalAlpha=1;
 }
