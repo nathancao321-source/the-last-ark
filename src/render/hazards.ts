@@ -2,7 +2,7 @@ import type { GameState } from '../game/types';
 import type { Camera } from '../camera/camera';
 import { viewBounds } from '../camera/camera';
 import { HAZARD } from './palette';
-import {jetParticle,waveGeometry} from '../game/hazard-geometry';
+import {jetParticle,jetSpatialFade,jetVisualIntensity,waveGeometry} from '../game/hazard-geometry';
 
 /** Read-only world-space rendering. Fixed budgets, no persistent particles or
  * camera-relative noise. Enhanced=false preserves mandatory hazard silhouettes. */
@@ -14,7 +14,7 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
     const legacyGuide=!enhanced&&(j.phase==='idle'||j.phase==='cooldown');
     if(j.intensity>0||legacyGuide){
       const active=j.damaging,warning=j.phase==='warning';
-      const opacity=legacyGuide?.025:j.intensity;
+      const opacity=legacyGuide?.025:jetVisualIntensity(j);
       for(const jet of j.beams){
         const sign=jet.direction,x=jet.start.x,y=jet.start.y,end=jet.end.y;
         if(x+jet.plumeRadius<view.minX||x-jet.plumeRadius>view.maxX||Math.max(y,end)+jet.plumeRadius<view.minY||Math.min(y,end)-jet.plumeRadius>view.maxY)continue;
@@ -28,7 +28,7 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
         ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,jet.length);ctx.stroke();
         ctx.setLineDash([]);
         if(enhanced){
-          const gradient=ctx.createLinearGradient(0,0,0,jet.length);gradient.addColorStop(0,HAZARD.jetLight);gradient.addColorStop(.6,HAZARD.jetPlume);gradient.addColorStop(1,'#5046aa00');
+          const gradient=ctx.createLinearGradient(0,0,0,jet.length);gradient.addColorStop(0,HAZARD.jetLight);gradient.addColorStop(.58,HAZARD.jetPlume);gradient.addColorStop(.78,'#5046aa99');gradient.addColorStop(1,'#5046aa00');
           ctx.fillStyle=gradient;
           for(let layer=3;layer>=1;layer--){
             ctx.globalAlpha=opacity*.12;ctx.beginPath();
@@ -39,7 +39,7 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
               const xx=side*width,yy=u*jet.length;
               if(side<0&&n===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
             }
-            ctx.closePath();ctx.fill();
+            ctx.closePath();ctx.globalAlpha=opacity*.12;ctx.fill();
           }
           ctx.globalAlpha=opacity*.18;ctx.strokeStyle=HAZARD.jetLight;ctx.lineWidth=jet.coreRadius*.3;
           for(let strand=0;strand<(fine?5:2);strand++){
@@ -47,9 +47,9 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
               if(n===0)ctx.moveTo(xx,0);else ctx.lineTo(xx,u*jet.length);}ctx.stroke();
           }
           // Particles use the shared pole and direction, with simulation time only.
-          ctx.globalAlpha=opacity*.6;ctx.strokeStyle=HAZARD.jetCore;ctx.lineWidth=1.4/camera.zoom;ctx.beginPath();
-          if(active)for(let n=0;n<(fine?36:12);n++){const p=jetParticle(jet,n,j.flowAge),xx=p.x-x,yy=(p.y-y)*sign;
-            ctx.moveTo(xx,yy);ctx.lineTo(xx,Math.min(jet.length,yy+12));}ctx.stroke();
+          if(active||warning)for(let n=0;n<(fine?36:12);n++){const p=jetParticle(jet,n,j.flowAge+(warning?t*.25:0)),xx=p.x-x,yy=(p.y-y)*sign;
+            ctx.globalAlpha=opacity*(warning?.22:.6)*Math.max(.25,jetSpatialFade(yy,jet.length));ctx.strokeStyle=HAZARD.jetCore;ctx.lineWidth=1.4/camera.zoom;
+            ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx,Math.min(jet.length,yy+12));ctx.stroke();}
         }
         ctx.restore();
       }

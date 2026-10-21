@@ -26,7 +26,7 @@ describe('authoritative hazard rendering contract',()=>{
   // Editing level config after a simulation snapshot cannot change the rendered geometry.
   config.length=17;config.coreRadius=1;const camera=createCamera({x:1300,y:0},1600,1600);camera.zoom=.5;
   drawHazards(ctx,g,camera,quality!=='off',quality);
-  const cores=strokes.filter(s=>s.width===48);expect(cores).toHaveLength(2);for(const core of cores){expect(core.cap).toBe('round');expect(core.points).toEqual([[0,0],[0,1100]]);}
+  const cores=strokes.filter(s=>s.width===48);expect(cores).toHaveLength(2);for(const core of cores){expect(core.cap).toBe('round');expect(core.points).toEqual([[0,0],[0,geometry.beams[0].length]]);}
  });
  it('anchors both particle roots and axis to the physical poles',()=>{
   const geometry=jetGeometry({x:501,y:-91},100,blackHoleLevel.blackHoleJets!,{phase:'firing',cycle:7,progress:0});
