@@ -133,7 +133,7 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
   it('contains every named planet and keeps background rubble outside physical lists',()=>{
     const game=createGame(solarSystem),names=starMapPoints(game).map(b=>b.appearance?.name);
     for(const name of ['太阳','水星','金星','地球','火星','木星','土星','天王星','海王星','冥王星'])expect(names).toContain(name);
-    expect(game.level.decorations).toHaveLength(100);expect(game.bodies.length).toBeLessThan(20);
+    expect(game.level.decorations).toHaveLength(140);expect(game.bodies.filter(b=>b.kind==='asteroid')).toHaveLength(14);
     expect(game.level.missionBounds).toBeUndefined();
   });
   it('lets environmental gravity bend planets and retains player-only damping',()=>{
@@ -193,9 +193,9 @@ describe('solar bodies, hazards and deterministic checkpoints',()=>{
   it('enables gravity on physical solar asteroids while keeping decorative debris outside the solver',()=>{
     const game=createGame(solarSystem);game.bodies[0].position={x:2200,y:0};togglePause(game);
     updateEncounters(game,{minX:1600,maxX:2800,minY:-400,maxY:400});
-    const rocks=game.bodies.filter(b=>b.kind==='asteroid');expect(rocks).toHaveLength(5);
+    const rocks=game.bodies.filter(b=>b.kind==='asteroid');expect(rocks).toHaveLength(18);
     for(const rock of rocks){expect(rock.emitsGravity).not.toBe(false);expect(bodyGravity(rock).strength).toBeGreaterThan(0);expect(bodyGravity(rock).radius).toBeGreaterThan(0);}
-    expect(game.level.decorations).toHaveLength(100);
+    expect(game.level.decorations).toHaveLength(140);
   });
   it('cancels simultaneous projections and resets interrupted dwell; neutron stars lose heat but retain stronger gravity',()=>{
     const game=createGame(solarSystem),sun=game.bodies.find(b=>b.id==='sun')!,original=bodyGravity(sun).strength;

@@ -35,8 +35,26 @@ const planets=[
   planet('neptune','海王星',3950,240,50,'#597ddc'),
   planet('pluto','冥王星',4350,-120,23,'#ad9d90'),
 ];
-const random=seededRandom(76127);
-const decorations=Array.from({length:100},()=>({position:{x:2280+random()*260,y:(random()-0.5)*1250},radius:1+random()*3,color:'#707988'}));
+const decorationRandom=seededRandom(76127);
+const decorations=Array.from({length:140},()=>({position:{x:2200+decorationRandom()*520,y:(decorationRandom()-0.5)*1500},radius:1+decorationRandom()*3,color:'#707988'}));
+
+/** Deterministic physical belt layout. The rejection pass keeps the clusters
+ * readable while leaving upper/lower approach lanes outside the band. */
+function physicalBeltAsteroids() {
+  const random=seededRandom(44129), rocks:{x:number;y:number;radius:number}[]=[];
+  for(let attempt=0;rocks.length<14&&attempt<500;attempt++){
+    const cluster=rocks.length%5===0;
+    const x=cluster?2290+random()*110:2230+random()*470;
+    const y=(random()*2-1)*(cluster?360:520);
+    const radius=13+random()*16;
+    if(rocks.some(r=>Math.hypot(r.x-x,r.y-y)<r.radius+radius+22))continue;
+    rocks.push({x,y,radius});
+  }
+  return rocks.map((rock,index)=>createBody({id:`belt-rock-${index}`,kind:'asteroid',radius:rock.radius,
+    position:{x:2400+rock.x-2400,y:rock.y},
+    velocity:{x:-5-(index%4)*2,y:(index%2?-1:1)*(2+index%3)},gravityResponse:1,gravityRadius:100,
+    stabilization:{halfLife:1.1},appearance:{name:'小行星',color:'#929ba6'}}));
+}
 const pass=(id:string,label:string,x:number,requires?:string[])=>({id,label,requires,target:{position:{x,y:0}},
   condition:{type:'inside_region' as const,entityId:'ark',region:{shape:'rect' as const,bounds:{minX:x,maxX:1e9,minY:-1e9,maxY:1e9}}}});
 /** Compressed, initially aligned solar system. All physical bodies exchange locally indexed gravity; initial circular speeds are seeded.
@@ -49,11 +67,10 @@ export const solarSystem:Level={
   bodies:[createBody({id:'ark',kind:'ship',radius:8,position:{x:-180,y:0},velocity:{x:110,y:0}}),
     sun,
     ...planets,
-    ...[[-140,90],[100,-190],[40,250]].map(([x,y],i)=>createBody({id:`belt-rock-${i}`,kind:'asteroid',radius:17+i*3,
-      position:{x:2400+x,y},velocity:{x:-8-i*2,y:i%2?4:-4},gravityResponse:1,stabilization:{halfLife:1.1},appearance:{name:'小行星',color:'#929ba6'}})),
+    ...physicalBeltAsteroids(),
     createBody({id:'interstellar',kind:'wormhole',radius:110,position:{x:5480,y:0},appearance:{name:'星际转移区',color:'#94e9dc'}}),
   ],
-  waves:[{id:'belt-approach',bounds:{minX:2160,maxX:2560,minY:-650,maxY:650},seed:441,count:2}],
+  waves:[{id:'belt-approach',bounds:{minX:2160,maxX:2700,minY:-650,maxY:650},seed:441,count:4}],
   mission:{objectives:[
     pass('earth-depart','地球起航 · 向右出发，双场引导航线',160),
     pass('sun-pass','太阳绕行 · 建议从热区上方通过；实体接触致命',1340,['earth-depart']),
@@ -66,4 +83,4 @@ export const solarSystem:Level={
 };
 
 export const solarSections={earth:{position:{x:-180,y:0},completed:[]},sun:{position:{x:600,y:-410},completed:['earth-depart']},
-  belt:{position:{x:2110,y:-340},completed:['earth-depart','sun-pass']},pluto:{position:{x:4140,y:0},completed:['earth-depart','sun-pass','inner-pass','belt-pass']}};
+  belt:{position:{x:2110,y:-620},completed:['earth-depart','sun-pass']},pluto:{position:{x:4140,y:0},completed:['earth-depart','sun-pass','inner-pass','belt-pass']}};
