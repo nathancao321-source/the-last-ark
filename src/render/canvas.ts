@@ -25,6 +25,7 @@ import {createEndlessBackground,drawEndlessBackground,suspendEndlessBackground} 
 import {drawEndlessStar,drawEndlessLighting} from './endless-stellar';
 import {drawEndlessPlanet} from './endless-planets';
 import {drawSolarPlanet,solarPlanetExtent} from './solar-planets';
+import {createAbyssBackground,drawAbyssBackground} from './spacetime/abyss-background';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -61,6 +62,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   if(!cinematic&&options.renderer?.endless)suspendEndlessBackground(options.renderer.endless);
   ctx.clearRect(0, 0, width, height);
   if(cinematic&&game.universe){const r=options.renderer!;drawEndlessBackground(ctx,r.endless??=createEndlessBackground(),game,camera,options.visuals!,options.warp!,options.art!,r.sample);}
+  else if(cinematic&&game.level.id==='beyond-the-horizon')drawAbyssBackground(ctx,options.renderer!.abyss??=createAbyssBackground(),camera,options.visuals!,options.warp!,options.art!);
   else if(cinematic)drawSpaceBackdrop(ctx,options.renderer!,camera,options.visuals!,options.warp!,options.art!);
   else {ctx.fillStyle = '#0c1220'; ctx.fillRect(0, 0, width, height);}
   if(cinematic)drawCinematicNodes(ctx,options.renderer!,game.players,camera,options.visuals!,options.warp!,options.art!);
