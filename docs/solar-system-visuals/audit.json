@@ -1,0 +1,267 @@
+{
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
+    "cores": 20,
+    "dpr": 1
+  },
+  "coldPreviewMs": [
+    3.5,
+    1.0999999642372131,
+    3.5,
+    1.199999988079071,
+    1.7000000476837158,
+    1.199999988079071,
+    0.8999999761581421,
+    1.100000023841858,
+    1
+  ],
+  "warm": {
+    "entries": 27,
+    "capacity": 27,
+    "pending": 0,
+    "builds": 27,
+    "workerMs": 254,
+    "bytes": 4379648
+  },
+  "afterStress": {
+    "entries": 27,
+    "capacity": 27,
+    "pending": 0,
+    "builds": 27,
+    "workerMs": 254,
+    "bytes": 4379648
+  },
+  "checks": [
+    {
+      "id": "mercury",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "venus",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 25235,
+        "max": 3,
+        "mean": 0.06343017578125
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "earth",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 47411,
+        "max": 61,
+        "mean": 0.57992431640625
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "mars",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "jupiter",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 30199,
+        "max": 3,
+        "mean": 0.07612060546875
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "saturn",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "uranus",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "neptune",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 1415,
+        "max": 7,
+        "mean": 0.00599609375
+      },
+      "outside": 0,
+      "readOnly": true
+    },
+    {
+      "id": "pluto",
+      "frozen": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "translated": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "adjacent": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "motion": {
+        "channels": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "outside": 0,
+      "readOnly": true
+    }
+  ],
+  "ringVisible": true,
+  "renderNine": {
+    "p50": 0,
+    "p95": 0.10000002384185791
+  },
+  "errors": []
+}

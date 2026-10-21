@@ -1,0 +1,147 @@
+{
+  "entries": [
+    {
+      "id": "mercury",
+      "radius": 24,
+      "zoom": 0.28
+    },
+    {
+      "id": "venus",
+      "radius": 37,
+      "zoom": 0.28
+    },
+    {
+      "id": "earth",
+      "radius": 40,
+      "zoom": 0.28
+    },
+    {
+      "id": "mars",
+      "radius": 31,
+      "zoom": 0.28
+    },
+    {
+      "id": "jupiter",
+      "radius": 82,
+      "zoom": 0.28
+    },
+    {
+      "id": "saturn",
+      "radius": 68,
+      "zoom": 0.28
+    },
+    {
+      "id": "uranus",
+      "radius": 52,
+      "zoom": 0.28
+    },
+    {
+      "id": "neptune",
+      "radius": 50,
+      "zoom": 0.28
+    },
+    {
+      "id": "pluto",
+      "radius": 23,
+      "zoom": 0.28
+    },
+    {
+      "id": "mercury",
+      "radius": 24,
+      "zoom": 0.8
+    },
+    {
+      "id": "venus",
+      "radius": 37,
+      "zoom": 0.8
+    },
+    {
+      "id": "earth",
+      "radius": 40,
+      "zoom": 0.8
+    },
+    {
+      "id": "mars",
+      "radius": 31,
+      "zoom": 0.8
+    },
+    {
+      "id": "jupiter",
+      "radius": 82,
+      "zoom": 0.8
+    },
+    {
+      "id": "saturn",
+      "radius": 68,
+      "zoom": 0.8
+    },
+    {
+      "id": "uranus",
+      "radius": 52,
+      "zoom": 0.8
+    },
+    {
+      "id": "neptune",
+      "radius": 50,
+      "zoom": 0.8
+    },
+    {
+      "id": "pluto",
+      "radius": 23,
+      "zoom": 0.8
+    },
+    {
+      "id": "mercury",
+      "radius": 24,
+      "zoom": 1.8
+    },
+    {
+      "id": "venus",
+      "radius": 37,
+      "zoom": 1.8
+    },
+    {
+      "id": "earth",
+      "radius": 40,
+      "zoom": 1.8
+    },
+    {
+      "id": "mars",
+      "radius": 31,
+      "zoom": 1.8
+    },
+    {
+      "id": "jupiter",
+      "radius": 82,
+      "zoom": 1.8
+    },
+    {
+      "id": "saturn",
+      "radius": 68,
+      "zoom": 1.8
+    },
+    {
+      "id": "uranus",
+      "radius": 52,
+      "zoom": 1.8
+    },
+    {
+      "id": "neptune",
+      "radius": 50,
+      "zoom": 1.8
+    },
+    {
+      "id": "pluto",
+      "radius": 23,
+      "zoom": 1.8
+    }
+  ],
+  "render": {
+    "p50": 1.7,
+    "p95": 2
+  },
+  "readOnly": true,
+  "offHash": "a46b989e20c8cac651916a2f35e6ede36a012ddb31e747769842f26ceaedaa44",
+  "errors": [],
+  "baselineOffHash": "a46b989e20c8cac651916a2f35e6ede36a012ddb31e747769842f26ceaedaa44"
+}

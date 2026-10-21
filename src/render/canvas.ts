@@ -24,6 +24,7 @@ import { drawHazards, drawHazardImpact, drawHazardColliders } from './hazards';
 import {createEndlessBackground,drawEndlessBackground,suspendEndlessBackground} from './endless-background';
 import {drawEndlessStar,drawEndlessLighting} from './endless-stellar';
 import {drawEndlessPlanet} from './endless-planets';
+import {drawSolarPlanet,solarPlanetExtent} from './solar-planets';
 const STATUS = { ready: '待发射', running: '护航中', paused: '已暂停', completed: '安全抵达', failed: '任务失败' };
 export function telemetry(game: GameState): string {
   const ship = game.bodies.find(body => body.kind === 'ship')!;
@@ -114,7 +115,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
   }
   if(!cinematic)drawHazards(ctx,game,camera,false,options.warp?.quality);
   for(const body of game.bodies)if(body.nodeInfluence&&body.id!==game.level.blackHoleJets?.sourceId&&isVisible(camera,body.position,body.nodeInfluence.ejectionDistance))drawGammaJet(ctx,body,game.elapsed,camera.zoom);
-  for (const body of (cinematic?game.bodies.filter(b=>b.layer!=='hidden'&&isVisible(camera,b.position,b.radius*(b.kind==='black_hole'?5:b.kind==='star'?2.2:b.kind==='wormhole'?1.5:b.kind==='planet'&&game.universe?2.2:1))):visibleEntities(camera,game.bodies))) {
+  for (const body of (cinematic?game.bodies.filter(b=>b.layer!=='hidden'&&isVisible(camera,b.position,b.kind==='planet'&&!game.universe?solarPlanetExtent(b):b.radius*(b.kind==='black_hole'?5:b.kind==='star'?2.2:b.kind==='wormhole'?1.5:b.kind==='planet'&&game.universe?2.2:1))):visibleEntities(camera,game.bodies))) {
     if (body.kind === 'ship') {
       ctx.save(); ctx.translate(body.position.x, body.position.y); ctx.rotate(Math.atan2(body.velocity.y, body.velocity.x));
       const iconScale=Math.max(1,0.8/camera.zoom);ctx.scale(iconScale,iconScale);
@@ -126,7 +127,10 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, trajector
       ctx.fillText(body.appearance?.name??'虫洞', body.position.x, body.position.y + body.radius + 26);
     } else {
       if(cinematic&&(body.kind==='star'||body.kind==='black_hole')&&!body.spawnPending){/* Material was drawn below hazards/navigation. */}
-      else if(cinematic&&body.kind==='planet'&&!body.spawnPending){if(game.universe)drawEndlessPlanet(ctx,body,game.elapsed,camera,options.warp!.quality);else drawPlanet(ctx,body,game.elapsed);}
+      else if(cinematic&&body.kind==='planet'&&!body.spawnPending){
+        if(game.universe)drawEndlessPlanet(ctx,body,game.elapsed,camera,options.warp!.quality);
+        else if(!drawSolarPlanet(ctx,body,game.elapsed,camera,options.warp!.quality))drawPlanet(ctx,body,game.elapsed);
+      }
       else if(cinematic&&body.kind==='asteroid'&&!body.spawnPending)drawAsteroid(ctx,body);
       else circle(ctx, body.position.x, body.position.y, body.radius, body.appearance?.color??(body.kind === 'asteroid' ? '#8993a3' : '#8f69b9'),!body.spawnPending);
       if(body.appearance?.ring&&!cinematic){ctx.strokeStyle=body.appearance.color;ctx.beginPath();ctx.ellipse(body.position.x,body.position.y,body.radius*1.65,body.radius*0.5,-0.3,0,Math.PI*2);ctx.stroke();}

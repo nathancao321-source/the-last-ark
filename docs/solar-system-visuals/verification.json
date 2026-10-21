@@ -1,0 +1,11 @@
+{
+  "offDifferentPixels": 0,
+  "offSize": [
+    1200,
+    720
+  ],
+  "localTests": 562,
+  "localTestFiles": 40,
+  "build": "passed",
+  "gamePhysicsWorldLevelFilesChanged": false
+}

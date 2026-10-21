@@ -1,0 +1,10 @@
+{
+  "scene": "solar_system",
+  "phase": "running",
+  "debug": false,
+  "music": false,
+  "workers": [
+    "http://127.0.0.1:5179/assets/solar-planet-worker-vAu5Mep4.js"
+  ],
+  "errors": []
+}
