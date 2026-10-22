@@ -8,11 +8,12 @@ import type {ArtConfig} from './spacetime/art';
 import {drawBackground,type BackgroundCache} from './spacetime/background';
 import {generateEndlessStars} from './endless-field';
 import {SECTOR_SIZE} from '../world/sectors';
+import type {GeneratorVersion} from '../world/generator';
 export const ENDLESS_TILE_LIMIT=32;
 interface Tile {key:string;tx:number;ty:number;span:number;res:number;texture?:HTMLCanvasElement;activity?:HTMLCanvasElement;activity2?:HTMLCanvasElement;stars:ReturnType<typeof generateEndlessStars>;used:number;readyAt?:number}
-export interface EndlessBackground {tiles:Map<string,Tile>;worker?:Worker;pending:string[];busy?:string;seed:number;clock:number;sheet?:BackgroundCache;lastSpan?:number;lastTiles?:Tile[];starTransition?:{tiles:Tile[];started:number};stats:{generated:number;generationMs:number;drawn:number;stars:number;bytes:number;pending:number;entries:number}}
+export interface EndlessBackground {tiles:Map<string,Tile>;worker?:Worker;pending:string[];busy?:string;seed:number;generatorVersion?:GeneratorVersion;clock:number;sheet?:BackgroundCache;lastSpan?:number;lastTiles?:Tile[];starTransition?:{tiles:Tile[];started:number};stats:{generated:number;generationMs:number;drawn:number;stars:number;bytes:number;pending:number;entries:number}}
 export function createEndlessBackground():EndlessBackground{return {tiles:new Map(),pending:[],seed:0,clock:0,stats:{generated:0,generationMs:0,drawn:0,stars:0,bytes:0,pending:0,entries:0}};}
-export function resetEndlessBackground(cache:EndlessBackground):void{cache.worker?.terminate();delete cache.worker;delete cache.busy;delete cache.sheet;delete cache.lastSpan;delete cache.lastTiles;delete cache.starTransition;Object.assign(cache,createEndlessBackground());}
+export function resetEndlessBackground(cache:EndlessBackground):void{cache.worker?.terminate();delete cache.worker;delete cache.busy;delete cache.sheet;delete cache.lastSpan;delete cache.lastTiles;delete cache.starTransition;delete cache.generatorVersion;Object.assign(cache,createEndlessBackground());}
 /** OFF cancels unfinished work; warm textures remain reusable without allocation. */
 export function suspendEndlessBackground(cache:EndlessBackground):void{if(!cache.busy&&!cache.pending.length)return;cache.worker?.terminate();delete cache.worker;delete cache.busy;cache.pending=[];cache.stats.pending=0;}
 const surface=(w:number,h=w)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
@@ -20,16 +21,17 @@ const COLORS=['#78849dff','#9cadc9ff','#c6d9edff','#f1dfc5ff'];
 function pump(cache:EndlessBackground):void{
  if(cache.busy)return;
  const key=cache.pending.shift();if(!key)return;const tile=cache.tiles.get(key);if(!tile){pump(cache);return;}
- if(!cache.worker){cache.worker=new Worker(new URL('./endless-background-worker.ts',import.meta.url),{type:'module'});
+ if(!cache.worker){const worker=new Worker(new URL('./endless-background-worker.ts',import.meta.url),{type:'module'});cache.worker=worker;
   cache.worker.onmessage=(e:MessageEvent<{key:string;pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray;ms:number}>)=>{
+   if(cache.worker!==worker)return;
    const t=cache.tiles.get(e.data.key);if(t){const size=t.res+2;
     const make=(pixels:Uint8ClampedArray)=>{const c=surface(size),ctx=c.getContext('2d')!,image=ctx.createImageData(size,size);image.data.set(pixels);ctx.putImageData(image,0,0);return c;};
     t.texture=make(e.data.pixels);t.activity=make(e.data.activity);if(e.data.activity2)t.activity2=make(e.data.activity2);t.readyAt=performance.now();cache.stats.generated++;cache.stats.generationMs+=e.data.ms;
    }cache.busy=undefined;pump(cache);
   };
-  cache.worker.onerror=()=>{cache.worker?.terminate();cache.worker=undefined;cache.busy=undefined;cache.pending=[];};
+  cache.worker.onerror=()=>{if(cache.worker!==worker)return;cache.worker.terminate();cache.worker=undefined;cache.busy=undefined;cache.pending=[];};
  }
- cache.busy=key;cache.worker.postMessage({seed:cache.seed,key,tx:tile.tx,ty:tile.ty,span:tile.span,res:tile.res});
+ cache.busy=key;cache.worker.postMessage({seed:cache.seed,generatorVersion:cache.generatorVersion,key,tx:tile.tx,ty:tile.ty,span:tile.span,res:tile.res});
 }
 /** Fixed absolute lattice. Projection subtracts the universe origin once. */
 export function endlessTilePlan(camera:Camera,origin:{x:number;y:number}){
@@ -40,20 +42,20 @@ export function endlessTilePlan(camera:Camera,origin:{x:number;y:number}){
 }
 export function drawEndlessBackground(ctx:CanvasRenderingContext2D,cache:EndlessBackground,game:GameState,camera:Camera,state:VisualState,warp:WarpConfig,art:ArtConfig,sample:Sample):void{
  if(warp.quality==='off'){suspendEndlessBackground(cache);return;}if(!game.universe)return;
- const seed=game.universe.seed;if(cache.seed!==seed){resetEndlessBackground(cache);cache.seed=seed;}
+ const seed=game.universe.seed,version=game.universe.generatorVersion??1;if(cache.seed!==seed||cache.generatorVersion!==version){resetEndlessBackground(cache);cache.seed=seed;cache.generatorVersion=version;}
  const origin={x:game.universe.origin.x*SECTOR_SIZE,y:game.universe.origin.y*SECTOR_SIZE};
  const plan=endlessTilePlan(camera,origin),res=warp.quality==='high'?192:warp.quality==='medium'?128:80;
  cache.clock++;const active:Tile[]=[],needed=new Set<string>(),visible=new Set(plan.map(p=>p.tx+','+p.ty));
  const now=performance.now(),ahead=new Map(plan.map(p=>[p.tx+','+p.ty,p]));
  const bounds=viewBounds(camera),overlap=(t:Tile)=>!!t.texture&&t.tx*t.span-origin.x<bounds.maxX&&(t.tx+1)*t.span-origin.x>bounds.minX&&t.ty*t.span-origin.y<bounds.maxY&&(t.ty+1)*t.span-origin.y>bounds.minY;
- const replacing=[...cache.tiles.values()].some(t=>overlap(t)&&(t.span!==plan[0].span||t.res!==res))&&plan.some(p=>{const t=cache.tiles.get([seed,p.span,p.tx,p.ty,res].join(':'));return !t?.texture||now-(t.readyAt??0)<350;});
+ const replacing=[...cache.tiles.values()].some(t=>overlap(t)&&(t.span!==plan[0].span||t.res!==res))&&plan.some(p=>{const t=cache.tiles.get([seed,p.span,p.tx,p.ty,res,version].join(':'));return !t?.texture||now-(t.readyAt??0)<350;});
  // While replacing LOD, reserve capacity for every old visible tile. Prefetch
  // resumes only when the new visible coverage has finished fading in.
  if(!replacing)for(const p of plan)for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++){const q={tx:p.tx+x,ty:p.ty+y,span:p.span};ahead.set(q.tx+','+q.ty,q);}
  // Visible tiles first, then a bounded ring prepared before normal-speed travel.
  const requests=[...ahead.values()].sort((a,b)=>Number(visible.has(b.tx+','+b.ty))-Number(visible.has(a.tx+','+a.ty))).slice(0,28);
- for(const p of requests){const key=[seed,p.span,p.tx,p.ty,res].join(':');needed.add(key);let t=cache.tiles.get(key);
-  if(!t){t={...p,res,key,stars:generateEndlessStars(seed,p.tx,p.ty,p.span),used:cache.clock};cache.tiles.set(key,t);}t.used=cache.clock;
+ for(const p of requests){const key=[seed,p.span,p.tx,p.ty,res,version].join(':');needed.add(key);let t=cache.tiles.get(key);
+  if(!t){t={...p,res,key,stars:generateEndlessStars(seed,p.tx,p.ty,p.span,version),used:cache.clock};cache.tiles.set(key,t);}t.used=cache.clock;
   if(visible.has(p.tx+','+p.ty))active.push(t);
  }
  cache.pending=[...needed].filter(k=>!cache.tiles.get(k)?.texture&&k!==cache.busy);

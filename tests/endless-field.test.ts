@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {ENDLESS_STAR_TILE_LIMIT,generateEndlessStars,generateEndlessTile,sampleEndlessField} from '../src/render/endless-field';
-import {landmarks} from '../src/world/generator';
+import {landmarks,landmarkPosition} from '../src/world/generator';
 
 const seed=20261017;
 describe('continuous deterministic endless background field',()=>{
@@ -38,7 +38,7 @@ describe('continuous deterministic endless background field',()=>{
   expect(generateEndlessStars(seed,2**35,-(2**35))).not.toEqual(generateEndlessStars(seed,0,0));
  });
  it('concentrates cosmic web at the seeded landmark and leaves most distant space sparse',()=>{
-  const feature=landmarks(seed).nebula,x=feature.x*2048+1024,y=feature.y*2048+1024;
+  const feature=landmarks(seed).nebula,{x,y}=landmarkPosition(seed,'nebula');
   expect(sampleEndlessField(seed,x,y).density).toBeGreaterThan(.85);
   const densities=Array.from({length:100},(_,n)=>sampleEndlessField(seed,-80000+n*7919,50000+n*2511).density);
   expect(densities.filter(n=>n<.22).length).toBeGreaterThan(65);
@@ -63,13 +63,13 @@ describe('continuous deterministic endless background field',()=>{
   expect(generateEndlessStars(seed,0,0,Infinity)).toEqual([]);expect(generateEndlessStars(seed,0,0,0)).toEqual([]);
  });
  it('keeps opacity, activity and fixed star metadata bounded',()=>{
-  const tile=generateEndlessTile(seed,13,-3,2048,32);expect(tile.pixels).toHaveLength(34*34*4);expect(tile.activity).toHaveLength(tile.pixels.length);expect(tile.activity2).toHaveLength(tile.pixels.length);
+  const feature=landmarks(seed).nebula,tile=generateEndlessTile(seed,feature.x,feature.y,2048,32);expect(tile.pixels).toHaveLength(34*34*4);expect(tile.activity).toHaveLength(tile.pixels.length);expect(tile.activity2).toHaveLength(tile.pixels.length);
   for(let i=3;i<tile.pixels.length;i+=4)expect(tile.pixels[i]).toBe(255);
   expect(tile.activity.some((v,i)=>i%4===3&&v>0)).toBe(true);
   expect(tile.activity2.some((v,i)=>i%4===3&&v>0)).toBe(true);
   const emission=tile.activity.filter((_v,i)=>i%4===3),dust=tile.activity2.filter((_v,i)=>i%4===3);
   expect(dust).not.toEqual(emission);expect(new Set(dust).size).toBeGreaterThan(12);
-  expect(generateEndlessTile(seed+1,13,-3,2048,32).activity2).not.toEqual(tile.activity2);
+  expect(generateEndlessTile(seed+1,feature.x,feature.y,2048,32).activity2).not.toEqual(tile.activity2);
   for(let i=0;i<tile.activity2.length;i+=4)expect(Array.from(tile.activity2.slice(i,i+3))).toEqual([1,3,8]);
   const stars=generateEndlessStars(seed,-2,3);
   for(const star of stars){expect(star.x).toBeGreaterThanOrEqual(-4096);expect(star.x).toBeLessThan(-2048);expect(star.y).toBeGreaterThanOrEqual(6144);expect(star.y).toBeLessThan(8192);expect(star.brightness).toBeLessThanOrEqual(1);expect(star.size).toBeGreaterThan(0);}

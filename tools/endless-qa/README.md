@@ -1,5 +1,7 @@
 # Endless Mode 浏览器验收脚本
 
+2026-10-23：彩蛋地址与天体ID前缀从版本化生成器读取，不再固定为 `(3,0)` / `(13,-3)`。本轮多Seed布局及40秒连续飞行入口为 `tools/endless-layout-qa.mjs`，证据与兼容策略见 `docs/endless-layout/README.md`。下列阶段报告保留其原始日期与验证范围。
+
 这些脚本复现本次无尽视觉改造的 C / D / E 阶段证据，使用项目现有 Canvas 2D 渲染、真实 stepGame 和世界生成模块。脚本不 commit、不 push，也不会调用旧的主线 baseline 分支。browser.mjs 只提取连接器与显式调用的 setup，导入时不打开浏览器、不截图、不改存档。
 
 ## 环境与隔离

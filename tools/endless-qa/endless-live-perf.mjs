@@ -4,7 +4,7 @@ const c=await start(),report={environment:'Edge headless, local dev build, actua
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function key(code,key,vk,type='keyDown'){await c.send('Input.dispatchKeyEvent',{type,code,key,windowsVirtualKeyCode:vk});}
 try{
- const saves=await c.eval(`(async()=>{const {storeExploration}=await import('/src/game/exploration-save.ts');return [[0,0],[7168,1024],[27648,-5120]].map(([x,y])=>{qa.make(x,y);let save='';storeExploration({getItem:()=>null,setItem:(_k,v)=>save=v},qa.game);return save;});})()`);
+ const saves=await c.eval(`(async()=>{const {storeExploration}=await import('/src/game/exploration-save.ts');return [{x:0,y:0},qa.generator.landmarkPosition(20261017,'triple'),qa.generator.landmarkPosition(20261017,'nebula')].map(({x,y})=>{qa.make(x,y);let save='';storeExploration({getItem:()=>null,setItem:(_k,v)=>save=v},qa.game);return save;});})()`);
  for(const [index,name] of ['deep','triple','nebula'].entries()){
   await c.eval(`localStorage.setItem('the-last-ark.exploration.v1',${JSON.stringify(saves[index])})`);await c.send('Page.navigate',{url:gameUrl()});await wait(900);await c.send('Emulation.setDeviceMetricsOverride',{width:1200,height:720,deviceScaleFactor:1,mobile:false});
   await c.eval(`document.querySelector('#game').focus()`);await key('KeyL','l',76);await key('KeyL','l',76,'keyUp');await wait(250);

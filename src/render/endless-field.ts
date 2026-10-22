@@ -1,4 +1,4 @@
-import { landmarks } from '../world/generator';
+import { GENERATOR_VERSION, landmarkPosition, type GeneratorVersion } from '../world/generator';
 import { seededRandom } from '../world/sectors';
 
 export interface EndlessFieldSample {density:number;tint:number;filament:number;cloud:number;dust:number}
@@ -31,8 +31,8 @@ function fbm(x:number,y:number,seed:number,octaves:number):number {
  for(let n=0;n<octaves;n++){sum+=noise(x,y,seed+n*193)*weight;total+=weight;weight*=.5;x*=2;y*=2;}
  return sum/total;
 }
-function nebulaCenter(seed:number):{x:number;y:number} {
- const key=landmarks(seed).nebula;return {x:key.x*2048+1024,y:key.y*2048+1024};
+function nebulaCenter(seed:number,version:GeneratorVersion):{x:number;y:number} {
+ return landmarkPosition(seed,'nebula',version);
 }
 function sample(seed:number,x:number,y:number,center:{x:number;y:number}):EndlessFieldSample {
  const mx=x/15000,my=y/15000,macro=fbm(mx,my,seed+71,3);
@@ -52,14 +52,14 @@ function sample(seed:number,x:number,y:number,center:{x:number;y:number}):Endles
 
 /** Absolute universe coordinates; independent of camera, elapsed time, loading
  * order and game bodies. Only light intensity animates in the renderer. */
-export function sampleEndlessField(seed:number,x:number,y:number):EndlessFieldSample {
- return sample(seed,x,y,nebulaCenter(seed));
+export function sampleEndlessField(seed:number,x:number,y:number,version:GeneratorVersion=GENERATOR_VERSION):EndlessFieldSample {
+ return sample(seed,x,y,nebulaCenter(seed,version));
 }
 
 /** Pixel centres include a one-texel gutter. The neighboring tile's inner edge
  * and this tile's gutter sample identical world positions, including negatives. */
-export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,res=128):{pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray} {
- const size=res+2,pixels=new Uint8ClampedArray(size*size*4),activity=new Uint8ClampedArray(size*size*4),activity2=new Uint8ClampedArray(size*size*4),step=span/res,center=nebulaCenter(seed);
+export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,res=128,version:GeneratorVersion=GENERATOR_VERSION):{pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray} {
+ const size=res+2,pixels=new Uint8ClampedArray(size*size*4),activity=new Uint8ClampedArray(size*size*4),activity2=new Uint8ClampedArray(size*size*4),step=span/res,center=nebulaCenter(seed,version);
  for(let py=0;py<size;py++)for(let px=0;px<size;px++) {
   const x=tx*span+(px-.5)*step,y=ty*span+(py-.5)*step,s=sample(seed,x,y,center);
   const lit=Math.max(0,s.filament*(1-s.dust*.82)),mist=s.cloud*(1-s.dust*.65),i=(py*size+px)*4;
@@ -95,10 +95,10 @@ function descendantCell(seed:number,x:number,y:number,stride:number):{x:number;y
  * Each LOD visits only 16x16 quadtree representatives, never all hidden sectors.
  * The three dim micro-sites cluster along the sampled web; deep space retains
  * sparse primary stars. Neither positions nor brightness depend on LOD/time. */
-export function generateEndlessStars(seed:number,tx:number,ty:number,span=2048):EndlessStar[] {
+export function generateEndlessStars(seed:number,tx:number,ty:number,span=2048,version:GeneratorVersion=GENERATOR_VERSION):EndlessStar[] {
  const stars:EndlessStar[]=[],left=tx*span,top=ty*span,right=left+span,bottom=top+span;
  if(!(span>0)||![left,top,right,bottom].every(Number.isFinite))return stars;
- const center=nebulaCenter(seed),stride=2**Math.max(0,Math.ceil(Math.log2(span/2048))),spacing=stride*128;
+ const center=nebulaCenter(seed,version),stride=2**Math.max(0,Math.ceil(Math.log2(span/2048))),spacing=stride*128;
  const minX=Math.floor(left/spacing),minY=Math.floor(top/spacing),maxX=Math.ceil(right/spacing),maxY=Math.ceil(bottom/spacing);
  for(let gy=minY;gy<maxY;gy++)for(let gx=minX;gx<maxX;gx++) {
   const cell=descendantCell(seed+8711,gx*stride,gy*stride,stride),baseX=cell.x*128,baseY=cell.y*128;

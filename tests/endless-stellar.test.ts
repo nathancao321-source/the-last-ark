@@ -62,7 +62,7 @@ describe('Endless stellar identity and continuous surface activity', () => {
   });
   it('draws every layer at the live body center without modifying real triple motion', () => {
     const stars = generateChunk(endlessLevel.seed!, landmarks(endlessLevel.seed!).triple).bodies.filter(body => body.kind === 'star');
-    const localCamera = createCamera({ x: 1024, y: 1024 });
+    const localCamera = createCamera({x:stars.reduce((s,b)=>s+b.position.x,0)/3,y:stars.reduce((s,b)=>s+b.position.y,0)/3});
     const start = structuredClone(stars);
     for (let n = 0; n < 60; n++) integrate(stars, [], 1 / 60);
     expect(stars.map(body => body.position)).not.toEqual(start.map(body => body.position));

@@ -6,18 +6,39 @@ import { fieldAcceleration } from '../physics/fields';
 import { add, length, sub } from '../physics/vector';
 import type { Vec2 } from '../physics/vector';
 export type DiscoveryKind = 'triple' | 'nebula';
-export interface ChunkContent { bodies: Body[]; decorations: NonNullable<Level['decorations']>; feature?: DiscoveryKind }
+export type GeneratorVersion=1|2;
+export const GENERATOR_VERSION:GeneratorVersion=2;
+export const LAYOUT={edgeClearance:80,minGap:40,maxAttempts:48,featureFootprint:228} as const;
+export interface ChunkContent { bodies: Body[]; decorations: NonNullable<Level['decorations']>; feature?: DiscoveryKind; center:Vec2; layout?:{attempts:number;fallback:boolean} }
 /** Hash full decimal coordinates: unlike bitwise coordinates, no 2^32-chunk repeat. */
 export function chunkSeed(seed:number,key:SectorKey):number {
   let hash=2166136261;
   for(const c of `${seed}:${key.x}:${key.y}`)hash=Math.imul(hash^c.charCodeAt(0),16777619);
   return hash>>>0;
 }
-export function landmarks(seed:number):Record<DiscoveryKind,SectorKey> {
+export function landmarks(seed:number,version:GeneratorVersion=GENERATOR_VERSION):Record<DiscoveryKind,SectorKey> {
   const random=seededRandom(seed);
+  if(version===2){
+    const polar=(near:number,range:number)=>{const a=random()*Math.PI*2,r=near+random()*range;return {x:Math.round(Math.cos(a)*r),y:Math.round(Math.sin(a)*r)};};
+    return {triple:polar(3.5,.5),nebula:polar(12,4)};
+  }
   return {triple:{x:3+Math.floor(random()*2),y:0},nebula:{x:12+Math.floor(random()*4),y:-3}};
 }
 export const chunkId=(key:SectorKey)=>`${key.x},${key.y}`;
+const layoutRandom=(seed:number,key:SectorKey,tag:number)=>seededRandom(chunkSeed(seed^tag,key));
+function centerSample(seed:number,key:SectorKey,footprint:number):Vec2 {
+ const random=layoutRandom(seed,key,0x43454e54),pad=LAYOUT.edgeClearance+footprint;
+ return {x:pad+random()*(SECTOR_SIZE-2*pad),y:pad+random()*(SECTOR_SIZE-2*pad)};
+}
+/** Shared anchor for feature generation, discovery, dev jumps and background.
+ * It needs no neighboring chunks, camera, entity construction or history. */
+export function chunkFeatureCenter(seed:number,key:SectorKey,version:GeneratorVersion=GENERATOR_VERSION):Vec2 {
+ return version===1||(key.x===0&&key.y===0)?{x:1024,y:1024}:centerSample(seed,key,LAYOUT.featureFootprint);
+}
+export function landmarkPosition(seed:number,kind:DiscoveryKind,version:GeneratorVersion=GENERATOR_VERSION):Vec2 {
+ const key=landmarks(seed,version)[kind],center=chunkFeatureCenter(seed,key,version);
+ return {x:key.x*SECTOR_SIZE+center.x,y:key.y*SECTOR_SIZE+center.y};
+}
 /** Node coupling is independent of environmental gravity. Smaller bodies respond
  * more, while even a large procedural star can visibly move under sustained input. */
 export const ENDLESS_NODE_RESPONSE={
@@ -35,6 +56,7 @@ function seedCircularVelocity(body:Body,center:Vec2,sources:Body[]):void {
   let acceleration={x:0,y:0};
   for(const source of sources)if(source!==body)acceleration=add(acceleration,fieldAcceleration(body.position,source.position,bodyGravity(source,body)));
   const delta=sub(body.position,center),radius=length(delta);
+  if(radius<1e-8){body.velocity={x:0,y:0};return;}
   const inward=-(acceleration.x*delta.x+acceleration.y*delta.y)/radius;
   const speed=Math.sqrt(Math.max(0,inward)*radius);
   body.velocity={x:-delta.y/radius*speed,y:delta.x/radius*speed};
@@ -52,11 +74,11 @@ export function migrateLegacyChunkGravity(body:Body):void {
   // Also upgrade the previous near-imperceptible node coupling in saved chunks.
   body.affectedByFields=true;body.response=nodeResponse(body.kind,body.radius);
 }
-/** Chunk-local templates; no dependence on load order, camera, or current ship position.
- * All hazards start inside a 440-unit boundary margin; adjacent chunks cannot overlap.
- * The origin chunk is a safe launch corridor. At most six physical bodies per chunk. */
-export function generateChunk(seed:number,key:SectorKey):ChunkContent {
-  const random=seededRandom(chunkSeed(seed,key)),known=landmarks(seed),id=chunkId(key);
+/** V1 content rolls stay in their original order: layout consumes a separate
+ * random stream, so counts, physical parameters and ordinary appearance survive.
+ * V1 saves remain pinned to the complete old layout, including future chunks. */
+export function generateChunk(seed:number,key:SectorKey,version:GeneratorVersion=GENERATOR_VERSION):ChunkContent {
+  const random=seededRandom(chunkSeed(seed,key)),known=landmarks(seed,version),id=chunkId(key);
   const feature:DiscoveryKind|undefined=id===chunkId(known.triple)?'triple':id===chunkId(known.nebula)?'nebula':random()<0.018?'triple':undefined;
   const bodies:Body[]=[],decorations:ChunkContent['decorations']=[];
   const add=(b:Body)=>{b.chunk={...key};bodies.push(b);};
@@ -89,5 +111,73 @@ export function generateChunk(seed:number,key:SectorKey):ChunkContent {
     receivesGravity:true,gravityRadius:100,stabilization:{halfLife:1},appearance:{name:'小行星',color:'#8c96a6'}}));
   if(feature==='nebula'||random()<0.12)for(let i=0;i<3;i++)decorations.push({position:{x:700+random()*600,y:700+random()*600},radius:500+random()*200,color:feature==='nebula'?'#9f61c31c':'#476da018'});
   for(let i=0;i<8;i++)decorations.push({position:{x:random()*SECTOR_SIZE,y:random()*SECTOR_SIZE},radius:1+random()*2,color:'#bdc9e455'});
-  return {bodies,decorations,feature};
+  const result:ChunkContent={bodies,decorations,feature,center};
+  if(version===2)layoutChunk(seed,key,result);
+  return result;
+}
+
+/** Collision circles retain 80 units to their chunk edges: any pair of
+ * adjacent chunks has >=160 units of initial clearance, including diagonal
+ * seams. A system's FULL initial orbit footprint determines its centre bounds.
+ * Later motion is exclusively the existing integrator, never this function. */
+function layoutChunk(seed:number,key:SectorKey,chunk:ChunkContent):void {
+ const random=layoutRandom(seed,key,0x4f524249),angle=random()*Math.PI*2;
+ const system=chunk.bodies.filter(b=>b.kind!=='asteroid'),rocks=chunk.bodies.filter(b=>b.kind==='asteroid');
+ const planets=system.filter(b=>b.kind==='planet');
+ if(planets.length){
+  // Independent co-orbital radii rapidly create close encounters under the
+  // existing finite-range forces. Use verified rotating initial configurations:
+  // opposite or +/-60 degrees, with a shared seeded scale, not scripted orbits.
+  const separation=random()<.5?Math.PI:(random()<.5?-1:1)*Math.PI/3,r=270+random()*50;
+  planets.forEach((b,i)=>{const phase=angle+i*separation;b.position={x:r*Math.cos(phase),y:r*Math.sin(phase)};});
+  system.find(b=>b.kind==='star')!.position={x:0,y:0};
+ }else for(const [i,b]of system.entries())b.position={x:180*Math.cos(angle+i*Math.PI*2/3),y:180*Math.sin(angle+i*Math.PI*2/3)};
+ const footprint=Math.max(0,...system.map(b=>length(b.position)+b.radius));
+ const center=chunk.feature?chunkFeatureCenter(seed,key):centerSample(seed,key,footprint);
+ // The origin keeps its original protected preparation area, even for the
+ // rare pre-existing triple roll. No content probability is changed.
+ if(key.x===0&&key.y===0){center.x=1024;center.y=1024;}
+ chunk.center=center;
+ for(const b of system){b.position=add(center,b.position);b.velocity={x:0,y:0};}
+ let rotationCenter=center;
+ if(planets.length){
+  const star=system.find(b=>b.kind==='star')!,planet=planets[0];
+  const primary=length(fieldAcceleration(planet.position,star.position,bodyGravity(star,planet)));
+  const secondary=length(fieldAcceleration(star.position,planet.position,bodyGravity(planet,star)));
+  // For equal pair distances, these are the exact force coefficients of the
+  // existing fields. Seed around their common rotation centre, including the
+  // small stellar reflex velocity. No masses, fields or later motion change.
+  const fraction=secondary/(primary+2*secondary);
+  rotationCenter={x:center.x+fraction*(planets[0].position.x+planets[1].position.x-2*center.x),y:center.y+fraction*(planets[0].position.y+planets[1].position.y-2*center.y)};
+ }
+ system.forEach(b=>seedCircularVelocity(b,rotationCenter,system));
+
+ let attempts=0,fallback=false;
+ if(rocks.length){
+  const cluster=layoutRandom(seed,key,0x524f434b),rotation=cluster()*Math.PI*2;
+  const offsets=rocks.map((_,i)=>{const a=rotation+i*Math.PI*2/3+(cluster()-.5)*.4,r=68+cluster()*48;return {x:r*Math.cos(a),y:r*Math.sin(a)};});
+  const pad=LAYOUT.edgeClearance+Math.max(...offsets.map((p,i)=>length(p)+rocks[i].radius));
+  const legal=(point:Vec2)=>offsets.every((p,i)=>{
+   const position=add(point,p),rock=rocks[i];
+   return (!system.length||length(sub(position,center))>770)&&system.every(b=>length(sub(position,b.position))>rock.radius+b.radius+LAYOUT.minGap);
+  });
+  let site:Vec2|undefined;
+  for(attempts=1;attempts<=LAYOUT.maxAttempts;attempts++){
+   const candidate={x:pad+cluster()*(SECTOR_SIZE-2*pad),y:pad+cluster()*(SECTOR_SIZE-2*pad)};
+   if(legal(candidate)){site=candidate;break;}
+  }
+  if(!site){
+   fallback=true;attempts=LAYOUT.maxAttempts;
+   // The farthest corner is >=~1100 from a central system; even the
+   // closest cluster member clears the entire 770-unit exclusion circle.
+   site=[{x:pad,y:pad},{x:SECTOR_SIZE-pad,y:pad},{x:pad,y:SECTOR_SIZE-pad},{x:SECTOR_SIZE-pad,y:SECTOR_SIZE-pad}].sort((a,b)=>length(sub(b,center))-length(sub(a,center))).find(legal)!;
+  }
+  rocks.forEach((b,i)=>{b.position=add(site!,offsets[i]);});
+ }
+ // Move/rotate the existing cloud group; its count, radii, colors and noise
+ // materials are untouched. Point-star decoration retains its original sites.
+ const clouds=chunk.decorations.filter(d=>d.radius>100),decor=layoutRandom(seed,key,0x434c4f55),rotation=decor()*Math.PI*2;
+ const cloudCenter=chunk.feature==='nebula'?center:{x:280+decor()*(SECTOR_SIZE-560),y:280+decor()*(SECTOR_SIZE-560)};
+ for(const d of clouds){const dx=d.position.x-1000,dy=d.position.y-1000;d.position={x:cloudCenter.x+dx*Math.cos(rotation)-dy*Math.sin(rotation),y:cloudCenter.y+dx*Math.sin(rotation)+dy*Math.cos(rotation)};}
+ chunk.layout={attempts,fallback};
 }

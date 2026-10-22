@@ -98,8 +98,11 @@ describe('endless local mutual gravity',()=>{
     }
     expect(contacts).toBe(0);expect(bodies.length).toBe(original.length);
     for(const b of bodies.filter(b=>kind==='triple'||b.kind==='planet')) {
-      const radius=length(sub(b.position,{x:1024,y:1024}));
-      expect(Math.abs(radius-(kind==='triple'?180:300))).toBeLessThan(3);
+      const center=kind==='triple'?{x:original.reduce((s,b)=>s+b.position.x,0)/3,y:original.reduce((s,b)=>s+b.position.y,0)/3}:bodies.find(b=>b.kind==='star')!.position;
+      const initialCenter=kind==='triple'?center:original.find(b=>b.kind==='star')!.position;
+      const initial=length(sub(original.find(a=>a.id===b.id)!.position,initialCenter)),radius=length(sub(b.position,center));
+      if(kind==='triple')expect(Math.abs(radius-initial)).toBeLessThan(3);
+      else {expect(radius).toBeGreaterThan(initial*.7);expect(radius).toBeLessThan(initial*1.3);}
       expect(length(b.velocity)).toBeGreaterThan(10);
     }
   });

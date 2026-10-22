@@ -2,13 +2,13 @@ import type { Body, GameState } from '../game/types';
 import type { Vec2 } from '../physics/vector';
 import { length, sub } from '../physics/vector';
 import { planSectors, SECTOR_SIZE, sectorAt, type SectorKey } from './sectors';
-import { chunkId, generateChunk, landmarks, type DiscoveryKind } from './generator';
+import { chunkId, chunkFeatureCenter, generateChunk, GENERATOR_VERSION, landmarks, type DiscoveryKind, type GeneratorVersion } from './generator';
 
 export const MAX_LOADED_CHUNKS=54, MAX_CACHED_CHUNKS=32, MAX_DISCOVERIES=64;
 export const MAX_UNIVERSE_BODIES=MAX_LOADED_CHUNKS*6+1;
 interface ChunkSnapshot { key:SectorKey; bodies:Body[] }
 export interface UniverseState {
-  version:1; seed:number; origin:SectorKey; loaded:SectorKey[]; cache:ChunkSnapshot[];
+  version:1; generatorVersion?:GeneratorVersion; seed:number; origin:SectorKey; loaded:SectorKey[]; cache:ChunkSnapshot[];
   discoveries:{key:SectorKey;kind:DiscoveryKind}[]; notice:string;
 }
 export function worldChunk(game:GameState,position:Vec2):SectorKey {
@@ -35,13 +35,15 @@ export function rebaseUniverse(game:GameState):Vec2 {
   return delta;
 }
 export function initializeUniverse(game:GameState):void {
-  game.universe={version:1,seed:game.level.seed??20261017,origin:{x:0,y:0},loaded:[],cache:[],discoveries:[],notice:'自由探索 · H / J 召回节点 · K 保存 · L 恢复 · M 附近星图'};
+  const generatorVersion=game.level.generatorVersion??GENERATOR_VERSION;
+  game.level.generatorVersion=generatorVersion;
+  game.universe={version:1,generatorVersion,seed:game.level.seed??20261017,origin:{x:0,y:0},loaded:[],cache:[],discoveries:[],notice:'自由探索 · H / J 召回节点 · K 保存 · L 恢复 · M 附近星图'};
   streamUniverse(game,true);
 }
 /** Demand depends only on simulation positions. Three 3x3 neighborhoods; retain
  * home chunks of nearby displaced bodies up to a second bounded budget. */
 export function streamUniverse(game:GameState,force=false):void {
-  const u=game.universe!;
+  const u=game.universe!,version=u.generatorVersion??1;
   const ship=game.bodies.find(b=>b.kind==='ship')!,foci=[ship.position,...game.players.map(p=>p.position)];
   for(const b of game.bodies)if(b.spawnPending&&length(sub(b.position,ship.position))>b.radius+ship.radius+120)delete b.spawnPending;
   const wanted=planSectors(foci).map(k=>({x:k.x+u.origin.x,y:k.y+u.origin.y}));
@@ -60,7 +62,7 @@ export function streamUniverse(game:GameState,force=false):void {
     game.bodies=game.bodies.filter(b=>!b.chunk||wantedIds.has(chunkId(b.chunk)));
     for(const key of wanted)if(!previous.has(chunkId(key))) {
       const cached=u.cache.find(c=>chunkId(c.key)===chunkId(key));
-      const bodies=cached?cached.bodies:generateChunk(u.seed,key).bodies;
+      const bodies=cached?cached.bodies:generateChunk(u.seed,key,version).bodies;
       u.cache=u.cache.filter(c=>chunkId(c.key)!==chunkId(key));
       const offset=chunkOffset(key,u.origin);
       for(const b of bodies) {
@@ -72,15 +74,15 @@ export function streamUniverse(game:GameState,force=false):void {
       }
     }
     u.cache=u.cache.slice(-MAX_CACHED_CHUNKS);u.loaded=wanted;
-    game.level.decorations=wanted.flatMap(key=>{const offset=chunkOffset(key,u.origin);return generateChunk(u.seed,key).decorations.map(d=>({...d,position:{x:d.position.x+offset.x,y:d.position.y+offset.y}}));});
+    game.level.decorations=wanted.flatMap(key=>{const offset=chunkOffset(key,u.origin);return generateChunk(u.seed,key,version).decorations.map(d=>({...d,position:{x:d.position.x+offset.x,y:d.position.y+offset.y}}));});
   }
   // Navigation displays loaded neighborhoods only, never historical travel extents.
   game.level.mapBounds={minX:ship.position.x-3500,maxX:ship.position.x+3500,minY:ship.position.y-3500,maxY:ship.position.y+3500};
   for(const key of wanted) {
-    const offset=chunkOffset(key,u.origin);
-    if(!foci.some(p=>Math.hypot(p.x-offset.x-1024,p.y-offset.y-1024)<750))continue;
+    const offset=chunkOffset(key,u.origin),center=chunkFeatureCenter(u.seed,key,version);
+    if(!foci.some(p=>Math.hypot(p.x-offset.x-center.x,p.y-offset.y-center.y)<750))continue;
     if(u.discoveries.some(d=>chunkId(d.key)===chunkId(key)))continue;
-    const feature=generateChunk(u.seed,key).feature;
+    const feature=generateChunk(u.seed,key,version).feature;
     if(feature){u.discoveries.push({key:{...key},kind:feature});u.discoveries=u.discoveries.slice(-MAX_DISCOVERIES);u.notice=feature==='triple'?'发现：三日凌空 · 三颗恒星共舞；保持安全距离，观察引力变化':'发现：遥远的紫色星云 · 群星之间，仍有未见之境';game.message=u.notice;}
   }
 }
@@ -92,6 +94,6 @@ export function recallNode(game:GameState,index:0|1):boolean {
   game.universe.notice=`P${index+1} 已回到方舟附近（方舟运动未改变）`;streamUniverse(game);return true;
 }
 export function explorationText(game:GameState):string {
-  const u=game.universe!,key=worldChunk(game,game.bodies.find(b=>b.kind==='ship')!.position),known=landmarks(u.seed);
+  const u=game.universe!,key=worldChunk(game,game.bodies.find(b=>b.kind==='ship')!.position),known=landmarks(u.seed,u.generatorVersion??1);
   return `Seed ${u.seed} · 区块 (${key.x},${key.y}) · 已载入 ${u.loaded.length}/${MAX_LOADED_CHUNKS} · 天体 ${game.bodies.length}/${MAX_UNIVERSE_BODIES} · 发现 ${u.discoveries.length}\n线索：三日系统 (${known.triple.x},${known.triple.y})；遥远星云 (${known.nebula.x},${known.nebula.y}) · 每区块 ${SECTOR_SIZE} 单位`;
 }

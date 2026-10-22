@@ -30,6 +30,7 @@ export function loadExploration(storage:ProgressStorage):GameState|undefined {
     const text=storage.getItem(KEY);if(!text||text.length>MAX_SAVE_BYTES)return;
     const d=JSON.parse(text),u=d.universe as UniverseState;
     if(d.version!==1||!u||u.version!==1||!key(u.origin)||!Number.isSafeInteger(u.seed)||u.seed<0||u.seed>4294967295||!finite(d.elapsed)||d.elapsed<0||!finite(d.distance)||d.distance<0)return;
+    if(u.generatorVersion!==undefined&&u.generatorVersion!==1&&u.generatorVersion!==2)return;
     if(!Array.isArray(u.loaded)||u.loaded.length>MAX_LOADED_CHUNKS||!u.loaded.every(key)||!Array.isArray(u.cache)||u.cache.length>MAX_CACHED_CHUNKS)return;
     if(!u.cache.every(c=>key(c.key)&&Array.isArray(c.bodies)&&c.bodies.length<=6&&c.bodies.every(validBody)))return;
     if(!Array.isArray(u.discoveries)||u.discoveries.length>MAX_DISCOVERIES||!u.discoveries.every(v=>key(v.key)&&['triple','nebula'].includes(v.kind)))return;
@@ -42,7 +43,10 @@ export function loadExploration(storage:ProgressStorage):GameState|undefined {
     if(!d.health||!finite(d.health.current)||d.health.current<=0||d.health.current>100)return;
     d.bodies.forEach(migrateLegacyChunkGravity);
     u.cache.forEach(c=>c.bodies.forEach(migrateLegacyChunkGravity));
-    const game=createGame({...endlessLevel,seed:u.seed});
+    // Missing metadata means the exact old world. Do not reroll stored bodies,
+    // cache entries, landmark directions or future evicted chunks on restore.
+    u.generatorVersion??=1;
+    const game=createGame({...endlessLevel,seed:u.seed,generatorVersion:u.generatorVersion});
     game.universe=u;game.bodies=d.bodies;game.elapsed=d.elapsed;game.distance=d.distance;game.health={current:d.health.current,max:100};
     game.players.forEach((p,i)=>{p.position={...d.players[i].position};p.velocity={...d.players[i].velocity};p.active=false;});
     game.phase='paused';u.notice='已恢复探索存档 · Space 继续；技能开关已关闭';game.message=u.notice;

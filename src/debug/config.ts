@@ -2,8 +2,7 @@ import type { SceneRegistry } from '../scenes/types';
 import { cooperationLevel } from '../levels/cooperation';
 import { solarSections } from '../levels/solar-system';
 import { blackHoleSections } from '../levels/black-hole';
-import { landmarks } from '../world/generator';
-import { SECTOR_SIZE } from '../world/sectors';
+import { landmarkPosition } from '../world/generator';
 import { collisionFixture } from './collision-fixtures';
 /** Called ONLY in Vite development mode. Values become level config, so forecasts
  * and checkpoints use exactly the same settings. No runtime physics monkey patching.
@@ -34,7 +33,7 @@ export function developmentRegistry(base: SceneRegistry, search: string): SceneR
   if(result.endless.level) {
     const level=result.endless.level;level.seed=Math.floor(number('seed',0,4294967295)??level.seed!);
     if(section==='triple'||section==='nebula') {
-      const key=landmarks(level.seed)[section],position={x:key.x*SECTOR_SIZE+400,y:key.y*SECTOR_SIZE+1024};
+      const center=landmarkPosition(level.seed,section),position={x:center.x+600,y:center.y};
       level.bodies[0].position=position;level.bodies[0].velocity={x:0,y:0};
       level.players.forEach((p,i)=>{p.position={x:position.x+(i?-90:120),y:position.y+(i?140:-140)};});
     }

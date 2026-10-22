@@ -112,6 +112,8 @@ export interface Level {
   scoring?: { threeStarsSeconds: number; twoStarsSeconds: number };
   mode?: 'mission' | 'exploration';
   procedural?: boolean;
+  /** Pinned on an exploration world's level so R/retry keeps save compatibility. */
+  generatorVersion?:1|2;
   shipHealth?: number;
   decorations?: { position: Vec2; radius: number; color: string }[];
   waves?: { id: string; bounds: Rect; seed: number; count: number }[];

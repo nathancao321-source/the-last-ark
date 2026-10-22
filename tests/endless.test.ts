@@ -2,8 +2,8 @@ import { describe,it,expect } from 'vitest';
 import { createGame,stepGame,togglePause,retryGame } from '../src/game/game';
 import { endlessLevel } from '../src/levels/endless';
 import { NO_CONTROLS } from '../src/game/types';
-import { chunkSeed,generateChunk,landmarks,chunkId } from '../src/world/generator';
-import { MAX_CACHED_CHUNKS,MAX_LOADED_CHUNKS,MAX_UNIVERSE_BODIES,streamUniverse,rebaseUniverse,recallNode,worldChunk,chunkOffset } from '../src/world/universe';
+import { chunkSeed,generateChunk,landmarks,chunkId,LAYOUT } from '../src/world/generator';
+import { MAX_CACHED_CHUNKS,MAX_LOADED_CHUNKS,MAX_UNIVERSE_BODIES,streamUniverse,rebaseUniverse,recallNode,worldChunk } from '../src/world/universe';
 import { SECTOR_SIZE } from '../src/world/sectors';
 import { storeExploration,loadExploration } from '../src/game/exploration-save';
 import { createCamera,worldToScreen,screenToWorld } from '../src/camera/camera';
@@ -19,6 +19,7 @@ import { bodyGravity } from '../src/physics/gravity';
 import { fieldAcceleration } from '../src/physics/fields';
 const seed=endlessLevel.seed!;
 function memory(){let value:string|null=null;return {getItem:()=>value,setItem:(_key:string,v:string)=>{value=v;}};}
+function legacyWorld(){return createGame({...endlessLevel,generatorVersion:1});}
 function bounded(g:ReturnType<typeof createGame>){
   expect(g.universe!.loaded.length).toBeLessThanOrEqual(MAX_LOADED_CHUNKS);
   expect(g.universe!.cache.length).toBeLessThanOrEqual(MAX_CACHED_CHUNKS);
@@ -34,7 +35,7 @@ describe('deterministic bounded universe',()=>{
   it('generates separated celestial bodies, bounded counts and safe chunk seams for many seeds',()=>{
     for(let n=0;n<500;n++) {
       const {bodies}=generateChunk(seed+n,{x:n%19-9,y:n%27-13});expect(bodies.length).toBeLessThanOrEqual(6);
-      for(const b of bodies){expect(b.position.x-b.radius).toBeGreaterThan(440);expect(b.position.y-b.radius).toBeGreaterThan(440);expect(b.position.x+b.radius).toBeLessThan(SECTOR_SIZE-440);expect(b.position.y+b.radius).toBeLessThan(SECTOR_SIZE-440);}
+      for(const b of bodies){expect(b.position.x-b.radius).toBeGreaterThanOrEqual(LAYOUT.edgeClearance);expect(b.position.y-b.radius).toBeGreaterThanOrEqual(LAYOUT.edgeClearance);expect(b.position.x+b.radius).toBeLessThanOrEqual(SECTOR_SIZE-LAYOUT.edgeClearance);expect(b.position.y+b.radius).toBeLessThanOrEqual(SECTOR_SIZE-LAYOUT.edgeClearance);}
       for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++)expect(length(sub(bodies[i].position,bodies[j].position))).toBeGreaterThan(bodies[i].radius+bodies[j].radius+25);
     }
   });
@@ -79,8 +80,8 @@ describe('deterministic bounded universe',()=>{
     const reloaded=game.bodies.find(b=>b.id===id)!;expect(reloaded.spawnPending).toBe(true);expect(capabilities(reloaded).collision).toBe('none');
     game.bodies[0].position.x+=500;streamUniverse(game);expect(reloaded.spawnPending).toBeUndefined();expect(capabilities(reloaded).collision).toBe('hazard');
   });
-  it('coasts continuously across 30 chunks using fixed steps without jumps, damage, or speed edits',()=>{
-    const game=createGame(endlessLevel);game.bodies[0].velocity={x:240,y:0};togglePause(game);
+  it('keeps the original 30-chunk coast reproducible in a version-1 world',()=>{
+    const game=legacyWorld();game.bodies[0].velocity={x:240,y:0};togglePause(game);
     const ship=game.bodies[0];let previous=0;
     for(let i=0;i<15360;i++) {
       stepGame(game,NO_CONTROLS);
@@ -94,8 +95,8 @@ describe('deterministic bounded universe',()=>{
   },30000);
 });
 describe('floating origin, exploration UI contracts and discovery',()=>{
-  it('reaches both named discoveries from launch using only ordinary two-player intents',()=>{
-    const game=createGame(endlessLevel),known=landmarks(seed),tx=known.triple.x*SECTOR_SIZE+300,nx=known.nebula.x*SECTOR_SIZE+400;
+  it('preserves the authored two-player discovery route in legacy worlds',()=>{
+    const game=legacyWorld(),known=landmarks(seed,1),tx=known.triple.x*SECTOR_SIZE+300,nx=known.nebula.x*SECTOR_SIZE+400;
     const route=[{x:tx,y:0},{x:tx,y:1024},{x:tx,y:0},{x:nx-300,y:0},{x:nx-300,y:known.nebula.y*SECTOR_SIZE+1024},{x:nx,y:known.nebula.y*SECTOR_SIZE+1024}];
     let stage=0;const usage=[0,0];togglePause(game);
     for(let i=0;i<42000&&game.phase==='running';i++) {
@@ -149,7 +150,7 @@ describe('floating origin, exploration UI contracts and discovery',()=>{
       const center={x:stars.reduce((sum,b)=>sum+b.position.x,0)/3,y:stars.reduce((sum,b)=>sum+b.position.y,0)/3};
       const before=stars.map(b=>({...b.position}));for(let i=0;i<3600;i++)integrate(stars,[],1/60);
       stars.forEach((b,i)=>{expect(length(sub(before[i],b.position))).toBeGreaterThan(10);expect(Number.isFinite(b.position.x)).toBe(true);expect(b.orbit).toBeUndefined();expect(Math.abs(length(sub(b.position,center))-180)).toBeLessThan(1);});
-      const offset=chunkOffset(key,game.universe!.origin);const ship=game.bodies[0];ship.position={x:offset.x+1024,y:offset.y+1600};ship.velocity={x:0,y:0};integrate([ship,...stars],[],1/60);expect(length(ship.velocity)).toBeGreaterThan(0);
+      const ship=game.bodies[0];ship.position={x:center.x,y:center.y+600};ship.velocity={x:0,y:0};integrate([ship,...stars],[],1/60);expect(length(ship.velocity)).toBeGreaterThan(0);
     }
   });
 });

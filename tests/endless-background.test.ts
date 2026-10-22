@@ -103,7 +103,7 @@ describe('bounded world-anchored Endless background rendering',()=>{
     const h=harness(),f=fixture();f.camera.width=1200;f.camera.height=1200;f.camera.position={x:3000,y:3000};f.camera.zoom=.196;
     const oldPlan=endlessTilePlan(f.camera,{x:0,y:0});expect(oldPlan[0].span).toBe(2048);
     f.draw(h.ctx);h.completeAll();f.draw(h.ctx);
-    const oldVisible=oldPlan.map(p=>[f.game.universe!.seed,p.span,p.tx,p.ty,192].join(':'));
+    const oldVisible=oldPlan.map(p=>[f.game.universe!.seed,p.span,p.tx,p.ty,192,f.game.universe!.generatorVersion].join(':'));
     expect(oldVisible).toHaveLength(16);for(const key of oldVisible)expect(f.cache.tiles.get(key)?.texture).toBeDefined();
     f.camera.zoom=.195;expect(endlessTilePlan(f.camera,{x:0,y:0})[0].span).toBe(4096);
     const bounds=viewBounds(f.camera),generated=f.cache.stats.generated;
@@ -164,5 +164,12 @@ describe('bounded world-anchored Endless background rendering',()=>{
     const oldWorker=h.workers[0];f.game.universe!.seed++;f.draw(h.ctx);expect(oldWorker.terminated).toBe(true);expect(h.workers).toHaveLength(2);
     expect([...f.cache.tiles.keys()].every(key=>key.startsWith(f.game.universe!.seed+':'))).toBe(true);
     resetEndlessBackground(f.cache);expect(h.workers[1].terminated).toBe(true);expect(f.cache).toEqual(createEndlessBackground());
+  });
+  it('invalidates materials and stale worker results when the same seed changes generator version',()=>{
+    const h=harness(),f=fixture();f.draw(h.ctx);const oldWorker=h.workers[0],oldKey=f.cache.busy!,job={...oldWorker.job!};
+    f.game.universe!.generatorVersion=1;f.draw(h.ctx);expect(oldWorker.terminated).toBe(true);expect(f.cache.generatorVersion).toBe(1);expect(f.cache.tiles.has(oldKey)).toBe(false);
+    const before=f.cache.stats.generated,size=(job.res+2)**2*4,pixels=new Uint8ClampedArray(size);
+    oldWorker.onmessage?.({data:{key:job.key,pixels,activity:pixels,activity2:pixels,ms:0}});expect(f.cache.stats.generated).toBe(before);
+    expect(f.cache.tiles.size).toBeLessThanOrEqual(32);resetEndlessBackground(f.cache);expect(f.cache.generatorVersion).toBeUndefined();
   });
 });
