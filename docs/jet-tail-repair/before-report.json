@@ -1,0 +1,45 @@
+{
+  "mode": "before",
+  "perf": {
+    "off": {
+      "renderP50": 0.10000002384185791,
+      "renderP95": 0.20000004768371582,
+      "hazardsP50": 0.10000002384185791,
+      "hazardsP95": 0.20000004768371582,
+      "counts": {
+        "fill": 2,
+        "stroke": 2,
+        "vertices": 196
+      }
+    },
+    "medium": {
+      "renderP50": 2.8000000715255737,
+      "renderP95": 3.9000000953674316,
+      "hazardsP50": 0.2999999523162842,
+      "hazardsP95": 0.3999999761581421,
+      "counts": {
+        "fill": 8,
+        "stroke": 110,
+        "vertices": 1516
+      }
+    },
+    "high": {
+      "renderP50": 2.6999999284744263,
+      "renderP95": 3,
+      "hazardsP50": 0.2999999523162842,
+      "hazardsP95": 0.5,
+      "counts": {
+        "fill": 8,
+        "stroke": 110,
+        "vertices": 1516
+      }
+    }
+  },
+  "errors": [],
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
+  "resolution": [
+    1280,
+    800
+  ],
+  "dpr": 1
+}

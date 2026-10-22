@@ -24,7 +24,7 @@ function draw(t:number,target=ctx,c=camera){
  game.message=hazardNotice(game)??'喷流冷却 · 轴线无伤害';
  render(target,game,{points:[],seconds:0,outcome:'horizon'},c,{enhanced:true,visuals:state,renderer,warp,art:{...CINEMATIC_ART},layers,debugColliders:debug,debugLens:debug});
 }
-function configure(){camera.position={x:view.value==='left'?700:view.value==='right'?1900:1300,y:0};camera.zoom=view.value==='jet'?.1:view.value==='wide'?.06:.65;}
+function configure(){camera.position={x:view.value==='left'?700:view.value==='right'?1900:1300,y:view.value==='upper'?-2950:view.value==='lower'?2950:0};camera.zoom=view.value==='jet'?.1:view.value==='wide'?.06:.65;}
 configure();view.onchange=configure;time.oninput=()=>{clock=Number(time.value);playing=false;};
 document.querySelector<HTMLButtonElement>('#play')!.onclick=()=>{clock=3;playing=true;};document.querySelector<HTMLButtonElement>('#pause')!.onclick=()=>playing=false;
 function download(blob:Blob,name:string){const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.textContent=name;document.querySelector('#downloads')!.append(link,document.createTextNode('  '));return link;}
@@ -51,6 +51,6 @@ function frame(now:number){
  if(recordStart!==undefined){const u=Math.min(1,(now-recordStart)/8000);camera.position.x=1300+600*Math.sin(u*Math.PI*2);if(u===1){recordStart=undefined;recorder?.stop();}}
  const start=performance.now();draw(clock);samples.push(performance.now()-start);if(samples.length>240)samples.shift();if(intervals.length>240)intervals.shift();
  time.value=clock.toFixed(3);const sorted=[...samples].sort((a,b)=>a-b),p=(fraction:number)=>(sorted[Math.floor((sorted.length-1)*fraction)]??0).toFixed(2);
- stats.textContent='t='+clock.toFixed(3)+' '+game.hazards!.jet!.phase+' zoom='+camera.zoom+' camera='+camera.position.x.toFixed(1)+',0 | cache='+renderer.abyss?.tiles.size+'/48 pending='+renderer.abyss?.pending.length+' | render p50='+p(.5)+'ms p95='+p(.95)+'ms | observed rAF='+(intervals.length?1000*intervals.length/intervals.reduce((a,b)=>a+b,0):0).toFixed(1)+'Hz (browser scheduling included)';
+ stats.textContent='t='+clock.toFixed(3)+' '+game.hazards!.jet!.phase+' zoom='+camera.zoom+' camera='+camera.position.x.toFixed(1)+','+camera.position.y.toFixed(1)+' | cache='+renderer.abyss?.tiles.size+'/48 pending='+renderer.abyss?.pending.length+' | render p50='+p(.5)+'ms p95='+p(.95)+'ms | observed rAF='+(intervals.length?1000*intervals.length/intervals.reduce((a,b)=>a+b,0):0).toFixed(1)+'Hz (browser scheduling included)';
  requestAnimationFrame(frame);
 }requestAnimationFrame(frame);

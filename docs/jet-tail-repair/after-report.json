@@ -1,0 +1,60 @@
+{
+  "mode": "after",
+  "perf": {
+    "off": {
+      "renderP50": 0.20000004768371582,
+      "renderP95": 0.3999999761581421,
+      "hazardsP50": 0.19999992847442627,
+      "hazardsP95": 0.30000007152557373,
+      "counts": {
+        "fill": 4,
+        "stroke": 0,
+        "vertices": 676
+      }
+    },
+    "medium": {
+      "renderP50": 3,
+      "renderP95": 3.5,
+      "hazardsP50": 0.6000000238418579,
+      "hazardsP95": 0.7999999523162842,
+      "counts": {
+        "fill": 20,
+        "stroke": 96,
+        "vertices": 3348
+      }
+    },
+    "high": {
+      "renderP50": 3,
+      "renderP95": 3.5,
+      "hazardsP50": 0.6000000238418579,
+      "hazardsP95": 1,
+      "counts": {
+        "fill": 20,
+        "stroke": 96,
+        "vertices": 3348
+      }
+    }
+  },
+  "errors": [],
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
+  "resolution": [
+    1280,
+    800
+  ],
+  "dpr": 1,
+  "live": {
+    "seconds": 5,
+    "frames": 500,
+    "phases": [
+      "warning",
+      "firing",
+      "dissipating",
+      "cooldown"
+    ],
+    "renderP50": 7.199999928474426,
+    "renderP95": 7.700000047683716,
+    "rafP50": 12,
+    "rafP95": 18.200000000000728
+  },
+  "paused": true
+}

@@ -26,12 +26,27 @@ describe('authoritative hazard rendering contract',()=>{
  it.each(['low','medium','high','off'])('paints the entire shared core immediately at firing start in %s',quality=>{
   const g=createGame(blackHoleLevel),config=g.level.blackHoleJets!;g.phase='running';g.elapsed=5;g.bodies[0].position={x:0,y:-10000};updateHazards(g,[],1/60);
   const geometry=g.hazards!.jet!.geometry!;expect(geometry.damaging).toBe(true);expect(geometry.progress).toBe(0);
-  const strokes:{width:number;cap:string;alpha:number;points:number[][]}[]=[],props:Record<string,unknown>={};let points:number[][]=[];
-  const ctx=new Proxy(props,{get:(target,key)=>{if(key==='createLinearGradient')return ()=>({addColorStop:()=>{}});if(key==='beginPath')return ()=>{points=[];};if(key==='moveTo'||key==='lineTo')return (...p:number[])=>points.push(p);if(key==='stroke')return ()=>strokes.push({width:target.lineWidth as number,cap:target.lineCap as string,alpha:target.globalAlpha as number,points:[...points]});return target[key as string]??(()=>{});},set:(t,k,v)=>{t[k as string]=v;return true;}}) as unknown as CanvasRenderingContext2D;
+  const fills:{alpha:number;points:number[][];closed:boolean}[]=[],props:Record<string,unknown>={};let points:number[][]=[],closed=false;
+  const ctx=new Proxy(props,{get:(target,key)=>{if(key==='createLinearGradient')return ()=>({addColorStop:()=>{}});if(key==='beginPath')return ()=>{points=[];closed=false;};if(key==='closePath')return ()=>{closed=true;};if(key==='moveTo'||key==='lineTo')return (...p:number[])=>points.push(p);if(key==='fill')return ()=>fills.push({alpha:target.globalAlpha as number,points:[...points],closed});return target[key as string]??(()=>{});},set:(t,k,v)=>{t[k as string]=v;return true;}}) as unknown as CanvasRenderingContext2D;
   // Editing level config after a simulation snapshot cannot change the rendered geometry.
   config.length=17;config.coreRadius=1;const camera=createCamera({x:1300,y:0},1600,1600);camera.zoom=.5;
   drawHazards(ctx,g,camera,quality!=='off',quality);
-  const cores=strokes.filter(s=>s.width===48);expect(cores).toHaveLength(2);for(const core of cores){expect(core.cap).toBe('round');expect(core.alpha).toBeGreaterThanOrEqual(.56);expect(core.points).toEqual([[0,0],[0,geometry.beams[0].length]]);}
+  const cores=fills.filter(s=>s.alpha>=.56);expect(cores).toHaveLength(2);
+  for(const core of cores){
+   const beam=geometry.beams[0];expect(core.closed).toBe(true);
+   // The rendered blue ribbon reaches the visual end, then closes at zero width.
+   expect(Math.max(...core.points.map(p=>p[1]))).toBe(beam.visualLength);
+   expect(core.points.filter(p=>p[1]===beam.visualLength).every(p=>p[0]===0)).toBe(true);
+   // Test the actual filled polygon: every lethal cross-section, including
+   // both capsule caps, must be enclosed. This does not require a stroke API.
+   const left=core.points.slice(0,core.points.length/2);
+   for(let s=-beam.coreRadius;s<=beam.length+beam.coreRadius;s+=3){
+    const index=left.findIndex(p=>p[1]>=s),a=left[Math.max(0,index-1)],b=left[index];
+    const width=Math.abs(a[0]+(b[0]-a[0])*(s-a[1])/Math.max(.00001,b[1]-a[1]));
+    const expected=s<0?Math.sqrt(beam.coreRadius**2-s*s):s>beam.length?Math.sqrt(beam.coreRadius**2-(s-beam.length)**2):beam.coreRadius;
+    expect(width).toBeGreaterThanOrEqual(expected-1e-6);
+   }
+  }
  });
  it('anchors both particle roots and axis to the physical poles',()=>{
   const geometry=jetGeometry({x:501,y:-91},100,blackHoleLevel.blackHoleJets!,{phase:'firing',cycle:7,progress:0});

@@ -32,12 +32,31 @@ export function jetSpatialFade(distance:number,length:number,fadeStart=JET_FADE_
  // while this function is still bright; only the harmless tail reaches zero.
  return terminal+(1-terminal)*(1-smoothstep((u-fadeStart)/Math.max(.001,1-fadeStart)));
 }
+/** Pure presentation parameters; none of these change the damage capsule. The
+ * complete terminal cap (length + radius), rather than its centre, is protected. */
+export const JET_TAIL_PROFILE=Object.freeze({
+ taperStart:.5,protectedWidth:.88,coreAlpha:.68,widthExponent:1.05,fadeExponent:1.2,
+ filamentStart:.32,filamentExponent:1.1,samples:80,
+});
+export function jetTailEnvelope(beam:JetBeam,distance:number) {
+ const capEnd=Math.max(0,beam.length)+Math.max(0,beam.coreRadius);
+ const extent=Math.max(capEnd+1,beam.visualLength),s=Number.isNaN(distance)?0:Math.max(0,Math.min(extent,distance));
+ const start=Math.max(0,beam.length)*JET_TAIL_PROFILE.taperStart;
+ const core=smoothstep((s-start)/Math.max(1,capEnd-start));
+ const tail=1-smoothstep((s-capEnd)/Math.max(1,extent-capEnd));
+ const width=(1-(1-JET_TAIL_PROFILE.protectedWidth)*core)*tail**JET_TAIL_PROFILE.widthExponent;
+ const alpha=(1-(1-JET_TAIL_PROFILE.coreAlpha)*core)*tail**JET_TAIL_PROFILE.fadeExponent;
+ const filament=(1-smoothstep((s-beam.length*JET_TAIL_PROFILE.filamentStart)/Math.max(1,capEnd-beam.length*JET_TAIL_PROFILE.filamentStart)))**JET_TAIL_PROFILE.filamentExponent;
+ const radius=Math.max(0,beam.coreRadius)/JET_TAIL_PROFILE.protectedWidth;
+ const root=distance<0?Math.sqrt(Math.max(0,1-(distance/Math.max(.001,radius))**2)):1;
+ return {width,alpha,filament,coreRadius:radius*width*root,particleAlpha:alpha*smoothstep(s/60)};
+}
 export function shockwaveRadius(wave:SolarWaveState,time:number):number {return wave.radius0+wave.speed*Math.max(0,Math.min(time,wave.endsAt)-wave.launchedAt);}
 export function waveGeometry(wave:SolarWaveState){return {origin:wave.origin,outer:wave.front,inner:Math.max(0,wave.front-wave.thickness),center:Math.max(0,wave.front-wave.thickness*.5),thickness:wave.thickness,damaging:wave.active} as const;}
 /** Decorative flow starts at the physical pole and has zero lateral offset there. */
 export function jetParticle(beam:JetBeam,index:number,age:number,visual=false):Vec2 {
  const extent=visual?beam.visualLength:beam.length;
  const distance=((Math.max(0,age)*580-index*extent/48)%extent+extent)%extent;
- const sway=Math.sin(index*13.7+distance*.013)*beam.coreRadius*.35*Math.min(1,distance/80);
+ const sway=Math.sin(index*13.7+distance*.013)*beam.coreRadius*.35*Math.min(1,distance/80)*(visual?jetTailEnvelope(beam,distance).width:1);
  return {x:beam.start.x+sway,y:beam.start.y+beam.direction*distance};
 }

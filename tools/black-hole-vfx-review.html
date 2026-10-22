@@ -2,7 +2,7 @@
 <style>body{margin:20px;background:#060910;color:#d5dce9;font:14px system-ui}h1{font-size:20px}button,select,input{margin:4px;padding:7px;background:#151e30;color:#e2e7ef;border:1px solid #405071}canvas{display:block;width:min(1280px,100%);height:auto}label{display:inline-block;margin-right:14px}video{max-width:100%}pre{white-space:pre-wrap}a{color:#9ccaff}</style>
 <h1>黑洞专项视觉验收 · 实际游戏渲染器 / 开发快照</h1>
 <p>仅检查渲染与危险快照，不作为普通操作通关证据。黑洞坐标固定 (1300, 0)。</p>
-<div><label>视野 <select id="view"><option value="near">黑洞近景</option><option value="jet">完整喷流</option><option value="wide">大范围背景</option><option value="left">平移左侧</option><option value="right">平移右侧</option></select></label>
+<div><label>视野 <select id="view"><option value="near">黑洞近景</option><option value="jet">完整喷流</option><option value="upper">上喷流尾端</option><option value="lower">下喷流尾端</option><option value="wide">大范围背景</option><option value="left">平移左侧</option><option value="right">平移右侧</option></select></label>
 <label>时刻 <input id="time" type="number" min="0" max="12" step="0.05" value="5.4"></label>
 <button id="play">播放完整周期</button><button id="pause">冻结</button><button id="sequence">喷流连续帧</button><button id="warning-frames">蓄力四帧</button><button id="pan">录制相机平移</button><button id="export">导出画面 PNG</button></div>
 <div id="layers"></div><canvas id="view-canvas" width="1280" height="720"></canvas><pre id="stats"></pre><div id="downloads"></div><div id="sequence-output"></div>
