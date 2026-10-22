@@ -65,7 +65,8 @@ export function drawHazards(ctx:CanvasRenderingContext2D,game:GameState,camera:C
           // particles are invisible at the far end and ease in at the root.
           for(let n=0;n<(fine?48:16);n++){
             const p=jetParticle(jet,n,t,true),xx=(p.x-x)*envelope.width,yy=(p.y-y)*sign;
-            const root=Math.min(1,yy/60),tail=yy>jet.length?.18:1;
+            const root=Math.min(1,yy/60),tailProgress=Math.max(0,Math.min(1,(yy-jet.length+120)/240));
+            const tail=1-.82*tailProgress*tailProgress*(3-2*tailProgress);
             const birth=Math.max(0,Math.min(1,(envelope.density-(n%12)/16)*4));
             ctx.globalAlpha=opacity*.6*birth*birth*(3-2*birth)*jetSpatialFade(yy,extent)*root*root*(3-2*root)*tail;
             ctx.strokeStyle=yy>jet.length?HAZARD.jetPlume:HAZARD.jetCore;ctx.lineWidth=1.2/camera.zoom;

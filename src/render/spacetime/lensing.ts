@@ -1,6 +1,7 @@
 import type {Vec2} from '../../physics/vector';
 import type {Camera} from '../../camera/camera';
 import {worldToScreen} from '../../camera/camera';
+import {ACCRETION} from '../accretion-model';
 export interface LensSource {position:Readonly<Vec2>;coreRadius:number;influenceRadius:number;strength:number}
 const smooth=(t:number)=>{const u=Math.max(0,Math.min(1,t));return u*u*(3-2*u);};
 /** Monotone radial light map; positive radius derivative prevents folds/NaNs.
@@ -34,7 +35,7 @@ export function lensWeight(world:Readonly<Vec2>,lens:LensSource):number {
  * and a projected world lattice, with constant-pixel labels and strokes. */
 export function drawLensDebug(ctx:CanvasRenderingContext2D,c:Camera,lens:LensSource):void {
  const center=worldToScreen(c,lens.position),r=lens.influenceRadius;ctx.save();ctx.lineWidth=1;ctx.font='11px monospace';
- for(const [radius,color]of [[lens.coreRadius,'#ff5eae'],[lens.coreRadius*4.6,'#ffd36a'],[r,'#d981ff']] as const){ctx.strokeStyle=color;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(center.x,center.y,radius*c.zoom,0,Math.PI*2);ctx.stroke();}
+ for(const [radius,color]of [[lens.coreRadius,'#ff5eae'],[lens.coreRadius*ACCRETION.outer,'#ffd36a'],[r,'#d981ff']] as const){ctx.strokeStyle=color;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(center.x,center.y,radius*c.zoom,0,Math.PI*2);ctx.stroke();}
  ctx.setLineDash([]);ctx.strokeStyle='#bc9fe94d';
  for(const axis of [0,1])for(let row=-5;row<=5;row++){
   ctx.beginPath();for(let n=0;n<=60;n++){
