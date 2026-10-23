@@ -32,8 +32,9 @@ export function developmentRegistry(base: SceneRegistry, search: string): SceneR
   };
   if(result.endless.level) {
     const level=result.endless.level;level.seed=Math.floor(number('seed',0,4294967295)??level.seed!);
+    const version=number('generator',1,3);if(version&&Number.isInteger(version))level.generatorVersion=version as 1|2|3;
     if(section==='triple'||section==='nebula') {
-      const center=landmarkPosition(level.seed,section),position={x:center.x+600,y:center.y};
+      const center=landmarkPosition(level.seed,section,level.generatorVersion),position={x:center.x+600,y:center.y};
       level.bodies[0].position=position;level.bodies[0].velocity={x:0,y:0};
       level.players.forEach((p,i)=>{p.position={x:position.x+(i?-90:120),y:position.y+(i?140:-140)};});
     }

@@ -3,6 +3,8 @@ import type { Vec2 } from '../physics/vector';
 import { length, sub } from '../physics/vector';
 import { planSectors, SECTOR_SIZE, sectorAt, type SectorKey } from './sectors';
 import { chunkId, chunkFeatureCenter, generateChunk, GENERATOR_VERSION, landmarks, type DiscoveryKind, type GeneratorVersion } from './generator';
+import { streamExpedition,attachExpeditionStore } from './endless-runtime';
+import type {WorldIdentity,ColdStats} from './cold-store';
 
 export const MAX_LOADED_CHUNKS=54, MAX_CACHED_CHUNKS=32, MAX_DISCOVERIES=64;
 export const MAX_UNIVERSE_BODIES=MAX_LOADED_CHUNKS*6+1;
@@ -10,6 +12,7 @@ interface ChunkSnapshot { key:SectorKey; bodies:Body[] }
 export interface UniverseState {
   version:1; generatorVersion?:GeneratorVersion; seed:number; origin:SectorKey; loaded:SectorKey[]; cache:ChunkSnapshot[];
   discoveries:{key:SectorKey;kind:DiscoveryKind}[]; notice:string;
+  cold?:WorldIdentity; coldStats?:ColdStats;
 }
 export function worldChunk(game:GameState,position:Vec2):SectorKey {
   const local=sectorAt(position),origin=game.universe!.origin;
@@ -38,12 +41,14 @@ export function initializeUniverse(game:GameState):void {
   const generatorVersion=game.level.generatorVersion??GENERATOR_VERSION;
   game.level.generatorVersion=generatorVersion;
   game.universe={version:1,generatorVersion,seed:game.level.seed??20261017,origin:{x:0,y:0},loaded:[],cache:[],discoveries:[],notice:'自由探索 · H / J 召回节点 · K 保存 · L 恢复 · M 附近星图'};
+  if(generatorVersion===3)attachExpeditionStore(game,undefined,true);
   streamUniverse(game,true);
 }
 /** Demand depends only on simulation positions. Three 3x3 neighborhoods; retain
  * home chunks of nearby displaced bodies up to a second bounded budget. */
-export function streamUniverse(game:GameState,force=false):void {
+export function streamUniverse(game:GameState,force=false):boolean {
   const u=game.universe!,version=u.generatorVersion??1;
+  if(version===3)return streamExpedition(game,force);
   const ship=game.bodies.find(b=>b.kind==='ship')!,foci=[ship.position,...game.players.map(p=>p.position)];
   for(const b of game.bodies)if(b.spawnPending&&length(sub(b.position,ship.position))>b.radius+ship.radius+120)delete b.spawnPending;
   const wanted=planSectors(foci).map(k=>({x:k.x+u.origin.x,y:k.y+u.origin.y}));
@@ -85,6 +90,7 @@ export function streamUniverse(game:GameState,force=false):void {
     const feature=generateChunk(u.seed,key,version).feature;
     if(feature){u.discoveries.push({key:{...key},kind:feature});u.discoveries=u.discoveries.slice(-MAX_DISCOVERIES);u.notice=feature==='triple'?'发现：三日凌空 · 三颗恒星共舞；保持安全距离，观察引力变化':'发现：遥远的紫色星云 · 群星之间，仍有未见之境';game.message=u.notice;}
   }
+  return true;
 }
 export function recallNode(game:GameState,index:0|1):boolean {
   if(!game.universe||game.phase==='failed'||game.phase==='completed')return false;

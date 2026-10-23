@@ -25,6 +25,8 @@ import { movementTelemetry } from './debug/telemetry';
 import { recallNode, explorationText } from './world/universe';
 import { SECTOR_SIZE } from './world/sectors';
 import { loadExploration, storeExploration } from './game/exploration-save';
+import {loadExplorationV3,storeExplorationV3} from './game/exploration-v3';
+import {cancelExpedition,settleExpedition} from './world/endless-runtime';
 import { createVisualState, syncVisualPositions, updateVisuals } from './render/spacetime/model';
 import type { VisualState } from './render/spacetime/model';
 import { createDemoRenderer } from './render/spacetime/renderer';
@@ -92,17 +94,32 @@ pauseButton.addEventListener('click',toggleFromButton);
 mapButton.addEventListener('click',toggleMap);
 const explorationTools=document.querySelector<HTMLElement>('#exploration-tools')!;
 const explorationNotice=document.querySelector<HTMLElement>('#exploration-notice')!;
-function saveExplorationUI():void {
+async function saveExplorationUI():Promise<void> {
   if(!scenes.game?.universe){explorationNotice.textContent='请先进入无限探索';return;}
-  const ok=storeExploration(progressStorage,scenes.game);
-  explorationNotice.textContent=scenes.game.message=scenes.game.universe.notice=ok?'探索已保存到本机 · L 恢复':'保存失败：当前状态不可保存或浏览器存储不可用';
+  const game=scenes.game;
+  const ok=game.universe!.generatorVersion===3?await storeExplorationV3(game):storeExploration(progressStorage,game);
+  if(scenes.game!==game)return;
+  explorationNotice.textContent=game.message=game.universe!.notice=ok?'探索已保存到本机 · L 恢复':game.universe!.generatorVersion===3?game.message:'保存失败：当前状态不可保存或浏览器存储不可用';
   canvas.focus();
 }
-function loadExplorationUI():void {
+async function loadExplorationUI():Promise<void> {
   if (!debug && !isSceneUnlocked('endless', scenes.progress)) return;
-  const restored=loadExploration(progressStorage);
-  if(restored){scenes.scene='endless';scenes.game=restored;scenes.revision++;explorationNotice.textContent='已恢复 · Space 继续';canvas.focus();}
-  else explorationNotice.textContent='没有可用探索存档，或存档损坏';
+  const current=scenes.game,revision=scenes.revision;if(current?.phase==='running')pause(current);
+  try {
+    if(current?.universe?.generatorVersion===3)await settleExpedition(current).catch(()=>{});
+    const legacy=loadExploration(progressStorage);
+    let restored;
+    try{restored=current?.universe&&current.universe.generatorVersion!==3?(legacy??await loadExplorationV3()):(await loadExplorationV3()??legacy);}
+    catch(error){
+      // An old localStorage world remains usable if IndexedDB is prohibited.
+      // Corrupt/unknown v3 data still fails explicitly, without silent fallback.
+      if(legacy&&error instanceof DOMException&&['SecurityError','NotSupportedError','InvalidStateError'].includes(error.name))restored=legacy;
+      else throw error;
+    }
+    if(scenes.revision!==revision)return;
+    if(restored){cancelExpedition(current);scenes.scene='endless';scenes.game=restored;scenes.revision++;explorationNotice.textContent='已恢复 · Space 继续';canvas.focus();}
+    else explorationNotice.textContent='没有可用探索存档，或存档损坏';
+  }catch(error){explorationNotice.textContent=error instanceof Error?error.message:'恢复失败，当前远征仍保留';}
 }
 const newUniverse=()=>{
   if (!debug && !isSceneUnlocked('endless', scenes.progress)) return;
@@ -119,7 +136,8 @@ const keyboard = new Keyboard(action => {
   if(action==='load')loadExplorationUI();
   if (action === 'toggle') toggle();
   if (action === 'map') toggleMap();
-  if (action === 'reset' || action === 'restart') scenes.retry(action === 'restart');
+  if(action==='reset'&&scenes.game?.universe?.generatorVersion===3)void loadExplorationUI();
+  else if (action === 'reset' || action === 'restart') scenes.retry(action === 'restart');
   if (action === 'title') {if(mapOpen)toggleMap();else ui.goBack();}
   if (action === 'blur') { inputs.releaseMovement(); if (scenes.game) pause(scenes.game); }
   if (action === 'zoom-in') setZoom(camera, (camera.preferredZoom??0.8) * 1.2);
@@ -246,4 +264,5 @@ function frame(now: number): void {
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+if(debug)Object.assign(window,{__arkDev:{scenes,camera,inputs,keyboard,telemetry,frameSamples,workSamples}});
 if (import.meta.hot) import.meta.hot.dispose(() => { fullscreen.dispose(); uiSounds.dispose(); artPanel?.dispose(); inputs.reset(); detach(); detachMouse(); devices.dispose(); ui.dispose(); cosmos.dispose(); pauseButton.removeEventListener('click',toggleFromButton); hazardPanel?.dispose(); mapButton.removeEventListener('click',toggleMap);saveButton.removeEventListener('click',saveExplorationUI);loadButton.removeEventListener('click',loadExplorationUI);newButton.removeEventListener('click',newUniverse); observer.disconnect(); debugView?.remove(); cancelAnimationFrame(frameId); });

@@ -1,7 +1,7 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {createCamera,viewBounds} from '../src/camera/camera';
 import {createGame} from '../src/game/game';
-import {endlessLevel} from '../src/levels/endless';
+import {endlessLevel} from './fixtures/endless-v2';
 import {createVisualState} from '../src/render/spacetime/model';
 import {DEFAULT_WARP} from '../src/render/spacetime/config';
 import type {Quality} from '../src/render/spacetime/config';

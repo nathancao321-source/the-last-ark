@@ -9,6 +9,7 @@ import { updateStellar } from './stellar';
 import { updateDamageZones } from './damage-zones';
 import { initializeHazards, updateHazards, hazardNotice } from './hazards';
 import { initializeUniverse, rebaseUniverse, streamUniverse } from '../world/universe';
+import {expeditionBlocked} from '../world/endless-runtime';
 export const FIXED_DT = 1 / 60;
 export function saveCheckpoint(game: GameState, id: string): void {
   const { checkpoint: _previous, ...state } = game;
@@ -32,6 +33,7 @@ export function createGame(level: Level): GameState {
   return game;
 }
 export function retryGame(game: GameState): GameState {
+  if(game.universe?.generatorVersion===3)return createGame(game.level);
   const restored: GameState = game.checkpoint ? structuredClone(game.checkpoint.snapshot) : createGame(game.level);
   restored.phase = 'ready'; restored.players.forEach(p => { p.active = false; if(p.capture)p.capture.abilityActive=false; }); delete restored.pendingScene;
   if (restored.tutorial) restored.tutorial.acknowledged = false;
@@ -40,6 +42,7 @@ export function retryGame(game: GameState): GameState {
   return restored;
 }
 export function togglePause(game: GameState): void {
+  if(game.universe?.generatorVersion===3&&expeditionBlocked(game))return;
   const lesson = currentLesson(game);
   if ((game.phase === 'ready' || game.phase === 'paused') && lesson && !game.tutorial!.acknowledged) {
     if (lesson.condition.type === 'acknowledge') {
@@ -63,7 +66,7 @@ export function stepGame(game: GameState, input: Controls, dt = FIXED_DT): void 
   if (game.phase === 'completed' || game.phase === 'failed') return;
   if (!Number.isFinite(dt) || dt <= 0) return;
   let frameShift={x:0,y:0};
-  if(game.universe){frameShift=rebaseUniverse(game);streamUniverse(game,frameShift.x!==0||frameShift.y!==0);}
+  if(game.universe){frameShift=rebaseUniverse(game);if(!streamUniverse(game,frameShift.x!==0||frameShift.y!==0))return;}
   const previous = new Map([...game.bodies, ...game.players].map(b => [b.id, { ...b.position }]));
   game.players.forEach((player, i) => {
     const intent=input.players[i],target=intent.targetWorldPosition;

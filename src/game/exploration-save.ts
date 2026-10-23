@@ -5,7 +5,7 @@ import { endlessLevel } from '../levels/endless';
 import { migrateLegacyChunkGravity } from '../world/generator';
 import { MAX_CACHED_CHUNKS, MAX_DISCOVERIES, MAX_LOADED_CHUNKS, MAX_UNIVERSE_BODIES, streamUniverse, type UniverseState } from '../world/universe';
 const KEY='the-last-ark.exploration.v1';
-const MAX_SAVE_BYTES=2_000_000;
+const MAX_SAVE_CHARACTERS=2_000_000;
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e14;
 const point=(v:unknown):v is {x:number;y:number}=>!!v&&typeof v==='object'&&finite((v as {x:unknown}).x)&&finite((v as {y:unknown}).y);
 const key=(v:unknown)=>point(v)&&Number.isSafeInteger(v.x)&&Number.isSafeInteger(v.y)&&Math.abs(v.x)<=2**40&&Math.abs(v.y)<=2**40;
@@ -21,13 +21,13 @@ function validBody(b:Body):boolean {
 }
 /** One bounded browser-local slot; no account, cloud writes or unbounded travel log. */
 export function storeExploration(storage:ProgressStorage,game:GameState):boolean {
-  if(!game.universe||game.phase==='failed'||game.phase==='completed')return false;
+  if(!game.universe||game.universe.generatorVersion===3||game.phase==='failed'||game.phase==='completed')return false;
   const data={version:1,universe:game.universe,bodies:game.bodies,players:game.players,elapsed:game.elapsed,distance:game.distance,health:game.health};
-  try {const text=JSON.stringify(data);if(text.length>MAX_SAVE_BYTES)return false;storage.setItem(KEY,text);return true;}catch{return false;}
+  try {const text=JSON.stringify(data);if(text.length>MAX_SAVE_CHARACTERS)return false;storage.setItem(KEY,text);return true;}catch{return false;}
 }
 export function loadExploration(storage:ProgressStorage):GameState|undefined {
   try {
-    const text=storage.getItem(KEY);if(!text||text.length>MAX_SAVE_BYTES)return;
+    const text=storage.getItem(KEY);if(!text||text.length>MAX_SAVE_CHARACTERS)return;
     const d=JSON.parse(text),u=d.universe as UniverseState;
     if(d.version!==1||!u||u.version!==1||!key(u.origin)||!Number.isSafeInteger(u.seed)||u.seed<0||u.seed>4294967295||!finite(d.elapsed)||d.elapsed<0||!finite(d.distance)||d.distance<0)return;
     if(u.generatorVersion!==undefined&&u.generatorVersion!==1&&u.generatorVersion!==2)return;

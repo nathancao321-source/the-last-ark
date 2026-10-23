@@ -1,8 +1,8 @@
 import { describe,it,expect } from 'vitest';
 import { createGame,stepGame,togglePause,retryGame } from '../src/game/game';
-import { endlessLevel } from '../src/levels/endless';
+import { endlessLevel } from './fixtures/endless-v2';
 import { NO_CONTROLS } from '../src/game/types';
-import { chunkSeed,generateChunk,landmarks,chunkId,LAYOUT } from '../src/world/generator';
+import { chunkSeed,generateChunk,landmarks,chunkId,LAYOUT } from './fixtures/endless-v2';
 import { MAX_CACHED_CHUNKS,MAX_LOADED_CHUNKS,MAX_UNIVERSE_BODIES,streamUniverse,rebaseUniverse,recallNode,worldChunk } from '../src/world/universe';
 import { SECTOR_SIZE } from '../src/world/sectors';
 import { storeExploration,loadExploration } from '../src/game/exploration-save';

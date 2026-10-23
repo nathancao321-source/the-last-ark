@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createGame} from '../src/game/game';
-import {endlessLevel} from '../src/levels/endless';
+import {endlessLevel} from './fixtures/endless-v2';
 import {syncUniverseVisuals,enhancedScene} from '../src/render/endless-bridge';
 import {createVisualState,updateVisuals,sampleDisturbance} from '../src/render/spacetime/model';
 import {worldCells} from '../src/render/spacetime/background';

@@ -4,6 +4,7 @@ import type { SceneId, SceneRegistry } from './types';
 import { scenes } from './registry';
 import type { CampaignProgress } from '../game/progress';
 import { isSceneUnlocked } from './campaign';
+import {cancelExpedition} from '../world/endless-runtime';
 /** Scene identity and simulation phase are independent; planned scenes cannot run. */
 export class SceneController {
   scene: SceneId = 'title';
@@ -21,14 +22,14 @@ export class SceneController {
     if (!scene || scene.status === 'planned' || (id !== 'title' && !scene.level)) {
       this.notice = '该场景尚在规划中'; return false;
     }
-    this.game = scene.level ? createGame(scene.level) : undefined;
+    cancelExpedition(this.game);this.game = scene.level ? createGame(scene.level) : undefined;
     this.arrival = undefined;
     this.scene = id; this.notice = ''; this.revision++; return true;
   }
   toggle(): void { if (this.scene === 'title') this.enter('tutorial_part_1'); else if (this.game) togglePause(this.game); }
   retry(fromStart = false): void {
     if (!this.game) return;
-    this.game = fromStart ? createGame(this.game.level) : retryGame(this.game); this.revision++;
+    cancelExpedition(this.game);this.game = fromStart ? createGame(this.game.level) : retryGame(this.game); this.revision++;
   }
   nextScene(): SceneId | undefined {
     const next = this.registry[this.scene].completion?.nextScene;

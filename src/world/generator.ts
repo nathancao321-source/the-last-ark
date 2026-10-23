@@ -5,11 +5,12 @@ import { bodyGravity } from '../physics/gravity';
 import { fieldAcceleration } from '../physics/fields';
 import { add, length, sub } from '../physics/vector';
 import type { Vec2 } from '../physics/vector';
+import { generateV3Chunk, type StructureDescriptor } from './structures';
 export type DiscoveryKind = 'triple' | 'nebula';
-export type GeneratorVersion=1|2;
-export const GENERATOR_VERSION:GeneratorVersion=2;
+export type GeneratorVersion=1|2|3;
+export const GENERATOR_VERSION:GeneratorVersion=3;
 export const LAYOUT={edgeClearance:80,minGap:40,maxAttempts:48,featureFootprint:228} as const;
-export interface ChunkContent { bodies: Body[]; decorations: NonNullable<Level['decorations']>; feature?: DiscoveryKind; center:Vec2; layout?:{attempts:number;fallback:boolean} }
+export interface ChunkContent { bodies: Body[]; decorations: NonNullable<Level['decorations']>; feature?: DiscoveryKind; center:Vec2; structure?:StructureDescriptor; layout?:{attempts:number;fallback:boolean} }
 /** Hash full decimal coordinates: unlike bitwise coordinates, no 2^32-chunk repeat. */
 export function chunkSeed(seed:number,key:SectorKey):number {
   let hash=2166136261;
@@ -18,7 +19,7 @@ export function chunkSeed(seed:number,key:SectorKey):number {
 }
 export function landmarks(seed:number,version:GeneratorVersion=GENERATOR_VERSION):Record<DiscoveryKind,SectorKey> {
   const random=seededRandom(seed);
-  if(version===2){
+  if(version>=2){
     const polar=(near:number,range:number)=>{const a=random()*Math.PI*2,r=near+random()*range;return {x:Math.round(Math.cos(a)*r),y:Math.round(Math.sin(a)*r)};};
     return {triple:polar(3.5,.5),nebula:polar(12,4)};
   }
@@ -78,6 +79,7 @@ export function migrateLegacyChunkGravity(body:Body):void {
  * random stream, so counts, physical parameters and ordinary appearance survive.
  * V1 saves remain pinned to the complete old layout, including future chunks. */
 export function generateChunk(seed:number,key:SectorKey,version:GeneratorVersion=GENERATOR_VERSION):ChunkContent {
+  if(version===3)return generateV3Chunk(seed,key);
   const random=seededRandom(chunkSeed(seed,key)),known=landmarks(seed,version),id=chunkId(key);
   const feature:DiscoveryKind|undefined=id===chunkId(known.triple)?'triple':id===chunkId(known.nebula)?'nebula':random()<0.018?'triple':undefined;
   const bodies:Body[]=[],decorations:ChunkContent['decorations']=[];

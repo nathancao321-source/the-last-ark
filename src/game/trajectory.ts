@@ -3,6 +3,7 @@ import type { Vec2 } from '../physics/vector';
 import { finite } from '../physics/vector';
 import { FIXED_DT, stepGame } from './game';
 import { SECTOR_SIZE } from '../world/sectors';
+import {markExpeditionPreview} from '../world/endless-runtime';
 
 export const PREDICTION_SECONDS = 12;
 export interface Trajectory {
@@ -22,6 +23,7 @@ export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS)
   if (game.phase === 'completed' || game.phase === 'failed') return result;
   const { checkpoint: _checkpoint, ...state } = game;
   const simulation: GameState = structuredClone(state);
+  if(simulation.universe?.generatorVersion===3)markExpeditionPreview(simulation);
   // Preview continuous physical flight, omitting pedagogical pauses/checkpoints only.
   // Mission triggers (including wormholes), forces and collisions remain identical.
   delete simulation.tutorial;
@@ -38,7 +40,9 @@ export function predictTrajectory(game: GameState, seconds = PREDICTION_SECONDS)
   // Streamed exploration forecasts are bounded to three seconds to keep the main thread responsive.
   const steps = Math.ceil(Math.min(game.universe?3:PREDICTION_SECONDS, Math.max(0, seconds)) / FIXED_DT);
   for (let i = 0; i < steps; i++) {
+    const oldElapsed=simulation.elapsed;
     stepGame(simulation, input);
+    if(simulation.universe?.generatorVersion===3&&simulation.elapsed===oldElapsed)break;
     // stepGame mutates phase; TypeScript otherwise retains the earlier literal narrowing.
     const phase = simulation.phase as GameState['phase'];
     result.seconds = (i + 1) * FIXED_DT;

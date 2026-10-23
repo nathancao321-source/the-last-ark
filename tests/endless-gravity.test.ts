@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { generateChunk,landmarks,migrateLegacyChunkGravity } from '../src/world/generator';
+import { generateChunk,landmarks,migrateLegacyChunkGravity } from './fixtures/endless-v2';
 import { firstLevel } from '../src/levels/first';
 import { integrate } from '../src/physics/world';
 import { integrateContacts } from '../src/physics/contact-world';
@@ -8,7 +8,7 @@ import { bodyGravity } from '../src/physics/gravity';
 import { length,sub } from '../src/physics/vector';
 import { createBody } from '../src/game/entities';
 import { createGame } from '../src/game/game';
-import { endlessLevel } from '../src/levels/endless';
+import { endlessLevel } from './fixtures/endless-v2';
 import { storeExploration,loadExploration } from '../src/game/exploration-save';
 const seed=endlessLevel.seed!;
 function ordinary() {

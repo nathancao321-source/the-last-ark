@@ -1,5 +1,6 @@
 import { GENERATOR_VERSION, landmarkPosition, type GeneratorVersion } from '../world/generator';
 import { seededRandom } from '../world/sectors';
+import {sampleRegionWeights} from '../world/regions';
 
 export interface EndlessFieldSample {density:number;tint:number;filament:number;cloud:number;dust:number}
 export interface EndlessStar {x:number;y:number;brightness:number;size:number;galaxy:boolean}
@@ -34,7 +35,7 @@ function fbm(x:number,y:number,seed:number,octaves:number):number {
 function nebulaCenter(seed:number,version:GeneratorVersion):{x:number;y:number} {
  return landmarkPosition(seed,'nebula',version);
 }
-function sample(seed:number,x:number,y:number,center:{x:number;y:number}):EndlessFieldSample {
+function sample(seed:number,x:number,y:number,center:{x:number;y:number},version:GeneratorVersion):EndlessFieldSample {
  const mx=x/15000,my=y/15000,macro=fbm(mx,my,seed+71,3);
  const wx=(fbm(x/3900,y/3900,seed+127,3)-.5)*1600,wy=(fbm(x/3900+7,y/3900-3,seed+811,3)-.5)*1600;
  const qx=(x+wx)/530,qy=(y+wy)/530,n=fbm(qx,qy,seed+917,5);
@@ -45,7 +46,8 @@ function sample(seed:number,x:number,y:number,center:{x:number;y:number}):Endles
  const cloud=fbm(qx*.59,qy*.59,seed+31,3),dust=smooth(.4,.77,noise(qx*1.7,qy*1.7,seed+771));
  const dx=(x-center.x+wx*.55)/6400,dy=(y-center.y+wy*.55)/3900;
  const landmark=Math.exp(-(dx*dx+dy*dy)*1.25);
- const density=clamp(.025+.78*smooth(.53,.73,macro)+.94*landmark);
+ const regional=version===3?.55+.9*sampleRegionWeights(seed,{x:x/2048,y:y/2048}).density:1;
+ const density=clamp((.025+.78*smooth(.53,.73,macro))*regional+.94*landmark);
  return {density,tint:noise(x/7400+13,y/7400-8,seed+501),
   filament:clamp((ridge*.69+branch*.31)*(.45+cloud)*density*knots),cloud:cloud*cloud*density,dust};
 }
@@ -53,7 +55,7 @@ function sample(seed:number,x:number,y:number,center:{x:number;y:number}):Endles
 /** Absolute universe coordinates; independent of camera, elapsed time, loading
  * order and game bodies. Only light intensity animates in the renderer. */
 export function sampleEndlessField(seed:number,x:number,y:number,version:GeneratorVersion=GENERATOR_VERSION):EndlessFieldSample {
- return sample(seed,x,y,nebulaCenter(seed,version));
+ return sample(seed,x,y,nebulaCenter(seed,version),version);
 }
 
 /** Pixel centres include a one-texel gutter. The neighboring tile's inner edge
@@ -61,7 +63,7 @@ export function sampleEndlessField(seed:number,x:number,y:number,version:Generat
 export function generateEndlessTile(seed:number,tx:number,ty:number,span=2048,res=128,version:GeneratorVersion=GENERATOR_VERSION):{pixels:Uint8ClampedArray;activity:Uint8ClampedArray;activity2:Uint8ClampedArray} {
  const size=res+2,pixels=new Uint8ClampedArray(size*size*4),activity=new Uint8ClampedArray(size*size*4),activity2=new Uint8ClampedArray(size*size*4),step=span/res,center=nebulaCenter(seed,version);
  for(let py=0;py<size;py++)for(let px=0;px<size;px++) {
-  const x=tx*span+(px-.5)*step,y=ty*span+(py-.5)*step,s=sample(seed,x,y,center);
+  const x=tx*span+(px-.5)*step,y=ty*span+(py-.5)*step,s=sample(seed,x,y,center,version);
   const lit=Math.max(0,s.filament*(1-s.dust*.82)),mist=s.cloud*(1-s.dust*.65),i=(py*size+px)*4;
   pixels[i]=2+lit*(31+s.tint*20)+mist*7;
   pixels[i+1]=3+lit*(42-s.tint*8)+mist*9;
@@ -102,7 +104,7 @@ export function generateEndlessStars(seed:number,tx:number,ty:number,span=2048,v
  const minX=Math.floor(left/spacing),minY=Math.floor(top/spacing),maxX=Math.ceil(right/spacing),maxY=Math.ceil(bottom/spacing);
  for(let gy=minY;gy<maxY;gy++)for(let gx=minX;gx<maxX;gx++) {
   const cell=descendantCell(seed+8711,gx*stride,gy*stride,stride),baseX=cell.x*128,baseY=cell.y*128;
-  const random=seededRandom(Math.floor(hash(cell.x,cell.y,seed+1987)*UINT32)),s=sample(seed,baseX+64,baseY+64,center);
+  const random=seededRandom(Math.floor(hash(cell.x,cell.y,seed+1987)*UINT32)),s=sample(seed,baseX+64,baseY+64,center,version);
   for(let site=0;site<4;site++) {
    const x=baseX+random()*128,y=baseY+random()*128,keep=random(),light=random(),scale=random(),rare=random();
    const micro=site>0,probability=micro?.004+s.density*.80+s.filament*.65:.14+s.density*.60+s.filament*.16;

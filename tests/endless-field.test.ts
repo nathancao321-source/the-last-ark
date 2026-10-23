@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {ENDLESS_STAR_TILE_LIMIT,generateEndlessStars,generateEndlessTile,sampleEndlessField} from '../src/render/endless-field';
-import {landmarks,landmarkPosition} from '../src/world/generator';
+import {landmarks,landmarkPosition} from './fixtures/endless-v2';
 
 const seed=20261017;
 describe('continuous deterministic endless background field',()=>{
