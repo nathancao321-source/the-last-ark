@@ -1,0 +1,107 @@
+{
+  "name": "binary",
+  "initial": {
+    "ship": {
+      "velocity": {
+        "x": 90,
+        "y": 0
+      },
+      "affectedByFields": true,
+      "response": 1,
+      "id": "ark",
+      "kind": "ship",
+      "radius": 8,
+      "position": {
+        "x": 1797.644074167023,
+        "y": 735.2824344625478
+      }
+    },
+    "origin": {
+      "x": -8,
+      "y": -8
+    },
+    "players": [
+      {
+        "id": "attractor",
+        "kind": "player",
+        "position": {
+          "x": 1917.644074167023,
+          "y": 635.2824344625478
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 280,
+          "strength": 1200000,
+          "softening": 70,
+          "maxAcceleration": 100,
+          "polarity": 1
+        }
+      },
+      {
+        "id": "repulsor",
+        "kind": "player",
+        "position": {
+          "x": 1677.644074167023,
+          "y": 835.2824344625478
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 320,
+          "strength": 1500000,
+          "softening": 75,
+          "maxAcceleration": 110,
+          "polarity": -1
+        }
+      }
+    ],
+    "key": {
+      "x": -7,
+      "y": -8
+    },
+    "seed": 20261017
+  },
+  "elapsed": 3.9666666666666575,
+  "phase": "running",
+  "hp": 100,
+  "shipVelocity": {
+    "x": 230.9445476316358,
+    "y": -65.30402682238743
+  },
+  "baselineVelocity": {
+    "x": 95.62855578770079,
+    "y": -7.597575884799599
+  },
+  "bothFields": [
+    true,
+    true
+  ],
+  "displacements": [
+    {
+      "id": "-7,-8/v3/star0",
+      "kind": "star",
+      "delta": 0.000004845697394917815
+    },
+    {
+      "id": "-7,-8/v3/star1",
+      "kind": "star",
+      "delta": 0.0068686279471042895
+    }
+  ],
+  "maxBudget": 0
+}

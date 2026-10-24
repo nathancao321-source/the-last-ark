@@ -1,0 +1,61 @@
+{
+  "input": {
+    "players": [
+      {
+        "position": {
+          "x": 256.50000000000017,
+          "y": -140
+        },
+        "active": true
+      },
+      {
+        "position": {
+          "x": -226.5000000000002,
+          "y": 140
+        },
+        "active": true
+      }
+    ],
+    "phase": "running"
+  },
+  "saved": {
+    "notice": "探索已保存到本机 · L 恢复",
+    "elapsed": 0.6500000000000004,
+    "world": {
+      "id": "0919cae7-7680-439a-ba28-f6a5609c0519",
+      "seed": 20261017,
+      "version": 3,
+      "epoch": 0
+    }
+  },
+  "loaded": {
+    "phase": "paused",
+    "elapsed": 0.6500000000000004,
+    "world": {
+      "id": "0919cae7-7680-439a-ba28-f6a5609c0519",
+      "seed": 20261017,
+      "version": 3,
+      "epoch": 1
+    },
+    "fields": [
+      false,
+      false
+    ]
+  },
+  "native": {
+    "aborted": true,
+    "stale": true,
+    "full": true,
+    "rollback": true,
+    "manifest": "valid"
+  },
+  "views": [
+    "layout-v2-20261017.png",
+    "layout-v3-20261017.png",
+    "layout-v2-7.png",
+    "layout-v3-7.png",
+    "layout-v2-424242.png",
+    "layout-v3-424242.png"
+  ],
+  "errors": []
+}

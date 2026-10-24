@@ -1,0 +1,112 @@
+{
+  "name": "rocks",
+  "initial": {
+    "ship": {
+      "velocity": {
+        "x": 90,
+        "y": 0
+      },
+      "affectedByFields": true,
+      "response": 1,
+      "id": "ark",
+      "kind": "ship",
+      "radius": 8,
+      "position": {
+        "x": 1190.0969126877226,
+        "y": 829.3375301073502
+      }
+    },
+    "origin": {
+      "x": -5,
+      "y": -8
+    },
+    "players": [
+      {
+        "id": "attractor",
+        "kind": "player",
+        "position": {
+          "x": 1310.0969126877226,
+          "y": 729.3375301073502
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 280,
+          "strength": 1200000,
+          "softening": 70,
+          "maxAcceleration": 100,
+          "polarity": 1
+        }
+      },
+      {
+        "id": "repulsor",
+        "kind": "player",
+        "position": {
+          "x": 1070.0969126877226,
+          "y": 929.3375301073502
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 320,
+          "strength": 1500000,
+          "softening": 75,
+          "maxAcceleration": 110,
+          "polarity": -1
+        }
+      }
+    ],
+    "key": {
+      "x": -5,
+      "y": -8
+    },
+    "seed": 20261017
+  },
+  "elapsed": 3.983333333333324,
+  "phase": "running",
+  "hp": 100,
+  "shipVelocity": {
+    "x": 239.98799451602423,
+    "y": 2.400518314183073
+  },
+  "baselineVelocity": {
+    "x": 90,
+    "y": 0
+  },
+  "bothFields": [
+    true,
+    true
+  ],
+  "displacements": [
+    {
+      "id": "-5,-8/v3/rock0",
+      "kind": "asteroid",
+      "delta": 0
+    },
+    {
+      "id": "-5,-8/v3/rock1",
+      "kind": "asteroid",
+      "delta": 54.462429859137266
+    },
+    {
+      "id": "-5,-8/v3/rock2",
+      "kind": "asteroid",
+      "delta": 9.410868787634172
+    }
+  ],
+  "maxBudget": 0
+}

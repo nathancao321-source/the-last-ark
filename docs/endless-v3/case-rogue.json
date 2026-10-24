@@ -1,0 +1,102 @@
+{
+  "name": "rogue",
+  "initial": {
+    "ship": {
+      "velocity": {
+        "x": 90,
+        "y": 0
+      },
+      "affectedByFields": true,
+      "response": 1,
+      "id": "ark",
+      "kind": "ship",
+      "radius": 8,
+      "position": {
+        "x": 254.38424337994365,
+        "y": 1505.7937157590914
+      }
+    },
+    "origin": {
+      "x": -8,
+      "y": -8
+    },
+    "players": [
+      {
+        "id": "attractor",
+        "kind": "player",
+        "position": {
+          "x": 374.38424337994365,
+          "y": 1405.7937157590914
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 280,
+          "strength": 1200000,
+          "softening": 70,
+          "maxAcceleration": 100,
+          "polarity": 1
+        }
+      },
+      {
+        "id": "repulsor",
+        "kind": "player",
+        "position": {
+          "x": 134.38424337994365,
+          "y": 1605.7937157590914
+        },
+        "radius": 13,
+        "speed": 260,
+        "acceleration": 650,
+        "braking": 433.33333333333337,
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "active": false,
+        "field": {
+          "radius": 320,
+          "strength": 1500000,
+          "softening": 75,
+          "maxAcceleration": 110,
+          "polarity": -1
+        }
+      }
+    ],
+    "key": {
+      "x": -8,
+      "y": -8
+    },
+    "seed": 20261017
+  },
+  "elapsed": 3.9999999999999907,
+  "phase": "running",
+  "hp": 100,
+  "shipVelocity": {
+    "x": 233.10598362393725,
+    "y": -57.11042285534832
+  },
+  "baselineVelocity": {
+    "x": 90.03885335951823,
+    "y": -0.029722368346974063
+  },
+  "bothFields": [
+    true,
+    true
+  ],
+  "displacements": [
+    {
+      "id": "-8,-8/v3/planet0",
+      "kind": "planet",
+      "delta": 0.7078944637284672
+    }
+  ],
+  "maxBudget": 0
+}

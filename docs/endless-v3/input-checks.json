@@ -1,0 +1,27 @@
+{
+  "mouse": {
+    "position": {
+      "x": 182.661399434971,
+      "y": -97.4720228137635
+    },
+    "active": true,
+    "status": "持续追踪屏幕鼠标 / 左键技能 / 右键切换制动 · 追踪中"
+  },
+  "braking": "持续追踪屏幕鼠标 / 左键技能 / 右键切换制动 · 已制动",
+  "map": true,
+  "retry": {
+    "saved": {
+      "id": "5cadc33d-6742-4d13-a7bb-9c7cd8e46dbd",
+      "t": 0.733333333333334
+    },
+    "fresh": "99ea5a42-4fe4-4f7c-ab14-7e066a795962",
+    "restored": {
+      "id": "5cadc33d-6742-4d13-a7bb-9c7cd8e46dbd",
+      "t": 0.733333333333334,
+      "phase": "paused"
+    }
+  },
+  "disconnectedPadStatus": "未检测到手柄：连接后请按任意键唤醒",
+  "physicalPadTested": false,
+  "errors": []
+}
