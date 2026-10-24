@@ -31,7 +31,8 @@ function centerSample(seed:number,key:SectorKey,footprint:number):Vec2 {
  const random=layoutRandom(seed,key,0x43454e54),pad=LAYOUT.edgeClearance+footprint;
  return {x:pad+random()*(SECTOR_SIZE-2*pad),y:pad+random()*(SECTOR_SIZE-2*pad)};
 }
-/** Shared anchor for feature generation, discovery, dev jumps and background.
+/** Shared anchor for guaranteed landmarks, dev jumps and background. V3's
+ * additional local triples expose their authoritative descriptor centre.
  * It needs no neighboring chunks, camera, entity construction or history. */
 export function chunkFeatureCenter(seed:number,key:SectorKey,version:GeneratorVersion=GENERATOR_VERSION):Vec2 {
  return version===1||(key.x===0&&key.y===0)?{x:1024,y:1024}:centerSample(seed,key,LAYOUT.featureFootprint);

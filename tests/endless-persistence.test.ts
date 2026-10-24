@@ -7,12 +7,18 @@ import {streamUniverse,rebaseUniverse,worldChunk} from '../src/world/universe';
 import {storeExplorationV3,loadExplorationV3} from '../src/game/exploration-v3';
 import {storeExploration} from '../src/game/exploration-save';
 import {NO_CONTROLS} from '../src/input/intent';
-import {chunkId} from '../src/world/generator';
+import {chunkId,generateChunk,chunkFeatureCenter} from '../src/world/generator';
 import {cruiseControls} from '../tools/endless-v3-controller';
 import {predictTrajectory} from '../src/game/trajectory';
 function make(store=new MemoryExpeditionStore(),seed=20261017){const g=createGame({...endlessLevel,seed});attachExpeditionStore(g,store);return g;}
 async function visit(g:ReturnType<typeof make>,x:number,y:number){g.bodies[0].position={x:(x-g.universe!.origin.x)*2048,y:(y-g.universe!.origin.y)*2048};g.players.forEach(p=>p.position={...g.bodies[0].position});rebaseUniverse(g);streamUniverse(g);await settleExpedition(g);}
 describe('bounded persistent expeditions',()=>{
+ it('discovers additional triples at their actual generated centre rather than the landmark sampler',async()=>{
+  const seed=7,key={x:3,y:0},c=generateChunk(seed,key,3),old=chunkFeatureCenter(seed,key,3),dx=c.center.x-old.x,dy=c.center.y-old.y,d=Math.hypot(dx,dy);
+  expect(c.feature).toBe('triple');expect(d).toBeGreaterThan(150);
+  const g=make(undefined,seed),p={x:key.x*2048+c.center.x+dx/d*600,y:key.y*2048+c.center.y+dy/d*600};g.bodies[0].position=p;g.players.forEach(n=>n.position={...p});rebaseUniverse(g);streamUniverse(g);await settleExpedition(g);
+  expect(g.universe!.discoveries).toContainEqual({key,kind:'triple'});
+ });
  it('retains moved/destroyed bodies beyond 32 hot entries, including arrival at their new location',async()=>{
   const store=new MemoryExpeditionStore(),g=make(store),body=g.bodies.find(b=>b.kind==='planet')!,owner={...body.chunk!},id=body.id;
   expect(body).toBeDefined();body.position={x:500*2048+500,y:600*2048+700};body.velocity={x:17,y:-8};body.stabilizationState={playerVelocity:{x:1,y:2},idleTime:4};

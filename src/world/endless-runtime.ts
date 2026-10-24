@@ -1,10 +1,10 @@
 import type {GameState,Body} from '../game/types';
-import {generateChunk,chunkId,chunkFeatureCenter} from './generator';
-import {planSectors} from './sectors';
+import {generateChunk,chunkId,type DiscoveryKind} from './generator';
+import {planSectors,type SectorKey} from './sectors';
 import {chunkOffset,translateBody,MAX_LOADED_CHUNKS,MAX_CACHED_CHUNKS} from './universe';
 import {defaultExpeditionStore,newWorld,type ExpeditionStore,type ChunkSnapshot,type WorldIdentity} from './cold-store';
 
-interface Runtime {store:ExpeditionStore;pending?:Promise<void>;error?:string;fresh:boolean;cancelled:boolean;demand?:string;ticket:number}
+interface Runtime {store:ExpeditionStore;pending?:Promise<void>;error?:string;fresh:boolean;cancelled:boolean;demand?:string;ticket:number;features?:{key:SectorKey;center:{x:number;y:number};kind:DiscoveryKind}[]}
 const runtimes=new WeakMap<GameState,Runtime>(),previews=new WeakSet<GameState>();
 export function attachExpeditionStore(game:GameState,store=defaultExpeditionStore(),fresh=false):void {runtimes.set(game,{store,fresh,cancelled:false,ticket:0});}
 export function cancelExpedition(game:GameState|undefined):void {if(!game)return;const rt=runtimes.get(game);if(rt)rt.cancelled=true;}
@@ -21,9 +21,10 @@ export function activeSnapshots(game:GameState):ChunkSnapshot[]{
  const u=game.universe!;return u.loaded.map(key=>{const offset=chunkOffset(key,u.origin),bodies=structuredClone(game.bodies.filter(b=>b.chunk&&chunkId(b.chunk)===chunkId(key)));bodies.forEach(b=>translateBody(b,{x:-offset.x,y:-offset.y}));return {key:{...key},bodies};});
 }
 function decorations(game:GameState):void {
- const u=game.universe!,ship=game.bodies[0];game.level.decorations=u.loaded.flatMap(key=>{const offset=chunkOffset(key,u.origin);return generateChunk(u.seed,key,3).decorations.map(d=>({...d,position:{x:d.position.x+offset.x,y:d.position.y+offset.y}}));});
- game.level.mapBounds={minX:ship.position.x-3500,maxX:ship.position.x+3500,minY:ship.position.y-3500,maxY:ship.position.y+3500};
- for(const key of u.loaded){const c=generateChunk(u.seed,key,3);if(!c.feature||u.discoveries.some(d=>chunkId(d.key)===chunkId(key)))continue;const center=chunkFeatureCenter(u.seed,key,3),offset=chunkOffset(key,u.origin);if(![ship,...game.players].some(b=>Math.hypot(b.position.x-offset.x-center.x,b.position.y-offset.y-center.y)<750))continue;u.discoveries.push({key:{...key},kind:c.feature});u.discoveries=u.discoveries.slice(-64);u.notice=c.feature==='triple'?'发现：三日凌空 · 三颗恒星真实共舞':'发现：遥远的紫色星云';}
+ const u=game.universe!,chunks=u.loaded.map(key=>({key,chunk:generateChunk(u.seed,key,3)}));
+ expeditionRuntime(game).features=chunks.flatMap(({key,chunk})=>chunk.feature?[{key:{...key},center:chunk.center,kind:chunk.feature}]:[]);
+ game.level.decorations=chunks.flatMap(({key,chunk})=>{const offset=chunkOffset(key,u.origin);return chunk.decorations.map(d=>({...d,position:{x:d.position.x+offset.x,y:d.position.y+offset.y}}));});
+ decorationsDiscovery(game);
 }
 function localBodies(game:GameState,snapshot:ChunkSnapshot):Body[]{
  const u=game.universe!,offset=chunkOffset(snapshot.key,u.origin),ship=game.bodies[0],bodies=structuredClone(snapshot.bodies);
@@ -71,5 +72,10 @@ export function streamExpedition(game:GameState,force=false):boolean {
 /** Discovery is cheap and independent of texture generation. */
 function decorationsDiscovery(game:GameState):void {
  const u=game.universe!,ship=game.bodies[0];game.level.mapBounds={minX:ship.position.x-3500,maxX:ship.position.x+3500,minY:ship.position.y-3500,maxY:ship.position.y+3500};
- for(const key of u.loaded){if(u.discoveries.some(d=>chunkId(d.key)===chunkId(key)))continue;const o=chunkOffset(key,u.origin),center=chunkFeatureCenter(u.seed,key,3);if(![ship,...game.players].some(b=>Math.hypot(b.position.x-o.x-center.x,b.position.y-o.y-center.y)<750))continue;const feature=generateChunk(u.seed,key,3).feature;if(feature){u.discoveries.push({key:{...key},kind:feature});u.discoveries=u.discoveries.slice(-64);u.notice=feature==='triple'?'发现：三日凌空 · 三颗恒星真实共舞':'发现：遥远的紫色星云';}}
+ for(const {key,center,kind} of expeditionRuntime(game).features??[]){
+  if(u.discoveries.some(d=>chunkId(d.key)===chunkId(key)))continue;
+  const o=chunkOffset(key,u.origin);
+  if(![ship,...game.players].some(b=>Math.hypot(b.position.x-o.x-center.x,b.position.y-o.y-center.y)<750))continue;
+  u.discoveries.push({key:{...key},kind});u.discoveries=u.discoveries.slice(-64);u.notice=kind==='triple'?'发现：三日凌空 · 三颗恒星真实共舞':'发现：遥远的紫色星云';
+ }
 }
